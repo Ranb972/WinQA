@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "MongoDB": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mongodb-mcp-server",
+        "--apiClientId",
+        "mdb_sa_id_6963aa5065c2e8f4abc026bf",
+        "--apiClientSecret",
+        "mdb_sa_sk_1DV2RAXxx0szRtbvxh5cCaqtTH4QbjOmAFbqwsPv"
+      ]
+    }
+  }
+}
