@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +17,30 @@ interface Message extends ChatMessageType {
   specificModel?: string;
   responseTime?: number;
   fallback?: FallbackInfo;
+  isLoading?: boolean;
 }
+
+// Timeout wrapper for fetch requests
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeout = 45000
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out after 45s');
+    }
+    throw error;
+  }
+};
 
 const DEFAULT_MODEL_PREFERENCES: Record<LLMProvider, SpecificModel> = defaultModels;
 
@@ -75,8 +99,9 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
 
+    const timestamp = Date.now();
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: timestamp.toString(),
       role: 'user',
       content: input.trim(),
     };
@@ -91,44 +116,91 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
     }));
 
     try {
-      const models = mode === 'single' ? selectedModel : selectedModels;
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: chatHistory, models, modelPreferences }),
-      });
-
-      const data = await response.json();
-
       if (mode === 'single') {
-        const chatResponse = data as ChatResponse;
+        // Single model: one request with loading indicator
+        const response = await fetchWithTimeout('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: chatHistory, models: selectedModel, modelPreferences }),
+        });
+
+        const data = await response.json() as ChatResponse;
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: (timestamp + 1).toString(),
           role: 'assistant',
-          content: chatResponse.error || chatResponse.content,
-          model: chatResponse.model,
-          specificModel: chatResponse.specificModel,
-          responseTime: chatResponse.responseTime,
-          fallback: chatResponse.fallback,
+          content: data.error || data.content,
+          model: data.model,
+          specificModel: data.specificModel,
+          responseTime: data.responseTime,
+          fallback: data.fallback,
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
-        const multiResponse = data as { responses: ChatResponse[] };
-        const assistantMessages: Message[] = multiResponse.responses.map((r, i) => ({
-          id: (Date.now() + i + 1).toString(),
+        // Compare Mode: Progressive loading with parallel requests
+        // Create placeholder messages for each model (with loading state)
+        const placeholderMessages: Message[] = selectedModels.map((model, i) => ({
+          id: `${timestamp}-${model}`,
           role: 'assistant' as const,
-          content: r.error || r.content,
-          model: r.model,
-          specificModel: r.specificModel,
-          responseTime: r.responseTime,
-          fallback: r.fallback,
+          content: '',
+          model,
+          isLoading: true,
         }));
-        setMessages((prev) => [...prev, ...assistantMessages]);
+        setMessages((prev) => [...prev, ...placeholderMessages]);
+
+        // Fire off parallel requests - each updates its own message when done
+        const promises = selectedModels.map(async (model) => {
+          const messageId = `${timestamp}-${model}`;
+          try {
+            const response = await fetchWithTimeout('/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messages: chatHistory,
+                models: model, // Single model per request
+                modelPreferences,
+              }),
+            });
+
+            const data = await response.json() as ChatResponse;
+
+            // Update this specific model's message
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      content: data.error || data.content,
+                      specificModel: data.specificModel,
+                      responseTime: data.responseTime,
+                      fallback: data.fallback,
+                      isLoading: false,
+                    }
+                  : msg
+              )
+            );
+          } catch (error) {
+            // Handle error for this specific model
+            const errorMessage = error instanceof Error ? error.message : 'Request failed';
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      content: `Error: ${errorMessage}`,
+                      isLoading: false,
+                    }
+                  : msg
+              )
+            );
+          }
+        });
+
+        // Wait for all to complete (but UI updates progressively)
+        await Promise.allSettled(promises);
       }
     } catch {
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (timestamp + 1).toString(),
         role: 'assistant',
         content: 'An error occurred while processing your request.',
       };
@@ -200,7 +272,12 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+            className="flex flex-col items-center justify-center h-full text-center"
+          >
             <div className="text-6xl mb-4">🧪</div>
             <h3 className="text-xl font-semibold text-slate-200 mb-2">
               Welcome to Chat Lab
@@ -209,28 +286,55 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
               Test prompts across different AI models. Select a model or enable
               comparison mode to see how different LLMs respond.
             </p>
-          </div>
+          </motion.div>
         ) : (
           <div className="space-y-4 max-w-4xl mx-auto">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                role={message.role}
-                content={message.content}
-                model={message.model}
-                specificModel={message.specificModel}
-                responseTime={message.responseTime}
-                fallback={message.fallback}
-                onFlagBug={() => handleFlagBug(message)}
-                onSaveToLibrary={handleSaveToLibrary}
-              />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  <ChatMessage
+                    role={message.role}
+                    content={message.content}
+                    model={message.model}
+                    specificModel={message.specificModel}
+                    responseTime={message.responseTime}
+                    fallback={message.fallback}
+                    isLoading={message.isLoading}
+                    onFlagBug={() => handleFlagBug(message)}
+                    onSaveToLibrary={handleSaveToLibrary}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-            {isLoading && (
-              <div className="flex items-center gap-2 text-slate-400 p-4">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating response...</span>
-              </div>
+            {isLoading && mode === 'single' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="p-4 rounded-lg bg-slate-900/50 border border-slate-800"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-medium text-emerald-400">Assistant</span>
+                  <span className="text-xs px-2 py-0.5 rounded border bg-purple-600/20 text-purple-400 border-purple-600/30">
+                    {modelPreferences[selectedModel] || selectedModel}
+                  </span>
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  </div>
+                  <span className="text-sm">Thinking...</span>
+                </div>
+              </motion.div>
             )}
           </div>
         )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Trash2, ChevronDown, ChevronUp, Filter, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { modelDisplayNames, LLMProvider } from '@/lib/llm';
+import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface BugReport {
   _id: string;
@@ -161,49 +163,51 @@ export default function BugsPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-            <Bug className="h-6 w-6 text-white" />
+      <MotionWrapper>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+              <Bug className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">
+                <span className="gradient-text-primary">Bug Log</span>
+              </h1>
+              <p className="text-slate-400 mt-1">
+                Track and manage AI response issues
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              <span className="gradient-text-primary">Bug Log</span>
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Track and manage AI response issues
-            </p>
-          </div>
-        </div>
 
-        {/* Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-500" />
-          {mounted && (
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 glass border-slate-700/50">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="glass border-slate-700/50">
-                <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
-                  All Status
-                </SelectItem>
-                <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
-                  Open
-                </SelectItem>
-                <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
-                  Investigating
-                </SelectItem>
-                <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
-                  Resolved
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          {/* Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-500" />
+            {mounted && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40 glass border-slate-700/50">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent className="glass border-slate-700/50">
+                  <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                    All Status
+                  </SelectItem>
+                  <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
+                    Open
+                  </SelectItem>
+                  <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
+                    Investigating
+                  </SelectItem>
+                  <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
+                    Resolved
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
-      </div>
+      </MotionWrapper>
 
       {/* Content */}
       {isLoading ? (
@@ -221,12 +225,14 @@ export default function BugsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <StaggerContainer className="space-y-3">
           {bugs.map((bug) => (
-            <div
-              key={bug._id}
-              className="glass-card rounded-xl overflow-hidden card-hover"
-            >
+            <StaggerItem key={bug._id}>
+              <motion.div
+                className="glass-card rounded-xl overflow-hidden"
+                whileHover={{ scale: 1.01, y: -2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
               {/* Header Row */}
               <div
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors"
@@ -317,9 +323,10 @@ export default function BugsPage() {
                   )}
                 </div>
               )}
-            </div>
+              </motion.div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Status Update Dialog */}

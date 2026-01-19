@@ -23,6 +23,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cohere-ai": "^7.20.0",
+        "framer-motion": "^12.27.1",
         "groq-sdk": "^0.37.0",
         "lucide-react": "^0.468.0",
         "mongoose": "^9.1.4",

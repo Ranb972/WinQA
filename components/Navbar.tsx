@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
@@ -125,36 +126,50 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
         <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', isOpen && 'rotate-180')} />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 dropdown-menu animate-dropdown z-50">
-          {item.dropdown?.map((dropItem) => (
-            dropItem.disabled ? (
-              <div
-                key={dropItem.href}
-                className="dropdown-item opacity-50 cursor-not-allowed"
-              >
-                {dropItem.icon}
-                <span>{dropItem.label}</span>
-                {dropItem.badge && (
-                  <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
-                    {dropItem.badge}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <Link
-                key={dropItem.href}
-                href={dropItem.href}
-                onClick={() => setIsOpen(false)}
-                className="dropdown-item"
-              >
-                {dropItem.icon}
-                <span>{dropItem.label}</span>
-              </Link>
-            )
-          ))}
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {isOpen && (
+          <motion.div
+            key="dropdown"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="absolute top-full left-0 mt-2 dropdown-menu z-50"
+          >
+            {item.dropdown?.map((dropItem) => (
+              dropItem.disabled ? (
+                <div
+                  key={dropItem.href}
+                  className="dropdown-item opacity-50 cursor-not-allowed"
+                >
+                  {dropItem.icon}
+                  <span>{dropItem.label}</span>
+                  {dropItem.badge && (
+                    <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                      {dropItem.badge}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <motion.div
+                  key={dropItem.href}
+                  whileHover={{ x: 4 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Link
+                    href={dropItem.href}
+                    onClick={() => setIsOpen(false)}
+                    className="dropdown-item"
+                  >
+                    {dropItem.icon}
+                    <span>{dropItem.label}</span>
+                  </Link>
+                </motion.div>
+              )
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -196,19 +211,24 @@ export default function Navbar() {
                 }
 
                 return (
-                  <Link
+                  <motion.div
                     key={item.label}
-                    href={item.href!}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-gradient-to-r from-violet-600/20 to-purple-600/20 text-violet-300 border border-violet-500/30'
-                        : 'text-slate-300 hover:text-white hover:bg-white/5'
-                    )}
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
+                    <Link
+                      href={item.href!}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-gradient-to-r from-violet-600/20 to-purple-600/20 text-violet-300 border border-violet-500/30'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>
@@ -249,8 +269,16 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Menu Dropdown */}
-        {mobileMenuOpen && (
-          <div className="glass-nav rounded-2xl mt-2 p-4 animate-dropdown">
+        <AnimatePresence mode="wait">
+          {mobileMenuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="glass-nav rounded-2xl mt-2 p-4"
+            >
             <div className="space-y-2">
               {navItems.map((item) => {
                 const isActive = isItemActive(item);
@@ -331,8 +359,9 @@ export default function Navbar() {
                 <span className="text-sm text-slate-300">Account</span>
               </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
     </>
   );

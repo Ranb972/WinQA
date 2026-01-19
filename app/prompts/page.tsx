@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import {
 import PromptCard from '@/components/PromptCard';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface Prompt {
   _id: string;
@@ -223,30 +225,35 @@ export default function PromptsPage() {
   });
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-            <Library className="h-6 w-6 text-white" />
+      <MotionWrapper>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+              <Library className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">
+                <span className="gradient-text-primary">Prompt Library</span>
+              </h1>
+              <p className="text-slate-400 mt-1">
+                Compare bad vs good prompts and learn best practices
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              <span className="gradient-text-primary">Prompt Library</span>
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Compare bad vs good prompts and learn best practices
-            </p>
-          </div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button onClick={openNewDialog} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Prompt
+            </Button>
+          </motion.div>
         </div>
-        <Button onClick={openNewDialog} className="btn-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Prompt
-        </Button>
-      </div>
+      </MotionWrapper>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+      <MotionWrapper delay={0.1}>
+        <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
@@ -290,7 +297,8 @@ export default function PromptsPage() {
             ))}
           </div>
         )}
-      </div>
+        </div>
+      </MotionWrapper>
 
       {/* Content */}
       {isLoading ? (
@@ -318,23 +326,29 @@ export default function PromptsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredPrompts.map((prompt) => (
-            <PromptCard
-              key={prompt._id}
-              id={prompt._id}
-              title={prompt.title}
-              badPrompt={prompt.bad_prompt_example}
-              goodPrompt={prompt.good_prompt_example}
-              explanation={prompt.explanation}
-              tags={prompt.tags}
-              isFavorite={prompt.is_favorite}
-              onToggleFavorite={() => handleToggleFavorite(prompt._id)}
-              onEdit={() => handleEdit(prompt)}
-              onDelete={() => handleDelete(prompt._id)}
-            />
+            <StaggerItem key={prompt._id}>
+              <motion.div
+                whileHover={{ scale: 1.01, y: -2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                <PromptCard
+                  id={prompt._id}
+                  title={prompt.title}
+                  badPrompt={prompt.bad_prompt_example}
+                  goodPrompt={prompt.good_prompt_example}
+                  explanation={prompt.explanation}
+                  tags={prompt.tags}
+                  isFavorite={prompt.is_favorite}
+                  onToggleFavorite={() => handleToggleFavorite(prompt._id)}
+                  onEdit={() => handleEdit(prompt)}
+                  onDelete={() => handleDelete(prompt._id)}
+                />
+              </motion.div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Dialog */}

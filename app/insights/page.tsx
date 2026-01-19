@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface Insight {
   _id: string;
@@ -180,27 +182,31 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-            <Lightbulb className="h-6 w-6 text-white" />
+      <MotionWrapper>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <Lightbulb className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">
+                <span className="gradient-text-primary">Insights</span>
+              </h1>
+              <p className="text-slate-400 mt-1">
+                Document your learnings about AI models and prompt engineering
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              <span className="gradient-text-primary">Insights</span>
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Document your learnings about AI models and prompt engineering
-            </p>
-          </div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button onClick={openNewDialog} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Insight
+            </Button>
+          </motion.div>
         </div>
-        <Button onClick={openNewDialog} className="btn-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Insight
-        </Button>
-      </div>
+      </MotionWrapper>
 
       {/* Content */}
       {isLoading ? (
@@ -208,24 +214,28 @@ export default function InsightsPage() {
           <div className="text-slate-400">Loading insights...</div>
         </div>
       ) : insights.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">💡</div>
-          <h3 className="text-lg font-medium text-slate-200 mb-2">No insights yet</h3>
-          <p className="text-slate-400 mb-6">
-            Start documenting your learnings about AI behavior
-          </p>
-          <Button onClick={openNewDialog} className="btn-primary">
-            <Plus className="h-4 w-4 mr-2" />
-            Add First Insight
-          </Button>
-        </div>
+        <MotionWrapper>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">💡</div>
+            <h3 className="text-lg font-medium text-slate-200 mb-2">No insights yet</h3>
+            <p className="text-slate-400 mb-6">
+              Start documenting your learnings about AI behavior
+            </p>
+            <Button onClick={openNewDialog} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Insight
+            </Button>
+          </div>
+        </MotionWrapper>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {insights.map((insight) => (
-            <Card
-              key={insight._id}
-              className="glass-card card-hover group"
-            >
+            <StaggerItem key={insight._id}>
+              <motion.div
+                whileHover={{ scale: 1.02, y: -4 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                <Card className="glass-card card-hover group">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
@@ -277,8 +287,10 @@ export default function InsightsPage() {
                 </p>
               </CardContent>
             </Card>
+              </motion.div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Dialog */}

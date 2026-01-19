@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Plus, Search, TestTube2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import TestCaseCard from '@/components/TestCaseCard';
 import { useToast } from '@/hooks/use-toast';
+import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface TestCase {
   _id: string;
@@ -171,38 +173,44 @@ export default function TestCasesPage() {
   );
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
-            <TestTube2 className="h-6 w-6 text-white" />
+      <MotionWrapper>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+              <TestTube2 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">
+                <span className="gradient-text-primary">Test Cases</span>
+              </h1>
+              <p className="text-slate-400 mt-1">
+                Manage and run your AI testing scenarios
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              <span className="gradient-text-primary">Test Cases</span>
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Manage and run your AI testing scenarios
-            </p>
-          </div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button onClick={openNewDialog} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              New Test Case
+            </Button>
+          </motion.div>
         </div>
-        <Button onClick={openNewDialog} className="btn-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          New Test Case
-        </Button>
-      </div>
+      </MotionWrapper>
 
       {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search test cases..."
-          className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
-        />
-      </div>
+      <MotionWrapper delay={0.1}>
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search test cases..."
+            className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+          />
+        </div>
+      </MotionWrapper>
 
       {/* Content */}
       {isLoading ? (
@@ -210,39 +218,47 @@ export default function TestCasesPage() {
           <div className="text-slate-400">Loading test cases...</div>
         </div>
       ) : filteredCases.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🧪</div>
-          <h3 className="text-lg font-medium text-slate-200 mb-2">
-            {searchQuery ? 'No matching test cases' : 'No test cases yet'}
-          </h3>
-          <p className="text-slate-400 mb-6">
-            {searchQuery
-              ? 'Try adjusting your search query'
-              : 'Create your first test case to get started'}
-          </p>
-          {!searchQuery && (
-            <Button onClick={openNewDialog} className="btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Test Case
-            </Button>
-          )}
-        </div>
+        <MotionWrapper>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🧪</div>
+            <h3 className="text-lg font-medium text-slate-200 mb-2">
+              {searchQuery ? 'No matching test cases' : 'No test cases yet'}
+            </h3>
+            <p className="text-slate-400 mb-6">
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Create your first test case to get started'}
+            </p>
+            {!searchQuery && (
+              <Button onClick={openNewDialog} className="btn-primary">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Test Case
+              </Button>
+            )}
+          </div>
+        </MotionWrapper>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCases.map((testCase) => (
-            <TestCaseCard
-              key={testCase._id}
-              id={testCase._id}
-              title={testCase.title}
-              description={testCase.description}
-              initialPrompt={testCase.initial_prompt}
-              expectedOutcome={testCase.expected_outcome}
-              onRun={() => handleRun(testCase)}
-              onEdit={() => handleEdit(testCase)}
-              onDelete={() => handleDelete(testCase._id)}
-            />
+            <StaggerItem key={testCase._id}>
+              <motion.div
+                whileHover={{ scale: 1.02, y: -4 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                <TestCaseCard
+                  id={testCase._id}
+                  title={testCase.title}
+                  description={testCase.description}
+                  initialPrompt={testCase.initial_prompt}
+                  expectedOutcome={testCase.expected_outcome}
+                  onRun={() => handleRun(testCase)}
+                  onEdit={() => handleEdit(testCase)}
+                  onDelete={() => handleDelete(testCase._id)}
+                />
+              </motion.div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Dialog */}

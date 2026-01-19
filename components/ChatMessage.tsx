@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bug, Library, Copy, Check, Clock, AlertCircle } from 'lucide-react';
+import { Bug, Library, Copy, Check, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LLMProvider, FallbackInfo, providerDisplayNames, specificModelDisplayNames } from '@/lib/llm';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ interface ChatMessageProps {
   specificModel?: string;
   responseTime?: number;
   fallback?: FallbackInfo;
+  isLoading?: boolean;
   onFlagBug?: () => void;
   onSaveToLibrary?: () => void;
 }
@@ -26,6 +27,7 @@ export default function ChatMessage({
   specificModel,
   responseTime,
   fallback,
+  isLoading,
   onFlagBug,
   onSaveToLibrary,
 }: ChatMessageProps) {
@@ -38,6 +40,39 @@ export default function ChatMessage({
   };
 
   const isAssistant = role === 'assistant';
+
+  // Loading state for this message
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in p-4 rounded-lg bg-slate-900/50 border border-slate-800">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm font-medium text-emerald-400">Assistant</span>
+          {model && (
+            <span
+              className={cn(
+                'text-xs px-2 py-0.5 rounded border',
+                model === 'cohere' && 'bg-purple-600/20 text-purple-400 border-purple-600/30',
+                model === 'gemini' && 'bg-blue-600/20 text-blue-400 border-blue-600/30',
+                model === 'groq' && 'bg-orange-600/20 text-orange-400 border-orange-600/30',
+                model === 'openrouter' && 'bg-green-600/20 text-green-400 border-green-600/30'
+              )}
+            >
+              {providerDisplayNames[model]}
+            </span>
+          )}
+          <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+        </div>
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex gap-1">
+            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+          </div>
+          <span className="text-sm">Thinking...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
