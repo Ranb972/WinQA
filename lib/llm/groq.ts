@@ -1,28 +1,35 @@
 import Groq from 'groq-sdk';
 import { ChatMessage, ChatResponse, GroqModel } from './types';
 
-let groq: Groq | null = null;
+// Cache clients by API key to avoid creating new instances for each request
+const clientCache = new Map<string, Groq>();
 
-function getGroqClient(): Groq {
-  if (!groq) {
-    groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
+function getGroqClient(customApiKey?: string): Groq {
+  const apiKey = customApiKey || process.env.GROQ_API_KEY || '';
+
+  // Return cached client if exists
+  if (clientCache.has(apiKey)) {
+    return clientCache.get(apiKey)!;
   }
-  return groq;
+
+  // Create and cache new client
+  const client = new Groq({ apiKey });
+  clientCache.set(apiKey, client);
+  return client;
 }
 
 export async function groqChat(
   messages: ChatMessage[],
   temperature: number = 0.7,
   maxTokens: number = 1024,
-  modelOverride?: GroqModel
+  modelOverride?: GroqModel,
+  customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || 'llama-3.3-70b-versatile';
 
   try {
-    const response = await getGroqClient().chat.completions.create({
+    const response = await getGroqClient(customApiKey).chat.completions.create({
       model: modelToUse,
       messages: messages.map((msg) => ({
         role: msg.role,

@@ -1,26 +1,35 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatMessage, ChatResponse, GeminiModel } from './types';
 
-let genAI: GoogleGenerativeAI | null = null;
+// Cache clients by API key to avoid creating new instances for each request
+const clientCache = new Map<string, GoogleGenerativeAI>();
 
-function getGenAI(): GoogleGenerativeAI {
-  if (!genAI) {
-    genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+function getGenAI(customApiKey?: string): GoogleGenerativeAI {
+  const apiKey = customApiKey || process.env.GOOGLE_GEMINI_API_KEY || '';
+
+  // Return cached client if exists
+  if (clientCache.has(apiKey)) {
+    return clientCache.get(apiKey)!;
   }
-  return genAI;
+
+  // Create and cache new client
+  const client = new GoogleGenerativeAI(apiKey);
+  clientCache.set(apiKey, client);
+  return client;
 }
 
 export async function geminiChat(
   messages: ChatMessage[],
   temperature: number = 0.7,
   maxTokens: number = 1024,
-  modelOverride?: GeminiModel
+  modelOverride?: GeminiModel,
+  customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || 'gemini-2.5-flash';
 
   try {
-    const model = getGenAI().getGenerativeModel({
+    const model = getGenAI(customApiKey).getGenerativeModel({
       model: modelToUse,
       generationConfig: {
         temperature,

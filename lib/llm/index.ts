@@ -9,6 +9,7 @@ import {
   LLMProvider,
   MultiModelRequest,
   MultiModelResponse,
+  CustomApiKeys,
 } from './types';
 
 export * from './types';
@@ -20,23 +21,24 @@ export async function chat(
   temperature: number = 0.7,
   maxTokens: number = 1024,
   enableFallback: boolean = true,
-  specificModel?: string
+  specificModel?: string,
+  customApiKeys?: CustomApiKeys
 ): Promise<ChatResponse> {
   // Use fallback-enabled chat by default
   if (enableFallback) {
-    return chatWithFallback(messages, model, temperature, maxTokens, { specificModel });
+    return chatWithFallback(messages, model, temperature, maxTokens, { specificModel, customApiKeys });
   }
 
   // Direct call without fallback
   switch (model) {
     case 'cohere':
-      return cohereChat(messages, temperature, maxTokens, specificModel as any);
+      return cohereChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.cohere);
     case 'gemini':
-      return geminiChat(messages, temperature, maxTokens, specificModel as any);
+      return geminiChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.gemini);
     case 'groq':
-      return groqChat(messages, temperature, maxTokens, specificModel as any);
+      return groqChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.groq);
     case 'openrouter':
-      return openrouterChat(messages, temperature, maxTokens, specificModel as any);
+      return openrouterChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.openrouter);
     default:
       return {
         content: '',
@@ -48,14 +50,14 @@ export async function chat(
 }
 
 export async function multiModelChat(
-  request: MultiModelRequest
+  request: MultiModelRequest & { customApiKeys?: CustomApiKeys }
 ): Promise<MultiModelResponse> {
-  const { messages, models, temperature, maxTokens, modelPreferences } = request;
+  const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys } = request;
 
   const responses = await Promise.all(
     models.map((model) => {
       const specificModel = modelPreferences?.[model];
-      return chat(messages, model, temperature, maxTokens, true, specificModel);
+      return chat(messages, model, temperature, maxTokens, true, specificModel, customApiKeys);
     })
   );
 

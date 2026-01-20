@@ -49,3 +49,11 @@ export interface MultiModelRequest {
 export interface MultiModelResponse {
   responses: ChatResponse[];
 }
+
+// Custom API keys provided by user
+export interface CustomApiKeys {
+  cohere?: string;
+  gemini?: string;
+  groq?: string;
+  openrouter?: string;
+}

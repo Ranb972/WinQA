@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Loader2, Trash2 } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,6 +11,7 @@ import ModelSelector from '@/components/ModelSelector';
 import ChatMessage from '@/components/ChatMessage';
 import BugReportModal from '@/components/BugReportModal';
 import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels } from '@/lib/llm';
+import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 
 interface Message extends ChatMessageType {
   id: string;
@@ -49,6 +51,7 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
+  const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState(initialPrompt || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,9 +65,19 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
     modelUsed: LLMProvider;
   } | null>(null);
   const [modelPreferences, setModelPreferences] = useState<Record<LLMProvider, SpecificModel>>(DEFAULT_MODEL_PREFERENCES);
+  const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load API keys on mount and when user changes
+  useEffect(() => {
+    async function loadApiKeys() {
+      const keys = await getApiKeys(user?.id);
+      setCachedApiKeys(keys);
+    }
+    loadApiKeys();
+  }, [user?.id]);
 
   // Load model preferences from localStorage
   useEffect(() => {
@@ -116,12 +129,15 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
     }));
 
     try {
+      // Use cached API keys (already decrypted)
+      const customApiKeys = cachedApiKeys;
+
       if (mode === 'single') {
         // Single model: one request with loading indicator
         const response = await fetchWithTimeout('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: chatHistory, models: selectedModel, modelPreferences }),
+          body: JSON.stringify({ messages: chatHistory, models: selectedModel, modelPreferences, customApiKeys }),
         });
 
         const data = await response.json() as ChatResponse;
@@ -158,6 +174,7 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
                 messages: chatHistory,
                 models: model, // Single model per request
                 modelPreferences,
+                customApiKeys,
               }),
             });
 

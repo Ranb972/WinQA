@@ -6,7 +6,8 @@ export async function openrouterChat(
   messages: ChatMessage[],
   temperature: number = 0.7,
   maxTokens: number = 1024,
-  modelOverride?: OpenRouterModel
+  modelOverride?: OpenRouterModel,
+  customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || 'deepseek/deepseek-r1-0528:free';
@@ -16,7 +17,7 @@ export async function openrouterChat(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${customApiKey || process.env.OPENROUTER_API_KEY}`,
         'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
         'X-Title': 'WinQA',
       },

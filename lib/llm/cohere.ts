@@ -1,22 +1,29 @@
 import { CohereClient } from 'cohere-ai';
 import { ChatMessage, ChatResponse, CohereModel } from './types';
 
-let cohere: CohereClient | null = null;
+// Cache clients by API key to avoid creating new instances for each request
+const clientCache = new Map<string, CohereClient>();
 
-function getCohereClient(): CohereClient {
-  if (!cohere) {
-    cohere = new CohereClient({
-      token: process.env.COHERE_API_KEY,
-    });
+function getCohereClient(customApiKey?: string): CohereClient {
+  const apiKey = customApiKey || process.env.COHERE_API_KEY || '';
+
+  // Return cached client if exists
+  if (clientCache.has(apiKey)) {
+    return clientCache.get(apiKey)!;
   }
-  return cohere;
+
+  // Create and cache new client
+  const client = new CohereClient({ token: apiKey });
+  clientCache.set(apiKey, client);
+  return client;
 }
 
 export async function cohereChat(
   messages: ChatMessage[],
   temperature: number = 0.7,
   maxTokens: number = 1024,
-  modelOverride?: CohereModel
+  modelOverride?: CohereModel,
+  customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || 'command-r-plus-08-2024';
@@ -30,7 +37,7 @@ export async function cohereChat(
 
     const lastMessage = messages[messages.length - 1];
 
-    const response = await getCohereClient().chat({
+    const response = await getCohereClient(customApiKey).chat({
       model: modelToUse,
       message: lastMessage.content,
       chatHistory: chatHistory.length > 0 ? chatHistory : undefined,

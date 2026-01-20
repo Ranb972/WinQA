@@ -8,6 +8,7 @@ import {
   GeminiModel,
   GroqModel,
   OpenRouterModel,
+  CustomApiKeys,
 } from './types';
 import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
@@ -80,17 +81,18 @@ async function callProvider(
   model: SpecificModel,
   messages: ChatMessage[],
   temperature: number,
-  maxTokens: number
+  maxTokens: number,
+  customApiKeys?: CustomApiKeys
 ): Promise<ChatResponse> {
   switch (provider) {
     case 'cohere':
-      return cohereChat(messages, temperature, maxTokens, model as CohereModel);
+      return cohereChat(messages, temperature, maxTokens, model as CohereModel, customApiKeys?.cohere);
     case 'gemini':
-      return geminiChat(messages, temperature, maxTokens, model as GeminiModel);
+      return geminiChat(messages, temperature, maxTokens, model as GeminiModel, customApiKeys?.gemini);
     case 'groq':
-      return groqChat(messages, temperature, maxTokens, model as GroqModel);
+      return groqChat(messages, temperature, maxTokens, model as GroqModel, customApiKeys?.groq);
     case 'openrouter':
-      return openrouterChat(messages, temperature, maxTokens, model as OpenRouterModel);
+      return openrouterChat(messages, temperature, maxTokens, model as OpenRouterModel, customApiKeys?.openrouter);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -128,6 +130,7 @@ interface FallbackOptions {
   maxAttempts?: number;
   delayBetweenAttempts?: number;
   specificModel?: string;
+  customApiKeys?: CustomApiKeys;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -147,6 +150,7 @@ export async function chatWithFallback(
     maxAttempts = 6,
     delayBetweenAttempts = 500,
     specificModel,
+    customApiKeys,
   } = options;
 
   // Use user-specified model or fall back to default
@@ -180,7 +184,8 @@ export async function chatWithFallback(
       currentModel,
       messages,
       temperature,
-      maxTokens
+      maxTokens,
+      customApiKeys
     );
 
     // Check if the response has an error

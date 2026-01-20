@@ -25,6 +25,7 @@ import {
   X,
   FlaskConical,
   Code,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -93,6 +94,11 @@ const navItems: NavItem[] = [
       { href: '/insights', label: 'All Insights', icon: <Lightbulb className="h-4 w-4" /> },
       { href: '/insights?action=new', label: 'Add New', icon: <Plus className="h-4 w-4" /> },
     ],
+  },
+  {
+    label: 'Settings',
+    href: '/settings',
+    icon: <Settings className="h-4 w-4" />,
   },
 ];
 
