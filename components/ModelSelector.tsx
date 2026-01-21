@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import { LLMProvider, SpecificModel, modelDisplayNames, fallbackChains, specificModelDisplayNames } from '@/lib/llm';
+import { CustomProvider } from '@/lib/custom-providers';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -23,10 +24,13 @@ interface ModelSelectorProps {
   selectedModel?: LLMProvider;
   selectedModels?: LLMProvider[];
   modelPreferences?: Record<LLMProvider, SpecificModel>;
+  customProviders?: CustomProvider[];
+  selectedCustomProviders?: string[];
   onModelChange?: (model: LLMProvider) => void;
   onModelsChange?: (models: LLMProvider[]) => void;
   onModeChange?: (mode: 'single' | 'multi') => void;
   onModelPreferenceChange?: (provider: LLMProvider, model: SpecificModel) => void;
+  onCustomProvidersChange?: (ids: string[]) => void;
 }
 
 const providers: LLMProvider[] = ['cohere', 'gemini', 'groq', 'openrouter'];
@@ -62,10 +66,13 @@ export default function ModelSelector({
   selectedModel = 'cohere',
   selectedModels = [],
   modelPreferences = {} as Record<LLMProvider, SpecificModel>,
+  customProviders = [],
+  selectedCustomProviders = [],
   onModelChange,
   onModelsChange,
   onModeChange,
   onModelPreferenceChange,
+  onCustomProvidersChange,
 }: ModelSelectorProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -78,6 +85,14 @@ export default function ModelSelector({
       onModelsChange?.([...selectedModels, model]);
     } else {
       onModelsChange?.(selectedModels.filter((m) => m !== model));
+    }
+  };
+
+  const handleCustomProviderSelect = (id: string, checked: boolean) => {
+    if (checked) {
+      onCustomProvidersChange?.([...selectedCustomProviders, id]);
+    } else {
+      onCustomProvidersChange?.(selectedCustomProviders.filter((i) => i !== id));
     }
   };
 
@@ -208,7 +223,8 @@ export default function ModelSelector({
 
       {/* Multi Model Selector */}
       {mode === 'multi' && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Built-in providers */}
           {providers.map((provider) => (
             <div key={provider} className="flex items-center gap-1">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -231,6 +247,29 @@ export default function ModelSelector({
               <ModelGearPopover provider={provider} />
             </div>
           ))}
+
+          {/* Custom providers */}
+          {customProviders.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-slate-700 mx-1" />
+              {customProviders.map((provider) => (
+                <div key={provider.id} className="flex items-center gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={selectedCustomProviders.includes(provider.id)}
+                      onCheckedChange={(checked) =>
+                        handleCustomProviderSelect(provider.id, checked as boolean)
+                      }
+                      className="border-slate-600 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                    />
+                    <span className="px-2 py-0.5 rounded text-xs border bg-violet-600/20 text-violet-400 border-violet-600/30">
+                      {provider.name}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

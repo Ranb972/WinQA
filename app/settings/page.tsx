@@ -15,13 +15,34 @@ import {
   Loader2,
   X,
   FlaskConical,
+  Plus,
 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { getApiKeys, setApiKeys, maskApiKey, ApiKeys } from '@/lib/api-keys';
 import { LLMProvider } from '@/lib/llm/types';
+import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
+import { getModelPreferences, setModelPreference, ModelPreferences } from '@/lib/model-preferences';
+import {
+  CustomProvider,
+  getCustomProviders,
+  saveCustomProviders,
+  removeCustomProvider,
+  toggleCustomProvider,
+  MAX_CUSTOM_PROVIDERS,
+} from '@/lib/custom-providers';
+import { testCustomProviderConnection } from '@/lib/llm/custom';
+import CustomProviderCard from '@/components/CustomProviderCard';
+import CustomProviderModal from '@/components/CustomProviderModal';
 
 interface ProviderConfig {
   key: LLMProvider;
@@ -81,23 +102,40 @@ export default function SettingsPage() {
   // Track which fields are being edited (show full key vs masked)
   const [editing, setEditing] = useState<Record<string, boolean>>({});
 
-  // Load keys on mount
+  // Model preferences state
+  const [modelPreferences, setModelPreferencesState] = useState<ModelPreferences>({});
+
+  // Custom providers state
+  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(null);
+
+  // Load keys, model preferences, and custom providers on mount
   useEffect(() => {
-    async function loadKeys() {
+    async function loadData() {
       if (!isLoaded) return;
 
       setIsLoading(true);
       try {
+        // Load API keys
         const stored = await getApiKeys(user?.id);
         setKeysState(stored);
         setSavedKeys(stored);
+
+        // Load model preferences
+        const prefs = getModelPreferences();
+        setModelPreferencesState(prefs);
+
+        // Load custom providers
+        const providers = await getCustomProviders(user?.id);
+        setCustomProviders(providers);
       } catch {
-        // Error loading keys, start fresh
+        // Error loading data, start fresh
       } finally {
         setIsLoading(false);
       }
     }
-    loadKeys();
+    loadData();
   }, [isLoaded, user?.id]);
 
   const toggleVisibility = (provider: string) => {
@@ -187,6 +225,58 @@ export default function SettingsPage() {
 
   const hasChanges = JSON.stringify(keys) !== JSON.stringify(savedKeys);
   const hasAnyKey = Object.values(savedKeys).some((k) => k && k.trim());
+
+  // Handle model preference change
+  const handleModelChange = (provider: LLMProvider, modelId: string) => {
+    setModelPreference(provider, modelId);
+    setModelPreferencesState((prev) => ({ ...prev, [provider]: modelId }));
+  };
+
+  // Handle custom provider save (add or update)
+  const handleSaveProvider = async (
+    providerData: Omit<CustomProvider, 'id'> & { id?: string }
+  ) => {
+    if (providerData.id) {
+      // Update existing
+      const updated = customProviders.map((p) =>
+        p.id === providerData.id ? { ...p, ...providerData } : p
+      );
+      await saveCustomProviders(updated as CustomProvider[], user?.id);
+      setCustomProviders(updated as CustomProvider[]);
+    } else {
+      // Add new
+      const newProvider: CustomProvider = {
+        ...providerData,
+        id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      };
+      const updated = [...customProviders, newProvider];
+      await saveCustomProviders(updated, user?.id);
+      setCustomProviders(updated);
+    }
+    setShowAddModal(false);
+    setEditingProvider(null);
+  };
+
+  // Handle custom provider delete
+  const handleDeleteProvider = async (id: string) => {
+    await removeCustomProvider(id, user?.id);
+    setCustomProviders((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Handle custom provider toggle
+  const handleToggleProvider = async (id: string) => {
+    await toggleCustomProvider(id, user?.id);
+    setCustomProviders((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
+    );
+  };
+
+  // Handle custom provider test
+  const handleTestCustomProvider = async (
+    provider: CustomProvider
+  ): Promise<{ valid: boolean; error?: string }> => {
+    return testCustomProviderConnection(provider);
+  };
 
   // Display value: show masked unless editing or visibility toggled
   const getDisplayValue = (provider: LLMProvider) => {
@@ -382,6 +472,37 @@ export default function SettingsPage() {
                         </motion.p>
                       )}
                     </AnimatePresence>
+
+                    {/* Model Selection Dropdown */}
+                    {PROVIDER_MODELS[provider.key] && (
+                      <div className="mt-3">
+                        <label className="text-xs text-slate-500 mb-1 block">
+                          Model
+                        </label>
+                        <Select
+                          value={modelPreferences[provider.key] || getDefaultModel(provider.key) || ''}
+                          onValueChange={(v) => handleModelChange(provider.key, v)}
+                        >
+                          <SelectTrigger className="bg-slate-900/50 border-slate-700 h-8 text-sm">
+                            <SelectValue placeholder="Select model" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {PROVIDER_MODELS[provider.key].map((model) => (
+                              <SelectItem
+                                key={model.id}
+                                value={model.id}
+                                className="text-slate-300 focus:bg-slate-800 text-sm"
+                              >
+                                {model.name}
+                                {model.default && (
+                                  <span className="text-slate-500 ml-1">(Default)</span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}
@@ -426,6 +547,74 @@ export default function SettingsPage() {
             </div>
           </div>
         </MotionWrapper>
+
+        {/* Custom Providers Section */}
+        <MotionWrapper delay={0.25}>
+          <div className="glass-card rounded-2xl p-6 border border-slate-700/50 mt-6">
+            <h2 className="text-xl font-semibold text-slate-100 mb-2 flex items-center gap-2">
+              <span className="text-2xl">🔌</span> Custom Providers
+            </h2>
+            <p className="text-sm text-slate-400 mb-6">
+              Add OpenAI-compatible API providers (max {MAX_CUSTOM_PROVIDERS})
+            </p>
+
+            {/* List existing custom providers */}
+            {customProviders.length > 0 && (
+              <div className="space-y-3 mb-4">
+                <AnimatePresence>
+                  {customProviders.map((provider) => (
+                    <CustomProviderCard
+                      key={provider.id}
+                      provider={provider}
+                      onEdit={() => setEditingProvider(provider)}
+                      onDelete={() => handleDeleteProvider(provider.id)}
+                      onTest={() => handleTestCustomProvider(provider)}
+                      onToggle={() => handleToggleProvider(provider.id)}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {customProviders.length === 0 && (
+              <p className="text-xs text-slate-500 text-center py-4 mb-4">
+                No custom providers configured. Add providers like OpenAI, Anthropic, or any OpenAI-compatible API.
+              </p>
+            )}
+
+            {/* Add button (disabled if at max) */}
+            {customProviders.length < MAX_CUSTOM_PROVIDERS && (
+              <Button
+                onClick={() => setShowAddModal(true)}
+                variant="outline"
+                className="w-full border-dashed border-slate-600 text-slate-400 hover:text-slate-200 hover:border-slate-500"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Custom Provider
+              </Button>
+            )}
+
+            {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
+              <p className="text-xs text-slate-500 text-center">
+                Maximum {MAX_CUSTOM_PROVIDERS} custom providers reached
+              </p>
+            )}
+          </div>
+        </MotionWrapper>
+
+        {/* Custom Provider Modal */}
+        <CustomProviderModal
+          open={showAddModal || !!editingProvider}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowAddModal(false);
+              setEditingProvider(null);
+            }
+          }}
+          provider={editingProvider}
+          onSave={handleSaveProvider}
+        />
 
         {/* Security Info - Collapsible */}
         <MotionWrapper delay={0.3}>

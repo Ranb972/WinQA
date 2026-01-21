@@ -12,6 +12,8 @@ import ChatMessage from '@/components/ChatMessage';
 import BugReportModal from '@/components/BugReportModal';
 import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
+import { getModelPreferences, setModelPreference } from '@/lib/model-preferences';
+import { CustomProvider, getEnabledCustomProviders } from '@/lib/custom-providers';
 
 interface Message extends ChatMessageType {
   id: string;
@@ -66,36 +68,49 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
   } | null>(null);
   const [modelPreferences, setModelPreferences] = useState<Record<LLMProvider, SpecificModel>>(DEFAULT_MODEL_PREFERENCES);
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
+  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [selectedCustomProviders, setSelectedCustomProviders] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load API keys on mount and when user changes
+  // Load API keys and custom providers on mount and when user changes
   useEffect(() => {
-    async function loadApiKeys() {
+    async function loadData() {
       const keys = await getApiKeys(user?.id);
       setCachedApiKeys(keys);
+
+      // Load enabled custom providers
+      const providers = await getEnabledCustomProviders(user?.id);
+      setCustomProviders(providers);
     }
-    loadApiKeys();
+    loadData();
   }, [user?.id]);
 
   // Load model preferences from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('modelPreferences');
-    if (saved) {
+    // Load from new storage module
+    const prefs = getModelPreferences();
+    if (Object.keys(prefs).length > 0) {
+      setModelPreferences((prev) => ({ ...prev, ...prefs } as Record<LLMProvider, SpecificModel>));
+    }
+    // Also check legacy storage
+    const legacy = localStorage.getItem('modelPreferences');
+    if (legacy) {
       try {
-        const parsed = JSON.parse(saved);
-        setModelPreferences({ ...DEFAULT_MODEL_PREFERENCES, ...parsed });
+        const parsed = JSON.parse(legacy);
+        setModelPreferences((prev) => ({ ...prev, ...parsed }));
       } catch {
-        // Invalid JSON, use defaults
+        // Invalid JSON, ignore
       }
     }
   }, []);
 
-  // Save model preferences to localStorage
-  useEffect(() => {
-    localStorage.setItem('modelPreferences', JSON.stringify(modelPreferences));
-  }, [modelPreferences]);
+  // Handle model preference change - save to new storage
+  const handleModelPreferenceChange = (provider: LLMProvider, model: SpecificModel) => {
+    setModelPreferences((prev) => ({ ...prev, [provider]: model }));
+    setModelPreference(provider, model);
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -153,18 +168,34 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
         // Compare Mode: Progressive loading with parallel requests
-        // Create placeholder messages for each model (with loading state)
-        const placeholderMessages: Message[] = selectedModels.map((model, i) => ({
+        // Get selected custom providers
+        const activeCustomProviders = customProviders.filter((p) =>
+          selectedCustomProviders.includes(p.id)
+        );
+
+        // Create placeholder messages for each built-in model
+        const builtInPlaceholders: Message[] = selectedModels.map((model) => ({
           id: `${timestamp}-${model}`,
           role: 'assistant' as const,
           content: '',
           model,
           isLoading: true,
         }));
-        setMessages((prev) => [...prev, ...placeholderMessages]);
 
-        // Fire off parallel requests - each updates its own message when done
-        const promises = selectedModels.map(async (model) => {
+        // Create placeholder messages for each custom provider
+        const customPlaceholders: Message[] = activeCustomProviders.map((provider) => ({
+          id: `${timestamp}-custom:${provider.id}`,
+          role: 'assistant' as const,
+          content: '',
+          model: `custom:${provider.id}` as LLMProvider,
+          specificModel: `${provider.name}: ${provider.modelId}`,
+          isLoading: true,
+        }));
+
+        setMessages((prev) => [...prev, ...builtInPlaceholders, ...customPlaceholders]);
+
+        // Fire off parallel requests for built-in providers
+        const builtInPromises = selectedModels.map(async (model) => {
           const messageId = `${timestamp}-${model}`;
           try {
             const response = await fetchWithTimeout('/api/chat', {
@@ -172,7 +203,7 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 messages: chatHistory,
-                models: model, // Single model per request
+                models: model,
                 modelPreferences,
                 customApiKeys,
               }),
@@ -180,7 +211,6 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
 
             const data = await response.json() as ChatResponse;
 
-            // Update this specific model's message
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === messageId
@@ -196,7 +226,51 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
               )
             );
           } catch (error) {
-            // Handle error for this specific model
+            const errorMessage = error instanceof Error ? error.message : 'Request failed';
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      content: `Error: ${errorMessage}`,
+                      isLoading: false,
+                    }
+                  : msg
+              )
+            );
+          }
+        });
+
+        // Fire off parallel requests for custom providers
+        const customPromises = activeCustomProviders.map(async (provider) => {
+          const messageId = `${timestamp}-custom:${provider.id}`;
+          try {
+            const response = await fetchWithTimeout('/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messages: chatHistory,
+                models: `custom:${provider.id}`,
+                customProvider: provider,
+              }),
+            });
+
+            const data = await response.json() as ChatResponse;
+
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      content: data.error || data.content,
+                      specificModel: data.specificModel || `${provider.name}: ${provider.modelId}`,
+                      responseTime: data.responseTime,
+                      isLoading: false,
+                    }
+                  : msg
+              )
+            );
+          } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Request failed';
             setMessages((prev) =>
               prev.map((msg) =>
@@ -213,7 +287,7 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
         });
 
         // Wait for all to complete (but UI updates progressively)
-        await Promise.allSettled(promises);
+        await Promise.allSettled([...builtInPromises, ...customPromises]);
       }
     } catch {
       const errorMessage: Message = {
@@ -266,12 +340,13 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
           selectedModel={selectedModel}
           selectedModels={selectedModels}
           modelPreferences={modelPreferences}
+          customProviders={customProviders}
+          selectedCustomProviders={selectedCustomProviders}
           onModelChange={setSelectedModel}
           onModelsChange={setSelectedModels}
           onModeChange={setMode}
-          onModelPreferenceChange={(provider, model) =>
-            setModelPreferences(prev => ({ ...prev, [provider]: model }))
-          }
+          onModelPreferenceChange={handleModelPreferenceChange}
+          onCustomProvidersChange={setSelectedCustomProviders}
         />
 
         <Button
