@@ -53,11 +53,18 @@ export default function TestCasesPage() {
     try {
       const response = await fetch('/api/test-cases');
       const data = await response.json();
-      setTestCases(data);
-    } catch {
+      if (response.ok && Array.isArray(data)) {
+        setTestCases(data);
+      } else {
+        setTestCases([]);
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch test cases');
+        }
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to fetch test cases',
+        description: error instanceof Error ? error.message : 'Failed to fetch test cases',
         variant: 'destructive',
       });
     } finally {

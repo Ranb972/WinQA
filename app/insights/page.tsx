@@ -53,11 +53,18 @@ export default function InsightsPage() {
     try {
       const response = await fetch('/api/insights');
       const data = await response.json();
-      setInsights(data);
-    } catch {
+      if (response.ok && Array.isArray(data)) {
+        setInsights(data);
+      } else {
+        setInsights([]);
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch insights');
+        }
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to fetch insights',
+        description: error instanceof Error ? error.message : 'Failed to fetch insights',
         variant: 'destructive',
       });
     } finally {

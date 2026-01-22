@@ -124,7 +124,7 @@ function StatCard({
   return (
     <MotionWrapper delay={0.1 + index * 0.05}>
       <motion.div
-        className="glass-card p-5 rounded-xl text-center"
+        className="glass-card-premium p-5 rounded-xl text-center"
         whileHover={{ scale: 1.03, y: -2 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       >
@@ -260,7 +260,7 @@ function Dashboard() {
               const Icon = feature.icon;
               return (
                 <StaggerItem key={feature.href}>
-                  <SpotlightCard className="glass-card rounded-2xl p-5 card-glow h-full">
+                  <SpotlightCard className="glass-card-premium rounded-2xl p-5 h-full">
                     <Link href={feature.href} className="block h-full">
                       <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-3 transition-transform group-hover:scale-110`}>
                         <Icon className="h-5 w-5 text-white" />

@@ -61,11 +61,18 @@ export default function PromptsPage() {
     try {
       const response = await fetch('/api/prompts');
       const data = await response.json();
-      setPrompts(data);
-    } catch {
+      if (response.ok && Array.isArray(data)) {
+        setPrompts(data);
+      } else {
+        setPrompts([]);
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch prompts');
+        }
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to fetch prompts',
+        description: error instanceof Error ? error.message : 'Failed to fetch prompts',
         variant: 'destructive',
       });
     } finally {

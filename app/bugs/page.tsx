@@ -82,11 +82,18 @@ export default function BugsPage() {
       }
       const response = await fetch(url);
       const data = await response.json();
-      setBugs(data);
-    } catch {
+      if (response.ok && Array.isArray(data)) {
+        setBugs(data);
+      } else {
+        setBugs([]);
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch bug reports');
+        }
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to fetch bug reports',
+        description: error instanceof Error ? error.message : 'Failed to fetch bug reports',
         variant: 'destructive',
       });
     } finally {
