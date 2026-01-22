@@ -11,14 +11,15 @@ import {
   getLanguageDisplayName,
 } from '@/lib/code-execution';
 import CodeExecutionResultDisplay from '@/components/CodeExecutionResult';
-import DebugModelSelector from '@/components/DebugModelSelector';
+import DebugModelSelector, { DebugMode } from '@/components/DebugModelSelector';
 import { LLMProvider } from '@/lib/llm';
 import { CustomProvider } from '@/lib/custom-providers';
 
 interface CodeBlockProps {
   code: string;
   language: string;
-  onDebugRequest?: (code: string, error: string, model: LLMProvider | string) => void;
+  onDebugRequest?: (code: string, error: string, model: LLMProvider | string, mode: DebugMode) => void;
+  onSuccessAnalysisRequest?: (code: string, output: string | undefined, model: LLMProvider | string, mode: DebugMode) => void;
   customProviders?: CustomProvider[];
 }
 
@@ -35,11 +36,13 @@ export default function CodeBlock({
   code,
   language,
   onDebugRequest,
+  onSuccessAnalysisRequest,
   customProviders,
 }: CodeBlockProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<CodeExecutionResult | null>(null);
   const [showDebugSelector, setShowDebugSelector] = useState(false);
+  const [showSuccessSelector, setShowSuccessSelector] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const normalizedLang = normalizeLanguage(language);
@@ -82,11 +85,18 @@ export default function CodeBlock({
     }
   };
 
-  const handleDebugSelect = (model: LLMProvider | string) => {
+  const handleDebugSelect = (model: LLMProvider | string, mode: DebugMode) => {
     if (result?.error && onDebugRequest) {
-      onDebugRequest(code, result.error, model);
+      onDebugRequest(code, result.error, model, mode);
     }
     setShowDebugSelector(false);
+  };
+
+  const handleSuccessAnalysisSelect = (model: LLMProvider | string, mode: DebugMode) => {
+    if (result?.success && onSuccessAnalysisRequest) {
+      onSuccessAnalysisRequest(code, result.output, model, mode);
+    }
+    setShowSuccessSelector(false);
   };
 
   return (
@@ -155,7 +165,9 @@ export default function CodeBlock({
       {result && (
         <CodeExecutionResultDisplay
           result={result}
+          code={code}
           onDebugClick={() => setShowDebugSelector(true)}
+          onSuccessAnalysisClick={() => setShowSuccessSelector(true)}
         />
       )}
 
@@ -165,6 +177,17 @@ export default function CodeBlock({
           onSelect={handleDebugSelect}
           onClose={() => setShowDebugSelector(false)}
           customProviders={customProviders}
+          analysisType="debug"
+        />
+      )}
+
+      {/* Success analysis model selector */}
+      {showSuccessSelector && result && result.success && (
+        <DebugModelSelector
+          onSelect={handleSuccessAnalysisSelect}
+          onClose={() => setShowSuccessSelector(false)}
+          customProviders={customProviders}
+          analysisType="success"
         />
       )}
     </div>

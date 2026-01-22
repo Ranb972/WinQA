@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -15,11 +15,13 @@ import { CustomProvider } from '@/lib/custom-providers';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 
 export type DebugMode = 'summary' | 'detailed';
+export type AnalysisType = 'debug' | 'success';
 
 interface DebugModelSelectorProps {
   onSelect: (model: LLMProvider | string, mode: DebugMode) => void;
   onClose: () => void;
   customProviders?: CustomProvider[];
+  analysisType?: AnalysisType;
 }
 
 // Built-in providers with their default models for display
@@ -50,11 +52,13 @@ export default function DebugModelSelector({
   onSelect,
   onClose,
   customProviders,
+  analysisType = 'debug',
 }: DebugModelSelectorProps) {
   const [selectedModel, setSelectedModel] = useState<string>('groq');
   const [debugMode, setDebugMode] = useState<DebugMode>('summary');
 
   const enabledCustomProviders = customProviders?.filter((p) => p.enabled) || [];
+  const isSuccess = analysisType === 'success';
 
   const handleAnalyze = () => {
     onSelect(selectedModel, debugMode);
@@ -64,8 +68,14 @@ export default function DebugModelSelector({
     <div className="glass-card rounded-lg p-4 mt-3 border border-slate-700 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-purple-400" />
-          <span className="text-sm font-medium text-slate-200">AI Debug Analysis</span>
+          {isSuccess ? (
+            <Target className="h-4 w-4 text-emerald-400" />
+          ) : (
+            <Search className="h-4 w-4 text-purple-400" />
+          )}
+          <span className="text-sm font-medium text-slate-200">
+            {isSuccess ? 'What Worked? Analysis' : 'AI Debug Analysis'}
+          </span>
         </div>
         <Button
           variant="ghost"
@@ -78,7 +88,9 @@ export default function DebugModelSelector({
       </div>
 
       <p className="text-xs text-slate-400 mb-3">
-        Select a model to analyze the error and suggest fixes:
+        {isSuccess
+          ? 'Select a model to analyze what worked in your code:'
+          : 'Select a model to analyze the error and suggest fixes:'}
       </p>
 
       <Select value={selectedModel} onValueChange={setSelectedModel}>
@@ -131,7 +143,7 @@ export default function DebugModelSelector({
             variant={debugMode === 'summary' ? 'default' : 'outline'}
             onClick={() => setDebugMode('summary')}
             className={debugMode === 'summary'
-              ? 'bg-purple-600 hover:bg-purple-500 text-white text-xs h-7'
+              ? `${isSuccess ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-purple-600 hover:bg-purple-500'} text-white text-xs h-7`
               : 'border-slate-600 text-slate-400 hover:text-slate-200 text-xs h-7'}
           >
             Summary
@@ -141,7 +153,7 @@ export default function DebugModelSelector({
             variant={debugMode === 'detailed' ? 'default' : 'outline'}
             onClick={() => setDebugMode('detailed')}
             className={debugMode === 'detailed'
-              ? 'bg-purple-600 hover:bg-purple-500 text-white text-xs h-7'
+              ? `${isSuccess ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-purple-600 hover:bg-purple-500'} text-white text-xs h-7`
               : 'border-slate-600 text-slate-400 hover:text-slate-200 text-xs h-7'}
           >
             Detailed
@@ -153,9 +165,13 @@ export default function DebugModelSelector({
         <Button
           onClick={handleAnalyze}
           size="sm"
-          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
+          className={`flex-1 bg-gradient-to-r ${
+            isSuccess
+              ? 'from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
+              : 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500'
+          }`}
         >
-          Analyze Error
+          {isSuccess ? 'Analyze Code' : 'Analyze Error'}
         </Button>
         <Button
           onClick={onClose}

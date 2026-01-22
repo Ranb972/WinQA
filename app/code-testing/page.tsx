@@ -17,6 +17,7 @@ import {
   Plus,
   X,
   History,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,6 +36,8 @@ import {
   SupportedLanguage,
   CodeExecutionResult,
   LANGUAGE_DISPLAY_NAMES,
+  isInteractiveHTML,
+  requiresDevEnvironment,
 } from '@/lib/code-execution';
 import { LLMProvider, ChatResponse } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
@@ -76,6 +79,9 @@ export default function CodeTestingPage() {
   const [showDebugSelector, setShowDebugSelector] = useState(false);
   const [isDebugging, setIsDebugging] = useState(false);
   const [debugResult, setDebugResult] = useState<string | null>(null);
+  const [showSuccessSelector, setShowSuccessSelector] = useState(false);
+  const [isAnalyzingSuccess, setIsAnalyzingSuccess] = useState(false);
+  const [successAnalysisResult, setSuccessAnalysisResult] = useState<string | null>(null);
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
 
@@ -95,6 +101,18 @@ export default function CodeTestingPage() {
     setResult(null);
     setShowDebugSelector(false);
     setDebugResult(null);
+    setShowSuccessSelector(false);
+    setSuccessAnalysisResult(null);
+
+    // Check if code is interactive HTML - skip API call and render in iframe
+    if (isInteractiveHTML(codeToRun) && !requiresDevEnvironment(codeToRun)) {
+      setResult({
+        success: true,
+        output: '',
+      });
+      setIsRunning(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/execute-code', {
@@ -126,6 +144,8 @@ export default function CodeTestingPage() {
     setResult(null);
     setShowDebugSelector(false);
     setDebugResult(null);
+    setShowSuccessSelector(false);
+    setSuccessAnalysisResult(null);
 
     try {
       const modelPreferences = getModelPreferences();
@@ -302,6 +322,76 @@ Please analyze the error and explain:
     }
   };
 
+  const handleSuccessAnalysisRequest = async (model: LLMProvider | string, mode: DebugMode) => {
+    if (!result?.success || !code) return;
+
+    setShowSuccessSelector(false);
+    setIsAnalyzingSuccess(true);
+    setSuccessAnalysisResult(null);
+
+    try {
+      const modelPreferences = getModelPreferences();
+      const customApiKeys = cachedApiKeys;
+
+      // Find custom provider if selected
+      let customProvider: CustomProvider | undefined;
+      if (model.startsWith('custom:')) {
+        const providerId = model.replace('custom:', '');
+        customProvider = customProviders.find((p) => p.id === providerId);
+      }
+
+      const summaryPrompt = `Analyze this working ${LANGUAGE_DISPLAY_NAMES[language]} code briefly in 3-5 bullet points:
+- What's good about this code
+- What the user can learn from it
+- Any small improvements (optional)
+
+Be concise and encouraging.
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+${result.output ? `\nOutput:\n${result.output}` : ''}`;
+
+      const detailedPrompt = `Please analyze this working ${LANGUAGE_DISPLAY_NAMES[language]} code and explain:
+1. What's good about this code (2-3 key points)
+2. What programming concepts or patterns the user can learn from it
+3. Optional: Small improvements that could make it even better
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+${result.output ? `\nOutput:\n${result.output}` : ''}`;
+
+      const analysisPrompt = mode === 'summary' ? summaryPrompt : detailedPrompt;
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: analysisPrompt }],
+          models: model,
+          modelPreferences,
+          customApiKeys,
+          ...(customProvider && { customProvider }),
+        }),
+      });
+
+      const data = await response.json() as ChatResponse;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccessAnalysisResult(data.content);
+    } catch (error) {
+      setSuccessAnalysisResult(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsAnalyzingSuccess(false);
+    }
+  };
+
   const handleRunClick = () => {
     if (code.trim()) {
       runCode(code);
@@ -400,6 +490,7 @@ Please analyze the error and explain:
                     setCode('');
                     setResult(null);
                     setDebugResult(null);
+                    setSuccessAnalysisResult(null);
                   }}
                   disabled={!code.trim()}
                   className="text-slate-400 hover:text-slate-200"
@@ -568,6 +659,7 @@ Please analyze the error and explain:
                         setCode('');
                         setResult(null);
                         setDebugResult(null);
+                        setSuccessAnalysisResult(null);
                       }}
                       className="text-slate-400 hover:text-slate-200"
                     >
@@ -669,7 +761,9 @@ Please analyze the error and explain:
               <>
                 <CodeExecutionResultDisplay
                   result={result}
+                  code={code}
                   onDebugClick={() => setShowDebugSelector(true)}
+                  onSuccessAnalysisClick={() => setShowSuccessSelector(true)}
                 />
 
                 {/* Debug Selector */}
@@ -678,6 +772,7 @@ Please analyze the error and explain:
                     onSelect={handleDebugRequest}
                     onClose={() => setShowDebugSelector(false)}
                     customProviders={customProviders}
+                    analysisType="debug"
                   />
                 )}
 
@@ -708,6 +803,47 @@ Please analyze the error and explain:
                     </div>
                     <div className="text-sm text-slate-300 whitespace-pre-wrap font-mono">
                       {debugResult}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Success Analysis Selector */}
+                {showSuccessSelector && result.success && (
+                  <DebugModelSelector
+                    onSelect={handleSuccessAnalysisRequest}
+                    onClose={() => setShowSuccessSelector(false)}
+                    customProviders={customProviders}
+                    analysisType="success"
+                  />
+                )}
+
+                {/* Success Analysis Loading */}
+                {isAnalyzingSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-4 p-4 rounded-lg bg-emerald-900/20 border border-emerald-500/30"
+                  >
+                    <div className="flex items-center gap-3 text-emerald-400">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>AI is analyzing what worked...</span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Success Analysis Result */}
+                {successAnalysisResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-4 rounded-lg bg-emerald-900/20 border border-emerald-500/30"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="h-5 w-5 text-emerald-400" />
+                      <span className="text-sm font-medium text-emerald-400">What Worked? Analysis</span>
+                    </div>
+                    <div className="text-sm text-slate-300 whitespace-pre-wrap font-mono">
+                      {successAnalysisResult}
                     </div>
                   </motion.div>
                 )}
