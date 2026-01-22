@@ -56,7 +56,7 @@ const navItems: NavItem[] = [
     dropdown: [
       { href: '/chat-lab', label: 'Chat Testing', icon: <Zap className="h-4 w-4" /> },
       { href: '/chat-lab?mode=compare', label: 'Compare Mode', icon: <BarChart3 className="h-4 w-4" /> },
-      { href: '#', label: 'Code Testing', icon: <Code className="h-4 w-4" />, disabled: true, badge: 'Soon' },
+      { href: '/code-testing', label: 'Code Testing', icon: <Code className="h-4 w-4" /> },
     ],
   },
   {
