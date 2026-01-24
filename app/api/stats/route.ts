@@ -10,11 +10,12 @@ export async function GET() {
   try {
     await dbConnect();
 
-    const [testCases, bugs, prompts, insights] = await Promise.all([
+    const [testCases, bugs, prompts, insights, resolvedBugs] = await Promise.all([
       TestCase.countDocuments({}),
       BugReport.countDocuments({}),
       PromptLibrary.countDocuments({}),
       Insight.countDocuments({}),
+      BugReport.countDocuments({ status: 'Resolved' }),
     ]);
 
     return NextResponse.json({
@@ -22,6 +23,7 @@ export async function GET() {
       bugs,
       prompts,
       insights,
+      resolvedBugs,
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
