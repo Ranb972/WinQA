@@ -7,6 +7,7 @@ import {
 } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "@/components/Navbar";
+import { baseMetadata } from "@/lib/metadata";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,10 +20,7 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-    title: "WinQA - Your AI Testing Playground",
-    description: "A platform for QA professionals to practice and learn AI testing with interactive labs, test cases, and prompt libraries.",
-};
+export const metadata: Metadata = baseMetadata;
 
 export default function RootLayout({
     children,
