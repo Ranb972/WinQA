@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface PromptCardProps {
   id: string;
@@ -33,6 +34,7 @@ export default function PromptCard({
 }: PromptCardProps) {
   const [copiedBad, setCopiedBad] = useState(false);
   const [copiedGood, setCopiedGood] = useState(false);
+  const { toast } = useToast();
 
   const handleCopy = async (text: string, type: 'bad' | 'good') => {
     await navigator.clipboard.writeText(text);
@@ -43,6 +45,10 @@ export default function PromptCard({
       setCopiedGood(true);
       setTimeout(() => setCopiedGood(false), 2000);
     }
+    toast({
+      title: 'Copied to clipboard',
+      description: `${type === 'good' ? 'Good' : 'Bad'} prompt copied`,
+    });
   };
 
   return (

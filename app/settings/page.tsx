@@ -43,6 +43,7 @@ import {
 import { testCustomProviderConnection } from '@/lib/llm/custom';
 import CustomProviderCard from '@/components/CustomProviderCard';
 import CustomProviderModal from '@/components/CustomProviderModal';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProviderConfig {
   key: LLMProvider;
@@ -91,9 +92,9 @@ export default function SettingsPage() {
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
   const [savedKeys, setSavedKeys] = useState<ApiKeys>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [securityExpanded, setSecurityExpanded] = useState(false);
+  const { toast } = useToast();
 
   // Test status per provider
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({});
@@ -212,12 +213,17 @@ export default function SettingsPage() {
     try {
       await setApiKeys(keys, user?.id);
       setSavedKeys(keys);
-      setSaveMessage('API keys saved and encrypted!');
-      setTimeout(() => {
-        setSaveMessage('');
-      }, 2000);
+      toast({
+        title: 'Settings saved',
+        description: 'API keys saved and encrypted!',
+        variant: 'success',
+      });
     } catch {
-      setSaveMessage('Failed to save keys');
+      toast({
+        title: 'Error',
+        description: 'Failed to save keys',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -243,6 +249,11 @@ export default function SettingsPage() {
       );
       await saveCustomProviders(updated as CustomProvider[], user?.id);
       setCustomProviders(updated as CustomProvider[]);
+      toast({
+        title: 'Provider updated',
+        description: `${providerData.name} has been updated`,
+        variant: 'success',
+      });
     } else {
       // Add new
       const newProvider: CustomProvider = {
@@ -252,6 +263,11 @@ export default function SettingsPage() {
       const updated = [...customProviders, newProvider];
       await saveCustomProviders(updated, user?.id);
       setCustomProviders(updated);
+      toast({
+        title: 'Provider added',
+        description: `${providerData.name} has been added`,
+        variant: 'success',
+      });
     }
     setShowAddModal(false);
     setEditingProvider(null);
@@ -511,17 +527,7 @@ export default function SettingsPage() {
             {/* Save Button */}
             <div className="mt-8 flex items-center justify-between">
               <div className="text-sm">
-                {saveMessage && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-emerald-400 flex items-center gap-2"
-                  >
-                    <Check className="h-4 w-4" />
-                    {saveMessage}
-                  </motion.span>
-                )}
-                {!saveMessage && hasAnyKey && (
+                {hasAnyKey && (
                   <span className="text-slate-500">
                     {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} keys configured
                   </span>

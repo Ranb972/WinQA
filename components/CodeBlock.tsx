@@ -14,6 +14,7 @@ import CodeExecutionResultDisplay from '@/components/CodeExecutionResult';
 import DebugModelSelector, { DebugMode } from '@/components/DebugModelSelector';
 import { LLMProvider } from '@/lib/llm';
 import { CustomProvider } from '@/lib/custom-providers';
+import { useToast } from '@/hooks/use-toast';
 
 interface CodeBlockProps {
   code: string;
@@ -44,6 +45,7 @@ export default function CodeBlock({
   const [showDebugSelector, setShowDebugSelector] = useState(false);
   const [showSuccessSelector, setShowSuccessSelector] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   const normalizedLang = normalizeLanguage(language);
   const isExecutable = isSupportedLanguage(language);
@@ -54,6 +56,10 @@ export default function CodeBlock({
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: 'Code copied',
+      description: 'Code copied to clipboard',
+    });
   };
 
   const handleRun = async () => {
