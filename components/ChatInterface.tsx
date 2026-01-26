@@ -322,9 +322,7 @@ export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
   };
 
   const handleSaveToLibrary = () => {
-    // This would open a dialog to save the prompt pair to the library
-    // For now, we'll just log it
-    console.log('Save to library');
+    // TODO: Implement save to library dialog
   };
 
   const clearChat = () => {

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, ChevronDown, ChevronUp, Filter, Bug } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { modelDisplayNames, LLMProvider } from '@/lib/llm';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
@@ -60,7 +62,10 @@ export default function BugsPage() {
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
   const [editingBug, setEditingBug] = useState<BugReport | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [mounted, setMounted] = useState(false);
@@ -72,15 +77,11 @@ export default function BugsPage() {
 
   useEffect(() => {
     fetchBugs();
-  }, [statusFilter]);
+  }, []);
 
   const fetchBugs = async () => {
     try {
-      let url = '/api/bugs';
-      if (statusFilter !== 'all') {
-        url += `?status=${statusFilter}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch('/api/bugs');
       const data = await response.json();
       if (response.ok && Array.isArray(data)) {
         setBugs(data);
@@ -169,6 +170,22 @@ export default function BugsPage() {
     });
   };
 
+  const filteredBugs = bugs.filter((bug) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      bug.prompt_context.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bug.model_response.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (bug.user_notes?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+
+    const matchesStatus = statusFilter === 'all' || bug.status === statusFilter;
+    const matchesSeverity = severityFilter === 'all' || bug.severity === severityFilter;
+    const matchesIssueType = issueTypeFilter === 'all' || bug.issue_type === issueTypeFilter;
+
+    return matchesSearch && matchesStatus && matchesSeverity && matchesIssueType;
+  });
+
+  const hasActiveFilters = searchQuery || statusFilter !== 'all' || severityFilter !== 'all' || issueTypeFilter !== 'all';
+
   return (
     <div>
       {/* Header */}
@@ -188,29 +205,91 @@ export default function BugsPage() {
             </div>
           </div>
 
-          {/* Filter */}
-          <div className="flex items-center gap-2">
+          </div>
+      </MotionWrapper>
+
+      {/* Search & Filters */}
+      <MotionWrapper delay={0.1}>
+        <div className="space-y-4 mb-6">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by prompt, response, or notes..."
+              className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+            />
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="flex flex-wrap items-center gap-3">
             <Filter className="h-4 w-4 text-slate-500" />
             {mounted && (
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 glass border-slate-700/50">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent className="glass border-slate-700/50">
-                  <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
-                    All Status
-                  </SelectItem>
-                  <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
-                    Open
-                  </SelectItem>
-                  <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
-                    Investigating
-                  </SelectItem>
-                  <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
-                    Resolved
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-36 glass border-slate-700/50">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="glass border-slate-700/50">
+                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                      All Status
+                    </SelectItem>
+                    <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
+                      Open
+                    </SelectItem>
+                    <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
+                      Investigating
+                    </SelectItem>
+                    <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
+                      Resolved
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                  <SelectTrigger className="w-32 glass border-slate-700/50">
+                    <SelectValue placeholder="Severity" />
+                  </SelectTrigger>
+                  <SelectContent className="glass border-slate-700/50">
+                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                      All Severity
+                    </SelectItem>
+                    <SelectItem value="Low" className="text-slate-300 focus:bg-violet-600/20">
+                      Low
+                    </SelectItem>
+                    <SelectItem value="Medium" className="text-slate-300 focus:bg-violet-600/20">
+                      Medium
+                    </SelectItem>
+                    <SelectItem value="High" className="text-slate-300 focus:bg-violet-600/20">
+                      High
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
+                  <SelectTrigger className="w-36 glass border-slate-700/50">
+                    <SelectValue placeholder="Issue Type" />
+                  </SelectTrigger>
+                  <SelectContent className="glass border-slate-700/50">
+                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                      All Types
+                    </SelectItem>
+                    <SelectItem value="Hallucination" className="text-slate-300 focus:bg-violet-600/20">
+                      Hallucination
+                    </SelectItem>
+                    <SelectItem value="Formatting" className="text-slate-300 focus:bg-violet-600/20">
+                      Formatting
+                    </SelectItem>
+                    <SelectItem value="Refusal" className="text-slate-300 focus:bg-violet-600/20">
+                      Refusal
+                    </SelectItem>
+                    <SelectItem value="Logic" className="text-slate-300 focus:bg-violet-600/20">
+                      Logic
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
             )}
           </div>
         </div>
@@ -218,22 +297,42 @@ export default function BugsPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="text-slate-400">Loading bug reports...</div>
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-4 w-24 ml-2" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      ) : bugs.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🐛</div>
-          <h3 className="text-lg font-medium text-slate-200 mb-2">
-            No bugs reported
-          </h3>
-          <p className="text-slate-400">
-            Bug reports will appear here when you flag issues in Chat Lab
-          </p>
-        </div>
+      ) : filteredBugs.length === 0 ? (
+        <MotionWrapper>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🐛</div>
+            <h3 className="text-lg font-medium text-slate-200 mb-2">
+              {hasActiveFilters ? 'No matching bugs' : 'No bugs reported'}
+            </h3>
+            <p className="text-slate-400">
+              {hasActiveFilters
+                ? 'Try adjusting your search or filters'
+                : 'Bug reports will appear here when you flag issues in Chat Lab'}
+            </p>
+          </div>
+        </MotionWrapper>
       ) : (
         <StaggerContainer className="space-y-3">
-          {bugs.map((bug) => (
+          {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
               <motion.div
                 className="glass-card rounded-xl overflow-hidden"

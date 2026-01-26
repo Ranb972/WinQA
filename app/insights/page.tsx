@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Lightbulb } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lightbulb, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface Insight {
@@ -33,6 +34,8 @@ const suggestedTags = ['Cohere', 'Gemini', 'Groq', 'Hebrew', 'Code', 'Formatting
 export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInsight, setEditingInsight] = useState<Insight | null>(null);
   const [formData, setFormData] = useState({
@@ -188,6 +191,23 @@ export default function InsightsPage() {
     });
   };
 
+  // Get all unique tags from insights
+  const allTags = Array.from(new Set(insights.flatMap((insight) => insight.tags))).sort();
+
+  // Filter insights by search and tag
+  const filteredInsights = insights.filter((insight) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      insight.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      insight.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesTag = !selectedTag || insight.tags.includes(selectedTag);
+
+    return matchesSearch && matchesTag;
+  });
+
+  const hasActiveFilters = searchQuery || selectedTag;
+
   return (
     <div>
       {/* Header */}
@@ -215,28 +235,101 @@ export default function InsightsPage() {
         </div>
       </MotionWrapper>
 
+      {/* Search & Tag Filter */}
+      <MotionWrapper delay={0.1}>
+        <div className="space-y-4 mb-6">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by title or content..."
+              className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+            />
+          </div>
+
+          {/* Tag Filter */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-slate-500">Tags:</span>
+              <Badge
+                className={`cursor-pointer transition-all ${
+                  !selectedTag
+                    ? 'bg-violet-600/30 text-violet-300 border-violet-500/50'
+                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
+                }`}
+                onClick={() => setSelectedTag(null)}
+              >
+                All
+              </Badge>
+              {allTags.map((tag) => (
+                <Badge
+                  key={tag}
+                  className={`cursor-pointer transition-all ${
+                    selectedTag === tag
+                      ? 'bg-violet-600/30 text-violet-300 border-violet-500/50'
+                      : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
+                  }`}
+                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      </MotionWrapper>
+
       {/* Content */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="text-slate-400">Loading insights...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="glass-card rounded-lg p-6">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-6 w-48" />
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-3/4 mb-4" />
+              <div className="flex gap-1 mb-3">
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ))}
         </div>
-      ) : insights.length === 0 ? (
+      ) : filteredInsights.length === 0 ? (
         <MotionWrapper>
           <div className="text-center py-16">
             <div className="text-6xl mb-4">💡</div>
-            <h3 className="text-lg font-medium text-slate-200 mb-2">No insights yet</h3>
+            <h3 className="text-lg font-medium text-slate-200 mb-2">
+              {hasActiveFilters ? 'No matching insights' : 'No insights yet'}
+            </h3>
             <p className="text-slate-400 mb-6">
-              Start documenting your learnings about AI behavior
+              {hasActiveFilters
+                ? 'Try adjusting your search or tag filter'
+                : 'Start documenting your learnings about AI behavior'}
             </p>
-            <Button onClick={openNewDialog} className="btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Insight
-            </Button>
+            {!hasActiveFilters && (
+              <Button onClick={openNewDialog} className="btn-primary">
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Insight
+              </Button>
+            )}
           </div>
         </MotionWrapper>
       ) : (
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {insights.map((insight) => (
+          {filteredInsights.map((insight) => (
             <StaggerItem key={insight._id}>
               <motion.div
                 whileHover={{ scale: 1.02, y: -4 }}

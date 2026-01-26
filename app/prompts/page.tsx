@@ -18,6 +18,7 @@ import {
 import PromptCard from '@/components/PromptCard';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
 interface Prompt {
@@ -309,8 +310,29 @@ export default function PromptsPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="text-slate-400">Loading prompts...</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-lg p-6">
+              <div className="flex items-start justify-between mb-3">
+                <Skeleton className="h-6 w-48" />
+                <div className="flex gap-1">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </div>
+              <div className="flex gap-1 mb-4">
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-20 w-full rounded-lg mb-4" />
+              <Skeleton className="h-3 w-24 mb-2" />
+              <Skeleton className="h-20 w-full rounded-lg mb-4" />
+              <Skeleton className="h-3 w-28 mb-2" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ))}
         </div>
       ) : filteredPrompts.length === 0 ? (
         <div className="text-center py-16">

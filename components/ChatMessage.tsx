@@ -7,6 +7,7 @@ import { Bug, Library, Copy, Check, Clock, AlertCircle, Loader2 } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { LLMProvider, FallbackInfo, providerDisplayNames, specificModelDisplayNames } from '@/lib/llm';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant' | 'system';
@@ -32,11 +33,16 @@ export default function ChatMessage({
   onSaveToLibrary,
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: 'Copied to clipboard',
+      description: 'Response copied',
+    });
   };
 
   const isAssistant = role === 'assistant';

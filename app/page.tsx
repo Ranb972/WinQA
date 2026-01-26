@@ -298,7 +298,7 @@ function ExampleCard({ title, prompt, category, index }: { title: string; prompt
 }
 
 // Rotating Image Preview Component
-function RotatingImagePreview({ images }: { images: string[] }) {
+function RotatingImagePreview({ images, priority = false }: { images: string[]; priority?: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -326,6 +326,8 @@ function RotatingImagePreview({ images }: { images: string[] }) {
             src={images[currentIndex]}
             alt="Feature preview"
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority={priority && currentIndex === 0}
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </motion.div>
@@ -341,10 +343,12 @@ function FeatureShowcaseSection({
   feature,
   stats,
   index,
+  isFirst = false,
 }: {
   feature: typeof featureSections[0];
   stats: { testCases: number; bugs: number; prompts: number; insights: number; resolvedBugs: number };
   index: number;
+  isFirst?: boolean;
 }) {
   const Icon = feature.icon;
 
@@ -379,7 +383,7 @@ function FeatureShowcaseSection({
         {/* Content Row */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Image Preview */}
-          <RotatingImagePreview images={feature.images} />
+          <RotatingImagePreview images={feature.images} priority={isFirst} />
 
           {/* Bullet Points */}
           <ul className="space-y-3">
@@ -493,6 +497,7 @@ function Dashboard() {
           feature={feature}
           stats={isLoading ? { testCases: 0, bugs: 0, prompts: 0, insights: 0, resolvedBugs: 0 } : stats}
           index={index}
+          isFirst={index === 0}
         />
       ))}
 

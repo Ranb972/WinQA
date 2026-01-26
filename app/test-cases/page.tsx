@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import TestCaseCard from '@/components/TestCaseCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 
@@ -221,8 +222,26 @@ export default function TestCasesPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="text-slate-400">Loading test cases...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-lg p-6">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <Skeleton className="h-6 w-40 mb-2" />
+                  <Skeleton className="h-4 w-full max-w-[16rem]" />
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-14 mb-2 mt-4" />
+              <Skeleton className="h-16 w-full rounded-lg mb-4" />
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-8 w-full mb-4" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          ))}
         </div>
       ) : filteredCases.length === 0 ? (
         <MotionWrapper>

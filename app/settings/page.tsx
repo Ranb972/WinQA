@@ -16,6 +16,9 @@ import {
   X,
   FlaskConical,
   Plus,
+  Download,
+  Upload,
+  AlertTriangle,
 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
@@ -28,6 +31,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getApiKeys, setApiKeys, maskApiKey, ApiKeys } from '@/lib/api-keys';
 import { LLMProvider } from '@/lib/llm/types';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
@@ -110,6 +123,12 @@ export default function SettingsPage() {
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(null);
+
+  // Export/Import state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
+  const [showReplaceWarning, setShowReplaceWarning] = useState(false);
 
   // Load keys, model preferences, and custom providers on mount
   useEffect(() => {
@@ -292,6 +311,115 @@ export default function SettingsPage() {
     provider: CustomProvider
   ): Promise<{ valid: boolean; error?: string }> => {
     return testCustomProviderConnection(provider);
+  };
+
+  // Handle data export
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/export');
+      if (!response.ok) throw new Error('Export failed');
+
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `winqa-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Export complete',
+        description: 'Your data has been downloaded',
+        variant: 'success',
+      });
+    } catch {
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handle import file selection
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        // Basic validation
+        if (!data.version || !data.data) {
+          throw new Error('Invalid format');
+        }
+        setPendingImportData(data);
+      } catch {
+        toast({
+          title: 'Invalid file',
+          description: 'The file is not a valid WinQA export',
+          variant: 'destructive',
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // Handle import mode selection
+  const handleImport = (mode: 'merge' | 'replace') => {
+    if (mode === 'replace') {
+      setShowReplaceWarning(true);
+      return;
+    }
+    executeImport(mode);
+  };
+
+  // Execute the actual import
+  const executeImport = async (mode: 'merge' | 'replace') => {
+    setIsImporting(true);
+    setShowReplaceWarning(false);
+
+    try {
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: pendingImportData, mode }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Import failed');
+      }
+
+      const total = result.imported.bugs + result.imported.prompts +
+                    result.imported.testCases + result.imported.insights;
+
+      toast({
+        title: 'Import complete',
+        description: `Imported ${total} items (${result.imported.bugs} bugs, ${result.imported.prompts} prompts, ${result.imported.testCases} test cases, ${result.imported.insights} insights)`,
+        variant: 'success',
+      });
+
+      setPendingImportData(null);
+    } catch (error) {
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Failed to import data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Display value: show masked unless editing or visibility toggled
@@ -621,6 +749,116 @@ export default function SettingsPage() {
           provider={editingProvider}
           onSave={handleSaveProvider}
         />
+
+        {/* Export/Import Section */}
+        <MotionWrapper delay={0.27}>
+          <div className="glass-card rounded-2xl p-6 border border-slate-700/50 mt-6">
+            <h2 className="text-xl font-semibold text-slate-100 mb-2 flex items-center gap-2">
+              <span className="text-2xl">💾</span> Export / Import Data
+            </h2>
+            <p className="text-sm text-slate-400 mb-6">
+              Backup your data or restore from a previous export
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Export Button */}
+              <Button
+                onClick={handleExport}
+                disabled={isExporting}
+                variant="outline"
+                className="h-20 flex-col gap-2 border-slate-600 hover:border-emerald-500/50 hover:bg-emerald-500/10"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                ) : (
+                  <Download className="h-6 w-6 text-emerald-400" />
+                )}
+                <span className="text-slate-300">Export Data</span>
+              </Button>
+
+              {/* Import Button */}
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportFile}
+                  className="hidden"
+                  disabled={isImporting}
+                />
+                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-slate-600 rounded-md hover:border-blue-500/50 hover:bg-blue-500/10 transition-colors">
+                  {isImporting ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                  ) : (
+                    <Upload className="h-6 w-6 text-blue-400" />
+                  )}
+                  <span className="text-slate-300">Import Data</span>
+                </div>
+              </label>
+            </div>
+
+            {/* Import Mode Selection */}
+            {pendingImportData && (
+              <div className="mt-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700">
+                <p className="text-sm text-slate-300 mb-3">How would you like to import?</p>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleImport('merge')}
+                    disabled={isImporting}
+                    variant="outline"
+                    className="flex-1 border-slate-600 hover:border-emerald-500/50"
+                  >
+                    Merge (Add to existing)
+                  </Button>
+                  <Button
+                    onClick={() => handleImport('replace')}
+                    disabled={isImporting}
+                    variant="outline"
+                    className="flex-1 border-slate-600 hover:border-rose-500/50 text-rose-400"
+                  >
+                    Replace (Delete existing)
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => setPendingImportData(null)}
+                  variant="ghost"
+                  className="w-full mt-2 text-slate-500"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 mt-4">
+              Export includes: bugs, prompts, test cases, and insights
+            </p>
+          </div>
+        </MotionWrapper>
+
+        {/* Replace Warning Dialog */}
+        <AlertDialog open={showReplaceWarning} onOpenChange={setShowReplaceWarning}>
+          <AlertDialogContent className="glass border-slate-700/50 bg-slate-900">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
+                Replace all data?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400">
+                This will permanently delete all your existing bugs, prompts, test cases, and insights before importing the new data. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => executeImport('replace')}
+                className="bg-rose-600 hover:bg-rose-500 text-white"
+              >
+                Yes, replace all
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Security Info - Collapsible */}
         <MotionWrapper delay={0.3}>

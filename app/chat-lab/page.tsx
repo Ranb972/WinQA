@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import ChatInterface from '@/components/ChatInterface';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function ChatLabContent() {
   const searchParams = useSearchParams();
@@ -11,16 +12,40 @@ function ChatLabContent() {
   return <ChatInterface initialPrompt={initialPrompt} />;
 }
 
+function ChatLabSkeleton() {
+  return (
+    <div className="flex flex-col h-[calc(100vh-2rem)]">
+      {/* Header skeleton */}
+      <div className="flex items-center justify-between p-4 border-b border-slate-800">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-48 rounded-md" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+        <Skeleton className="h-9 w-20 rounded-md" />
+      </div>
+
+      {/* Messages area skeleton */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <Skeleton className="h-16 w-16 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+
+      {/* Input skeleton */}
+      <div className="p-4 border-t border-slate-800">
+        <div className="max-w-4xl mx-auto flex gap-2">
+          <Skeleton className="flex-1 h-[60px] rounded-md" />
+          <Skeleton className="h-[60px] w-[60px] rounded-md" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatLabPage() {
   return (
     <div className="h-screen">
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center h-full">
-            <div className="text-slate-400">Loading...</div>
-          </div>
-        }
-      >
+      <Suspense fallback={<ChatLabSkeleton />}>
         <ChatLabContent />
       </Suspense>
     </div>
