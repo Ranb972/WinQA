@@ -113,6 +113,11 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
     setModelPreference(provider, model);
   };
 
+  // Sync mode with initialCompareMode prop when it changes (for URL navigation)
+  useEffect(() => {
+    setMode(initialCompareMode ? 'multi' : 'single');
+  }, [initialCompareMode]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

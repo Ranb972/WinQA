@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import {
-  MessageSquare,
   TestTube2,
   Bug,
   Library,
@@ -15,12 +14,9 @@ import {
   ChevronDown,
   Zap,
   BarChart3,
-  ClipboardList,
   Plus,
-  Tag,
   CheckCircle,
   CircleDot,
-  Star,
   Menu,
   X,
   FlaskConical,
@@ -61,12 +57,8 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Test Cases',
+    href: '/test-cases',
     icon: <TestTube2 className="h-4 w-4" />,
-    dropdown: [
-      { href: '/test-cases', label: 'All Tests', icon: <ClipboardList className="h-4 w-4" /> },
-      { href: '/test-cases?action=new', label: 'Add New', icon: <Plus className="h-4 w-4" /> },
-      { href: '/test-cases?filter=category', label: 'By Category', icon: <Tag className="h-4 w-4" /> },
-    ],
   },
   {
     label: 'Bug Log',
@@ -80,20 +72,13 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Prompts',
+    href: '/prompts',
     icon: <Library className="h-4 w-4" />,
-    dropdown: [
-      { href: '/prompts', label: 'All Prompts', icon: <Library className="h-4 w-4" /> },
-      { href: '/prompts?filter=favorites', label: 'Favorites', icon: <Star className="h-4 w-4" /> },
-      { href: '/prompts?action=new', label: 'Add New', icon: <Plus className="h-4 w-4" /> },
-    ],
   },
   {
     label: 'Insights',
+    href: '/insights',
     icon: <Lightbulb className="h-4 w-4" />,
-    dropdown: [
-      { href: '/insights', label: 'All Insights', icon: <Lightbulb className="h-4 w-4" /> },
-      { href: '/insights?action=new', label: 'Add New', icon: <Plus className="h-4 w-4" /> },
-    ],
   },
   {
     label: 'Settings',
