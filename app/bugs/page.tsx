@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,8 @@ const issueTypeColors = {
   Logic: 'bg-cyan-600/20 text-cyan-400 border-cyan-600/30',
 };
 
-export default function BugsPage() {
+function BugsPageContent() {
+  const searchParams = useSearchParams();
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export default function BugsPage() {
   const [mounted, setMounted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paramsProcessed, setParamsProcessed] = useState(false);
   const [formData, setFormData] = useState({
     prompt_context: '',
     model_response: '',
@@ -89,6 +92,24 @@ export default function BugsPage() {
   useEffect(() => {
     fetchBugs();
   }, []);
+
+  // Handle URL parameters
+  useEffect(() => {
+    if (paramsProcessed) return;
+
+    const status = searchParams.get('status');
+    const action = searchParams.get('action');
+
+    if (status === 'Open' || status === 'Investigating' || status === 'Resolved') {
+      setStatusFilter(status);
+    }
+
+    if (action === 'new') {
+      setTimeout(() => setDialogOpen(true), 100);
+    }
+
+    setParamsProcessed(true);
+  }, [searchParams, paramsProcessed]);
 
   const fetchBugs = async () => {
     try {
@@ -673,5 +694,36 @@ export default function BugsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Skeleton loading component
+function BugsPageSkeleton() {
+  return (
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-32 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function BugsPage() {
+  return (
+    <Suspense fallback={<BugsPageSkeleton />}>
+      <BugsPageContent />
+    </Suspense>
   );
 }

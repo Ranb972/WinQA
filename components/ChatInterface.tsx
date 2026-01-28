@@ -50,14 +50,15 @@ const DEFAULT_MODEL_PREFERENCES: Record<LLMProvider, SpecificModel> = defaultMod
 
 interface ChatInterfaceProps {
   initialPrompt?: string;
+  initialCompareMode?: boolean;
 }
 
-export default function ChatInterface({ initialPrompt }: ChatInterfaceProps) {
+export default function ChatInterface({ initialPrompt, initialCompareMode = false }: ChatInterfaceProps) {
   const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState(initialPrompt || '');
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'single' | 'multi'>('single');
+  const [mode, setMode] = useState<'single' | 'multi'>(initialCompareMode ? 'multi' : 'single');
   const [selectedModel, setSelectedModel] = useState<LLMProvider>('cohere');
   const [selectedModels, setSelectedModels] = useState<LLMProvider[]>(['cohere', 'gemini']);
   const [bugModalOpen, setBugModalOpen] = useState(false);

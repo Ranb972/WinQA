@@ -8,8 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 function ChatLabContent() {
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get('prompt') || undefined;
+  const mode = searchParams.get('mode');
+  const initialCompareMode = mode === 'compare';
 
-  return <ChatInterface initialPrompt={initialPrompt} />;
+  return <ChatInterface initialPrompt={initialPrompt} initialCompareMode={initialCompareMode} />;
 }
 
 function ChatLabSkeleton() {

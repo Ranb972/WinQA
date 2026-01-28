@@ -510,7 +510,7 @@ function Dashboard() {
 // Landing page for signed-out users
 function LandingPage() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
+    <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-pink-900/10 via-transparent to-purple-900/10 pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-purple-600/20 to-transparent blur-3xl pointer-events-none" />

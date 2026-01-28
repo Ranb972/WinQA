@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Lightbulb, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,8 @@ interface Insight {
 
 const suggestedTags = ['Cohere', 'Gemini', 'Groq', 'Hebrew', 'Code', 'Formatting', 'Edge Cases'];
 
-export default function InsightsPage() {
+function InsightsPageContent() {
+  const searchParams = useSearchParams();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,12 +47,26 @@ export default function InsightsPage() {
   });
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paramsProcessed, setParamsProcessed] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchInsights();
   }, []);
+
+  // Handle URL parameters
+  useEffect(() => {
+    if (paramsProcessed) return;
+
+    const action = searchParams.get('action');
+
+    if (action === 'new') {
+      setTimeout(() => setDialogOpen(true), 100);
+    }
+
+    setParamsProcessed(true);
+  }, [searchParams, paramsProcessed]);
 
   const fetchInsights = async () => {
     try {
@@ -502,5 +518,33 @@ export default function InsightsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Skeleton loading component
+function InsightsPageSkeleton() {
+  return (
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <Skeleton className="h-10 flex-1" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-48 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function InsightsPage() {
+  return (
+    <Suspense fallback={<InsightsPageSkeleton />}>
+      <InsightsPageContent />
+    </Suspense>
   );
 }

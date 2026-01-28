@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,8 @@ interface Prompt {
 
 const suggestedTags = ['Formatting', 'Reasoning', 'Security', 'Code', 'Creative', 'Analysis'];
 
-export default function PromptsPage() {
+function PromptsPageContent() {
+  const searchParams = useSearchParams();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,12 +53,32 @@ export default function PromptsPage() {
   });
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paramsProcessed, setParamsProcessed] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchPrompts();
   }, []);
+
+  // Handle URL parameters
+  useEffect(() => {
+    if (paramsProcessed) return;
+
+    const filter = searchParams.get('filter');
+    const action = searchParams.get('action');
+
+    if (filter === 'favorites') {
+      setShowFavoritesOnly(true);
+    }
+
+    if (action === 'new') {
+      // Small delay to ensure component is mounted
+      setTimeout(() => setDialogOpen(true), 100);
+    }
+
+    setParamsProcessed(true);
+  }, [searchParams, paramsProcessed]);
 
   const fetchPrompts = async () => {
     try {
@@ -514,5 +536,34 @@ export default function PromptsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Skeleton loading component
+function PromptsPageSkeleton() {
+  return (
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-64 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function PromptsPage() {
+  return (
+    <Suspense fallback={<PromptsPageSkeleton />}>
+      <PromptsPageContent />
+    </Suspense>
   );
 }
