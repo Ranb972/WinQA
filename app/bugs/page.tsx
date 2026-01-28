@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -69,6 +70,16 @@ export default function BugsPage() {
   const [editingBug, setEditingBug] = useState<BugReport | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [mounted, setMounted] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    prompt_context: '',
+    model_response: '',
+    model_used: 'cohere',
+    issue_type: 'Hallucination' as 'Hallucination' | 'Formatting' | 'Refusal' | 'Logic',
+    severity: 'Medium' as 'Low' | 'Medium' | 'High',
+    user_notes: '',
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -160,6 +171,61 @@ export default function BugsPage() {
     setNewStatus(bug.status);
   };
 
+  const resetForm = () => {
+    setFormData({
+      prompt_context: '',
+      model_response: '',
+      model_used: 'cohere',
+      issue_type: 'Hallucination',
+      severity: 'Medium',
+      user_notes: '',
+    });
+  };
+
+  const openNewDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const handleCreateBug = async () => {
+    if (!formData.prompt_context.trim() || !formData.model_response.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Prompt and model response are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/bugs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) throw new Error('Failed to create bug report');
+
+      toast({
+        title: 'Bug report created',
+        description: 'Your bug report has been saved successfully.',
+      });
+
+      setDialogOpen(false);
+      resetForm();
+      fetchBugs();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to create bug report',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -204,8 +270,13 @@ export default function BugsPage() {
               </p>
             </div>
           </div>
-
-          </div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button onClick={openNewDialog} className="btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Bug
+            </Button>
+          </motion.div>
+        </div>
       </MotionWrapper>
 
       {/* Search & Filters */}
@@ -334,11 +405,7 @@ export default function BugsPage() {
         <StaggerContainer className="space-y-3">
           {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
-              <motion.div
-                className="glass-card rounded-xl overflow-hidden"
-                whileHover={{ scale: 1.01, y: -2 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              >
+              <div className="glass-card rounded-xl overflow-hidden hover:border-slate-600 transition-colors">
               {/* Header Row */}
               <div
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors"
@@ -429,7 +496,7 @@ export default function BugsPage() {
                   )}
                 </div>
               )}
-              </motion.div>
+              </div>
             </StaggerItem>
           ))}
         </StaggerContainer>
@@ -479,6 +546,128 @@ export default function BugsPage() {
               className="btn-primary"
             >
               Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Bug Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="glass border-slate-700/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-100">Add Bug Report</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Document an AI response issue you&apos;ve encountered
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">Prompt Context *</label>
+              <Textarea
+                value={formData.prompt_context}
+                onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
+                placeholder="What prompt or context triggered this issue?"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">Model Response *</label>
+              <Textarea
+                value={formData.model_response}
+                onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
+                placeholder="What was the problematic response?"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[100px]"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Model Used</label>
+                {mounted && (
+                  <Select
+                    value={formData.model_used}
+                    onValueChange={(value) => setFormData({ ...formData, model_used: value })}
+                  >
+                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass border-slate-700/50">
+                      <SelectItem value="cohere" className="text-slate-300 focus:bg-violet-600/20">Cohere</SelectItem>
+                      <SelectItem value="gemini" className="text-slate-300 focus:bg-violet-600/20">Gemini</SelectItem>
+                      <SelectItem value="groq" className="text-slate-300 focus:bg-violet-600/20">Groq</SelectItem>
+                      <SelectItem value="openrouter" className="text-slate-300 focus:bg-violet-600/20">OpenRouter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Issue Type</label>
+                {mounted && (
+                  <Select
+                    value={formData.issue_type}
+                    onValueChange={(value) => setFormData({ ...formData, issue_type: value as typeof formData.issue_type })}
+                  >
+                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass border-slate-700/50">
+                      <SelectItem value="Hallucination" className="text-slate-300 focus:bg-violet-600/20">Hallucination</SelectItem>
+                      <SelectItem value="Formatting" className="text-slate-300 focus:bg-violet-600/20">Formatting</SelectItem>
+                      <SelectItem value="Refusal" className="text-slate-300 focus:bg-violet-600/20">Refusal</SelectItem>
+                      <SelectItem value="Logic" className="text-slate-300 focus:bg-violet-600/20">Logic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Severity</label>
+                {mounted && (
+                  <Select
+                    value={formData.severity}
+                    onValueChange={(value) => setFormData({ ...formData, severity: value as typeof formData.severity })}
+                  >
+                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass border-slate-700/50">
+                      <SelectItem value="Low" className="text-slate-300 focus:bg-violet-600/20">Low</SelectItem>
+                      <SelectItem value="Medium" className="text-slate-300 focus:bg-violet-600/20">Medium</SelectItem>
+                      <SelectItem value="High" className="text-slate-300 focus:bg-violet-600/20">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">Notes (optional)</label>
+              <Textarea
+                value={formData.user_notes}
+                onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
+                placeholder="Any additional context or observations..."
+                className="bg-slate-950/50 border-slate-700 text-slate-100"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setDialogOpen(false)}
+              className="text-slate-400"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateBug}
+              disabled={isSubmitting}
+              className="btn-primary"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Bug Report'}
             </Button>
           </DialogFooter>
         </DialogContent>

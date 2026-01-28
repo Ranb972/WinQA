@@ -19,6 +19,7 @@ interface ChatMessageProps {
   isLoading?: boolean;
   onFlagBug?: () => void;
   onSaveToLibrary?: () => void;
+  compact?: boolean;
 }
 
 export default function ChatMessage({
@@ -31,6 +32,7 @@ export default function ChatMessage({
   isLoading,
   onFlagBug,
   onSaveToLibrary,
+  compact,
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -83,7 +85,8 @@ export default function ChatMessage({
   return (
     <div
       className={cn(
-        'animate-fade-in p-4 rounded-lg',
+        'animate-fade-in rounded-lg h-full',
+        compact ? 'p-3' : 'p-4',
         isAssistant ? 'bg-slate-900/50 border border-slate-800' : 'bg-slate-800/30'
       )}
     >
@@ -108,7 +111,7 @@ export default function ChatMessage({
                 model === 'openrouter' && 'bg-green-600/20 text-green-400 border-green-600/30'
               )}
             >
-              {specificModel || 'unknown'} ({providerDisplayNames[model]})
+              {compact ? (specificModel || providerDisplayNames[model]) : `${specificModel || 'unknown'} (${providerDisplayNames[model]})`}
             </span>
           )}
           {responseTime !== undefined && (

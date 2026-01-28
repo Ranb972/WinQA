@@ -358,23 +358,18 @@ export default function PromptsPage() {
         <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredPrompts.map((prompt) => (
             <StaggerItem key={prompt._id}>
-              <motion.div
-                whileHover={{ scale: 1.01, y: -2 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              >
-                <PromptCard
-                  id={prompt._id}
-                  title={prompt.title}
-                  badPrompt={prompt.bad_prompt_example}
-                  goodPrompt={prompt.good_prompt_example}
-                  explanation={prompt.explanation}
-                  tags={prompt.tags}
-                  isFavorite={prompt.is_favorite}
-                  onToggleFavorite={() => handleToggleFavorite(prompt._id)}
-                  onEdit={() => handleEdit(prompt)}
-                  onDelete={() => handleDelete(prompt._id)}
-                />
-              </motion.div>
+              <PromptCard
+                id={prompt._id}
+                title={prompt.title}
+                badPrompt={prompt.bad_prompt_example}
+                goodPrompt={prompt.good_prompt_example}
+                explanation={prompt.explanation}
+                tags={prompt.tags}
+                isFavorite={prompt.is_favorite}
+                onToggleFavorite={() => handleToggleFavorite(prompt._id)}
+                onEdit={() => handleEdit(prompt)}
+                onDelete={() => handleDelete(prompt._id)}
+              />
             </StaggerItem>
           ))}
         </StaggerContainer>
