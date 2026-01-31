@@ -169,13 +169,13 @@ export default function ModelSelector({
   };
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
       {/* Mode Toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => onModeChange?.('single')}
           className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'single'
               ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30'
               : 'text-slate-400 hover:text-slate-300'
@@ -186,7 +186,7 @@ export default function ModelSelector({
         <button
           onClick={() => onModeChange?.('multi')}
           className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'multi'
               ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30'
               : 'text-slate-400 hover:text-slate-300'
@@ -200,7 +200,7 @@ export default function ModelSelector({
       {mode === 'single' && mounted && (
         <div className="flex items-center gap-2">
           <Select value={selectedModel} onValueChange={(v) => onModelChange?.(v as LLMProvider)}>
-            <SelectTrigger className="w-48 bg-slate-900 border-slate-700">
+            <SelectTrigger className="w-full sm:w-48 bg-slate-900 border-slate-700">
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
@@ -223,7 +223,7 @@ export default function ModelSelector({
 
       {/* Multi Model Selector */}
       {mode === 'multi' && (
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Built-in providers */}
           {providers.map((provider) => (
             <div key={provider} className="flex items-center gap-1">
@@ -237,7 +237,7 @@ export default function ModelSelector({
                 />
                 <span
                   className={cn(
-                    'px-2 py-0.5 rounded text-xs border',
+                    'px-1.5 sm:px-2 py-0.5 rounded text-xs border whitespace-nowrap',
                     modelBadgeColors[provider]
                   )}
                 >
@@ -262,7 +262,7 @@ export default function ModelSelector({
                       }
                       className="border-slate-600 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
                     />
-                    <span className="px-2 py-0.5 rounded text-xs border bg-violet-600/20 text-violet-400 border-violet-600/30">
+                    <span className="px-1.5 sm:px-2 py-0.5 rounded text-xs border bg-violet-600/20 text-violet-400 border-violet-600/30 whitespace-nowrap truncate max-w-[100px] sm:max-w-none">
                       {provider.name}
                     </span>
                   </label>

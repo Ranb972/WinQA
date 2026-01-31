@@ -338,26 +338,28 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
-        <ModelSelector
-          mode={mode}
-          selectedModel={selectedModel}
-          selectedModels={selectedModels}
-          modelPreferences={modelPreferences}
-          customProviders={customProviders}
-          selectedCustomProviders={selectedCustomProviders}
-          onModelChange={setSelectedModel}
-          onModelsChange={setSelectedModels}
-          onModeChange={setMode}
-          onModelPreferenceChange={handleModelPreferenceChange}
-          onCustomProvidersChange={setSelectedCustomProviders}
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-slate-800">
+        <div className="overflow-x-auto">
+          <ModelSelector
+            mode={mode}
+            selectedModel={selectedModel}
+            selectedModels={selectedModels}
+            modelPreferences={modelPreferences}
+            customProviders={customProviders}
+            selectedCustomProviders={selectedCustomProviders}
+            onModelChange={setSelectedModel}
+            onModelsChange={setSelectedModels}
+            onModeChange={setMode}
+            onModelPreferenceChange={handleModelPreferenceChange}
+            onCustomProvidersChange={setSelectedCustomProviders}
+          />
+        </div>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={clearChat}
-          className="text-slate-400 hover:text-rose-400"
+          className="text-slate-400 hover:text-rose-400 shrink-0 self-end sm:self-auto"
           disabled={messages.length === 0}
         >
           <Trash2 className="h-4 w-4 mr-2" />
