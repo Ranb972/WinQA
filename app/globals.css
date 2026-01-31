@@ -401,3 +401,56 @@ pre code {
 .transition-smooth {
   transition: all 0.3s ease;
 }
+
+/* ========================================
+   MOBILE RESPONSIVE UTILITIES
+   ======================================== */
+
+/* Ensure minimum touch target size (44px) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Safe area padding for notched devices */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Prevent horizontal scroll */
+.no-horizontal-scroll {
+  overflow-x: hidden;
+}
+
+/* Mobile-friendly text truncation */
+.mobile-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Mobile card container */
+.mobile-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Responsive dialog */
+@media (max-width: 640px) {
+  .dropdown-menu {
+    min-width: 160px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Improved tap feedback */
+@media (hover: none) {
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+}
