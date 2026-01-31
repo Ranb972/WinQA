@@ -42,7 +42,7 @@ export default function RootLayout({
 
                     <SignedIn>
                         <Navbar />
-                        <main className="pt-24 px-4 md:px-6 pb-8 max-w-7xl mx-auto relative">
+                        <main className="pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 pb-6 sm:pb-8 max-w-7xl mx-auto relative">
                             {children}
                         </main>
                     </SignedIn>
