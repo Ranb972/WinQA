@@ -168,6 +168,13 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedMobileDropdowns, setExpandedMobileDropdowns] = useState<string[]>([]);
+
+  const toggleMobileDropdown = (label: string) => {
+    setExpandedMobileDropdowns((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+    );
+  };
 
   const isItemActive = (item: NavItem) => {
     if (item.href) {
@@ -275,45 +282,75 @@ export default function Navbar() {
                 const isActive = isItemActive(item);
 
                 if (item.dropdown) {
+                  const isExpanded = expandedMobileDropdowns.includes(item.label);
                   return (
                     <div key={item.label} className="space-y-1">
-                      <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-400">
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </div>
-                      <div className="pl-4 space-y-1">
-                        {item.dropdown.map((dropItem) => (
-                          dropItem.disabled ? (
-                            <div
-                              key={dropItem.href}
-                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 opacity-50 cursor-not-allowed"
-                            >
-                              {dropItem.icon}
-                              <span>{dropItem.label}</span>
-                              {dropItem.badge && (
-                                <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
-                                  {dropItem.badge}
-                                </span>
-                              )}
+                      <button
+                        onClick={() => toggleMobileDropdown(item.label)}
+                        className={cn(
+                          'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-violet-600/20 text-violet-300'
+                            : 'text-slate-300 hover:bg-white/5'
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            'h-4 w-4 transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                        />
+                      </button>
+                      <AnimatePresence mode="wait">
+                        {isExpanded && (
+                          <motion.div
+                            key={`${item.label}-dropdown`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-4 space-y-1 pt-1">
+                              {item.dropdown.map((dropItem) => (
+                                dropItem.disabled ? (
+                                  <div
+                                    key={dropItem.href}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 opacity-50 cursor-not-allowed"
+                                  >
+                                    {dropItem.icon}
+                                    <span>{dropItem.label}</span>
+                                    {dropItem.badge && (
+                                      <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                                        {dropItem.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <Link
+                                    key={dropItem.href}
+                                    href={dropItem.href}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className={cn(
+                                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                                      pathname === dropItem.href.split('?')[0]
+                                        ? 'bg-violet-600/20 text-violet-300'
+                                        : 'text-slate-300 hover:bg-white/5'
+                                    )}
+                                  >
+                                    {dropItem.icon}
+                                    <span>{dropItem.label}</span>
+                                  </Link>
+                                )
+                              ))}
                             </div>
-                          ) : (
-                            <Link
-                              key={dropItem.href}
-                              href={dropItem.href}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                                pathname === dropItem.href.split('?')[0]
-                                  ? 'bg-violet-600/20 text-violet-300'
-                                  : 'text-slate-300 hover:bg-white/5'
-                              )}
-                            >
-                              {dropItem.icon}
-                              <span>{dropItem.label}</span>
-                            </Link>
-                          )
-                        ))}
-                      </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 }
