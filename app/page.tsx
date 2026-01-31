@@ -15,7 +15,6 @@ import {
   Sparkles,
   FlaskConical,
   BookOpen,
-  Zap,
   BarChart3,
   Code,
   Rocket,
@@ -697,22 +696,13 @@ function LandingPage() {
 
         {/* Footer */}
         <MotionWrapper>
-          <footer className="text-center py-12">
-            {/* Cyber tagline with shimmer effect */}
-            <div className="relative inline-block cyber-spark">
-              {/* Glow backdrop */}
-              <div className="cyber-glow-bg" />
-              {/* Main text with shimmer */}
-              <p className="text-xl md:text-2xl font-medium tracking-wide cyber-shimmer cyber-text">
-                {tagline}
-              </p>
-            </div>
-            {/* Electric line decoration */}
-            <div className="flex items-center justify-center gap-3 mt-6">
-              <div className="cyber-line w-16 md:w-24" />
-              <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
-              <div className="cyber-line w-16 md:w-24" />
-            </div>
+          <footer className="text-center py-16">
+            {/* Premium tagline with subtle shimmer */}
+            <p className="text-xl md:text-2xl font-light tracking-wide shimmer-text">
+              {tagline}
+            </p>
+            {/* Minimal divider */}
+            <div className="divider-gradient w-24 mx-auto mt-8" />
           </footer>
         </MotionWrapper>
       </main>

@@ -456,161 +456,44 @@ pre code {
 }
 
 /* ========================================
-   FUTURISTIC CYBER SHIMMER TEXT EFFECT
+   PREMIUM METALLIC SHIMMER EFFECT
    ======================================== */
 
-/* Main cyber text with electric glow */
-.cyber-text {
-  position: relative;
-  color: #e0f7ff;
-  text-shadow:
-    0 0 10px rgba(34, 211, 238, 0.8),
-    0 0 20px rgba(34, 211, 238, 0.6),
-    0 0 40px rgba(34, 211, 238, 0.4),
-    0 0 80px rgba(34, 211, 238, 0.2);
-  animation: cyber-flicker 4s ease-in-out infinite;
-}
-
-/* Subtle neon flicker */
-@keyframes cyber-flicker {
-  0%, 100% {
-    text-shadow:
-      0 0 10px rgba(34, 211, 238, 0.8),
-      0 0 20px rgba(34, 211, 238, 0.6),
-      0 0 40px rgba(34, 211, 238, 0.4),
-      0 0 80px rgba(34, 211, 238, 0.2);
-  }
-  50% {
-    text-shadow:
-      0 0 5px rgba(34, 211, 238, 0.6),
-      0 0 15px rgba(34, 211, 238, 0.4),
-      0 0 30px rgba(34, 211, 238, 0.3),
-      0 0 60px rgba(34, 211, 238, 0.1);
-  }
-}
-
-/* Electric shimmer sweep across text */
-.cyber-shimmer {
+/* Subtle metallic shimmer - like premium car commercials */
+.shimmer-text {
   position: relative;
   display: inline-block;
   background: linear-gradient(
     90deg,
-    #64748b 0%,
-    #94a3b8 20%,
-    #e0f7ff 40%,
-    #22d3ee 50%,
-    #67e8f9 52%,
-    #e0f7ff 60%,
-    #94a3b8 80%,
-    #64748b 100%
+    rgba(226, 232, 240, 1) 0%,
+    rgba(226, 232, 240, 1) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(226, 232, 240, 1) 60%,
+    rgba(226, 232, 240, 1) 100%
   );
-  background-size: 250% 100%;
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer-sweep 3s linear infinite;
+  animation: shimmer 4s ease-in-out infinite;
 }
 
-@keyframes shimmer-sweep {
-  0% {
+@keyframes shimmer {
+  0%, 100% {
     background-position: 200% center;
   }
-  100% {
+  50% {
     background-position: -200% center;
   }
 }
 
-/* Glow backdrop */
-.cyber-glow-bg {
-  position: absolute;
-  inset: -12px -24px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(34, 211, 238, 0.2) 0%,
-    rgba(34, 211, 238, 0.1) 30%,
-    transparent 70%
-  );
-  filter: blur(12px);
-  animation: glow-pulse 2s ease-in-out infinite;
-  pointer-events: none;
-  z-index: -1;
-}
-
-@keyframes glow-pulse {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-
-/* Horizontal data stream line */
-.cyber-line {
+/* Minimal gradient divider */
+.divider-gradient {
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(34, 211, 238, 0.3) 20%,
-    rgba(34, 211, 238, 0.8) 50%,
-    rgba(34, 211, 238, 0.3) 80%,
+    rgba(148, 163, 184, 0.4) 50%,
     transparent 100%
   );
-  animation: line-pulse 2s ease-in-out infinite;
-}
-
-@keyframes line-pulse {
-  0%, 100% {
-    opacity: 0.5;
-    transform: scaleX(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-}
-
-/* Electric spark traveling effect */
-.cyber-spark {
-  position: relative;
-  overflow: hidden;
-}
-
-.cyber-spark::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -100%;
-  width: 60px;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #22d3ee,
-    #67e8f9,
-    #22d3ee,
-    transparent
-  );
-  transform: translateY(-50%);
-  animation: spark-travel 4s ease-in-out infinite;
-  filter: blur(1px);
-}
-
-@keyframes spark-travel {
-  0% {
-    left: -100%;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    left: 200%;
-    opacity: 0;
-  }
 }
