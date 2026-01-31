@@ -417,16 +417,16 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
     <div>
       {/* Header */}
       <MotionWrapper>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-              <Code className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+              <Code className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="gradient-text-primary">Code Testing Lab</span>
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-sm sm:text-base text-slate-400 mt-1">
                 Test and debug code with AI assistance
               </p>
             </div>
@@ -434,7 +434,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
           {/* Language Selector */}
           <Select value={language} onValueChange={(v) => setLanguage(v as SupportedLanguage)}>
-            <SelectTrigger className="w-[150px] bg-slate-900/50 border-slate-700">
+            <SelectTrigger className="w-full sm:w-[150px] bg-slate-900/50 border-slate-700">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
@@ -530,9 +530,9 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   className="bg-slate-900/50 border-slate-700 text-slate-100 min-h-[100px] resize-y"
                 />
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-[250px] bg-slate-900/50 border-slate-700">
+                    <SelectTrigger className="w-full sm:w-[250px] bg-slate-900/50 border-slate-700">
                       <SelectValue placeholder="Select model" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700">
@@ -570,25 +570,27 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                     </SelectContent>
                   </Select>
 
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      onClick={generateCode}
-                      disabled={!prompt.trim() || isGenerating}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Bot className="h-4 w-4 mr-2" />
-                          Generate Code
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
+                  <div className="w-full sm:w-auto">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={generateCode}
+                        disabled={!prompt.trim() || isGenerating}
+                        className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Bot className="h-4 w-4 mr-2" />
+                            Generate Code
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                  </div>
                 </div>
               </div>
 
@@ -606,11 +608,11 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <pre className="font-mono text-sm bg-slate-900/50 border border-slate-700 rounded-lg p-4 overflow-x-auto text-slate-100 mb-4 max-h-[300px] overflow-y-auto">
                     {pendingCode}
                   </pre>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
                     <Button
                       size="sm"
                       onClick={handleUseCode}
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                      className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Use This Code
@@ -619,7 +621,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       size="sm"
                       variant="outline"
                       onClick={handleAddToCurrent}
-                      className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                      className="w-full sm:w-auto border-slate-600 text-slate-300 hover:bg-slate-800"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add to Current
@@ -628,7 +630,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       size="sm"
                       variant="ghost"
                       onClick={handleDiscard}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="w-full sm:w-auto text-slate-400 hover:text-slate-200"
                     >
                       <X className="h-4 w-4 mr-2" />
                       Discard
