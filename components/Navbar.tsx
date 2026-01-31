@@ -376,15 +376,23 @@ export default function Navbar() {
 
             {/* User Section in Mobile */}
             <div className="mt-4 pt-4 border-t border-slate-700/50">
-              <div className="flex items-center gap-3 px-3">
+              <div className="flex items-center gap-3 px-3 py-2">
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: 'h-8 w-8 ring-2 ring-violet-500/30',
+                      avatarBox: 'h-10 w-10 ring-2 ring-violet-500/30',
                     },
                   }}
+                  afterSignOutUrl="/"
                 />
-                <span className="text-sm text-slate-300">Account</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-200 truncate">
+                    Account
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Tap avatar to sign out
+                  </p>
+                </div>
               </div>
             </div>
             </motion.div>
