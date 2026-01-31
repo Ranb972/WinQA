@@ -258,22 +258,22 @@ function PromptsPageContent() {
     <div>
       {/* Header */}
       <MotionWrapper>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-              <Library className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+              <Library className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="gradient-text-primary">Prompt Library</span>
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-sm sm:text-base text-slate-400 mt-1">
                 Compare bad vs good prompts and learn best practices
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary">
+            <Button onClick={openNewDialog} className="btn-primary w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Prompt
             </Button>
@@ -283,8 +283,8 @@ function PromptsPageContent() {
 
       {/* Filters */}
       <MotionWrapper delay={0.1}>
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             value={searchQuery}
@@ -299,7 +299,7 @@ function PromptsPageContent() {
           size="sm"
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
           className={cn(
-            'transition-all',
+            'transition-all shrink-0',
             showFavoritesOnly
               ? 'bg-gradient-to-r from-rose-500 to-pink-500 border-none text-white'
               : 'border-slate-700 text-slate-400 hover:text-slate-100 hover:border-violet-500/50'
@@ -310,13 +310,13 @@ function PromptsPageContent() {
         </Button>
 
         {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="w-full sm:w-auto flex flex-wrap gap-2">
             {allTags.map((tag) => (
               <Badge
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                 className={cn(
-                  'cursor-pointer transition-all',
+                  'cursor-pointer transition-all text-xs',
                   selectedTag === tag
                     ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent'
                     : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
@@ -399,7 +399,7 @@ function PromptsPageContent() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-slate-100">
               {editingPrompt ? 'Edit Prompt' : 'Add Prompt'}
@@ -432,7 +432,7 @@ function PromptsPageContent() {
                   setFormData({ ...formData, bad_prompt_example: e.target.value })
                 }
                 placeholder="The ineffective prompt..."
-                className="bg-rose-950/20 border-rose-900/30 text-rose-300 placeholder:text-rose-400/50 min-h-[100px]"
+                className="bg-rose-950/20 border-rose-900/30 text-rose-300 placeholder:text-rose-400/50 min-h-[80px] sm:min-h-[100px]"
               />
             </div>
 
@@ -446,7 +446,7 @@ function PromptsPageContent() {
                   setFormData({ ...formData, good_prompt_example: e.target.value })
                 }
                 placeholder="The improved prompt..."
-                className="bg-emerald-950/20 border-emerald-900/30 text-emerald-300 placeholder:text-emerald-400/50 min-h-[100px]"
+                className="bg-emerald-950/20 border-emerald-900/30 text-emerald-300 placeholder:text-emerald-400/50 min-h-[80px] sm:min-h-[100px]"
               />
             </div>
 
@@ -472,7 +472,7 @@ function PromptsPageContent() {
                 {formData.tags.map((tag) => (
                   <Badge
                     key={tag}
-                    className="bg-violet-600/20 text-violet-400 border-violet-600/30 cursor-pointer"
+                    className="bg-violet-600/20 text-violet-400 border-violet-600/30 cursor-pointer text-xs"
                     onClick={() => removeTag(tag)}
                   >
                     {tag} ×
@@ -517,18 +517,18 @@ function PromptsPageContent() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-slate-400 hover:text-slate-100 w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
             >
               {isSubmitting ? 'Saving...' : editingPrompt ? 'Update' : 'Create'}
             </Button>
