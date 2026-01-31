@@ -696,13 +696,10 @@ function LandingPage() {
 
         {/* Footer */}
         <MotionWrapper>
-          <footer className="text-center py-16">
-            {/* Premium tagline with subtle shimmer */}
-            <p className="text-xl md:text-2xl font-light tracking-wide shimmer-text">
+          <footer className="text-center py-24">
+            <p className="text-2xl md:text-3xl font-semibold tracking-wider premium-tagline">
               {tagline}
             </p>
-            {/* Minimal divider */}
-            <div className="divider-gradient w-24 mx-auto mt-8" />
           </footer>
         </MotionWrapper>
       </main>
