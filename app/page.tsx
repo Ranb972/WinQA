@@ -697,16 +697,21 @@ function LandingPage() {
 
         {/* Footer */}
         <MotionWrapper>
-          <footer className="text-center py-8">
-            <p className="text-lg italic">
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-                &ldquo;{tagline}&rdquo;
-              </span>
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-              <Sparkles className="h-3 w-3 text-purple-400/60" />
-              <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+          <footer className="text-center py-12">
+            {/* Cyber tagline with shimmer effect */}
+            <div className="relative inline-block cyber-spark">
+              {/* Glow backdrop */}
+              <div className="cyber-glow-bg" />
+              {/* Main text with shimmer */}
+              <p className="text-xl md:text-2xl font-medium tracking-wide cyber-shimmer cyber-text">
+                {tagline}
+              </p>
+            </div>
+            {/* Electric line decoration */}
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <div className="cyber-line w-16 md:w-24" />
+              <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
+              <div className="cyber-line w-16 md:w-24" />
             </div>
           </footer>
         </MotionWrapper>
