@@ -277,22 +277,22 @@ function BugsPageContent() {
     <div>
       {/* Header */}
       <MotionWrapper>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-              <Bug className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+              <Bug className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="gradient-text-primary">Bug Log</span>
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-slate-400 text-sm sm:text-base mt-1">
                 Track and manage AI response issues
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary">
+            <Button onClick={openNewDialog} className="btn-primary w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Bug
             </Button>
@@ -320,7 +320,7 @@ function BugsPageContent() {
             {mounted && (
               <>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-36 glass border-slate-700/50">
+                  <SelectTrigger className="w-28 sm:w-36 glass border-slate-700/50 text-sm">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="glass border-slate-700/50">
@@ -340,7 +340,7 @@ function BugsPageContent() {
                 </Select>
 
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-32 glass border-slate-700/50">
+                  <SelectTrigger className="w-24 sm:w-32 glass border-slate-700/50 text-sm">
                     <SelectValue placeholder="Severity" />
                   </SelectTrigger>
                   <SelectContent className="glass border-slate-700/50">
@@ -360,7 +360,7 @@ function BugsPageContent() {
                 </Select>
 
                 <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
-                  <SelectTrigger className="w-36 glass border-slate-700/50">
+                  <SelectTrigger className="w-28 sm:w-36 glass border-slate-700/50 text-sm">
                     <SelectValue placeholder="Issue Type" />
                   </SelectTrigger>
                   <SelectContent className="glass border-slate-700/50">
@@ -429,12 +429,12 @@ function BugsPageContent() {
               <div className="glass-card rounded-xl overflow-hidden hover:border-slate-600 transition-colors">
               {/* Header Row */}
               <div
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-white/5 transition-colors"
                 onClick={() =>
                   setExpandedId(expandedId === bug._id ? null : bug._id)
                 }
               >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -443,7 +443,7 @@ function BugsPageContent() {
                   >
                     <Badge
                       className={cn(
-                        'border cursor-pointer hover:opacity-80 transition-opacity',
+                        'border cursor-pointer hover:opacity-80 transition-opacity text-xs',
                         statusColors[bug.status]
                       )}
                     >
@@ -451,19 +451,19 @@ function BugsPageContent() {
                     </Badge>
                   </button>
                   <Badge
-                    className={cn('border', issueTypeColors[bug.issue_type])}
+                    className={cn('border text-xs', issueTypeColors[bug.issue_type])}
                   >
                     {bug.issue_type}
                   </Badge>
-                  <Badge className={cn('border', severityColors[bug.severity])}>
+                  <Badge className={cn('border text-xs', severityColors[bug.severity])}>
                     {bug.severity}
                   </Badge>
-                  <span className="text-sm text-slate-300 ml-2">
+                  <span className="text-xs sm:text-sm text-slate-300 truncate max-w-[120px] sm:max-w-none">
                     {modelDisplayNames[bug.model_used as LLMProvider] || bug.model_used}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
                   <span className="text-xs text-slate-500">
                     {formatDate(bug.created_at)}
                   </span>
@@ -574,7 +574,7 @@ function BugsPageContent() {
 
       {/* Add New Bug Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-slate-100">Add Bug Report</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -603,7 +603,7 @@ function BugsPageContent() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-300">Model Used</label>
                 {mounted && (
@@ -611,7 +611,7 @@ function BugsPageContent() {
                     value={formData.model_used}
                     onValueChange={(value) => setFormData({ ...formData, model_used: value })}
                   >
-                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="glass border-slate-700/50">
@@ -631,7 +631,7 @@ function BugsPageContent() {
                     value={formData.issue_type}
                     onValueChange={(value) => setFormData({ ...formData, issue_type: value as typeof formData.issue_type })}
                   >
-                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="glass border-slate-700/50">
@@ -651,7 +651,7 @@ function BugsPageContent() {
                     value={formData.severity}
                     onValueChange={(value) => setFormData({ ...formData, severity: value as typeof formData.severity })}
                   >
-                    <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="glass border-slate-700/50">
@@ -675,18 +675,18 @@ function BugsPageContent() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400"
+              className="text-slate-400 w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateBug}
               disabled={isSubmitting}
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
             >
               {isSubmitting ? 'Creating...' : 'Create Bug Report'}
             </Button>
