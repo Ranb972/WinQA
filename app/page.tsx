@@ -230,6 +230,14 @@ const exampleTests = [
   },
 ];
 
+// Footer taglines - randomly selected on each page load
+const footerTaglines = [
+  "Built for the curious. Designed for the relentless.",
+  "For those who love AI — and love breaking it.",
+  "Where AI meets its toughest critics.",
+  "Break it. Document it. Master it.",
+];
+
 // Components
 function ValuePropCard({ icon: Icon, text, index }: { icon: React.ElementType; text: string; index: number }) {
   return (
@@ -509,6 +517,11 @@ function Dashboard() {
 
 // Landing page for signed-out users
 function LandingPage() {
+  // Randomly select a tagline on mount
+  const [tagline] = useState(() =>
+    footerTaglines[Math.floor(Math.random() * footerTaglines.length)]
+  );
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
       {/* Background effects */}
@@ -684,8 +697,17 @@ function LandingPage() {
 
         {/* Footer */}
         <MotionWrapper>
-          <footer className="text-center text-slate-500">
-            <p>Built for QA professionals exploring AI testing</p>
+          <footer className="text-center py-8">
+            <p className="text-lg italic">
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                &ldquo;{tagline}&rdquo;
+              </span>
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+              <Sparkles className="h-3 w-3 text-purple-400/60" />
+              <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+            </div>
           </footer>
         </MotionWrapper>
       </main>
