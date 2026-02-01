@@ -459,30 +459,27 @@ pre code {
    PREMIUM TAGLINE - APPLE/LUXURY AESTHETIC
    ======================================== */
 
-/* Premium text with subtle emerald/cyan glow */
+/* Premium text with emerald glow - Cyberpunk/Developer aesthetic */
 .premium-tagline {
-  color: #f1f5f9; /* slate-100 - crisp white-ish */
+  color: #f1f5f9; /* slate-100 */
   text-shadow:
-    0 0 20px rgba(52, 211, 153, 0.3),
-    0 0 40px rgba(34, 211, 238, 0.2),
-    0 0 60px rgba(52, 211, 153, 0.1);
+    0 0 20px rgba(52, 211, 153, 0.4),
+    0 0 40px rgba(52, 211, 153, 0.2);
   animation: breathe 4s ease-in-out infinite;
 }
 
-/* Subtle breathing animation - creates presence */
+/* Subtle breathing animation - 0.85 to 1.0 opacity */
 @keyframes breathe {
   0%, 100% {
-    opacity: 0.9;
+    opacity: 0.85;
     text-shadow:
-      0 0 20px rgba(52, 211, 153, 0.3),
-      0 0 40px rgba(34, 211, 238, 0.2),
-      0 0 60px rgba(52, 211, 153, 0.1);
+      0 0 20px rgba(52, 211, 153, 0.4),
+      0 0 40px rgba(52, 211, 153, 0.2);
   }
   50% {
     opacity: 1;
     text-shadow:
-      0 0 25px rgba(52, 211, 153, 0.4),
-      0 0 50px rgba(34, 211, 238, 0.25),
-      0 0 80px rgba(52, 211, 153, 0.15);
+      0 0 25px rgba(52, 211, 153, 0.5),
+      0 0 50px rgba(52, 211, 153, 0.3);
   }
 }
