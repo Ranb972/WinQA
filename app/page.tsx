@@ -609,7 +609,7 @@ function LandingPage() {
 
           {/* CTA Buttons */}
           <MotionWrapper delay={0.5}>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <SignUpButton mode="modal">
                   <motion.button
@@ -629,7 +629,7 @@ function LandingPage() {
                   See Examples
                 </motion.a>
               </div>
-              <p className="text-sm text-slate-500 mt-2">No credit card required</p>
+              <p className="text-sm text-slate-500">No credit card required</p>
             </div>
           </MotionWrapper>
         </section>
