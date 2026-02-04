@@ -5,6 +5,7 @@ import {
     SignedIn,
     SignedOut,
 } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "@/components/Navbar";
 import { baseMetadata } from "@/lib/metadata";
@@ -50,6 +51,7 @@ export default function RootLayout({
                         {children}
                     </SignedOut>
                     <Toaster />
+                    <Analytics />
                 </body>
             </html>
         </ClerkProvider>
