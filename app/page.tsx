@@ -349,11 +349,13 @@ function RotatingImagePreview({ images, priority = false }: { images: string[]; 
 function FeatureShowcaseSection({
   feature,
   stats,
+  isLoading = false,
   index,
   isFirst = false,
 }: {
   feature: typeof featureSections[0];
   stats: { testCases: number; bugs: number; prompts: number; insights: number; resolvedBugs: number };
+  isLoading?: boolean;
   index: number;
   isFirst?: boolean;
 }) {
@@ -412,9 +414,13 @@ function FeatureShowcaseSection({
 
         {/* Stats Row */}
         <div className="pt-4 border-t border-slate-700/50">
-          <p className="text-sm text-slate-400">
-            <span className="font-medium text-slate-300">{feature.statsTemplate(stats)}</span>
-          </p>
+          {isLoading ? (
+            <div className="h-5 w-48 bg-slate-800/50 rounded animate-pulse"></div>
+          ) : (
+            <p className="text-sm text-slate-400">
+              <span className="font-medium text-slate-300">{feature.statsTemplate(stats)}</span>
+            </p>
+          )}
         </div>
       </section>
     </MotionWrapper>
@@ -467,17 +473,37 @@ function ComingSoonSection() {
 function Dashboard() {
   const [stats, setStats] = useState({ testCases: 0, bugs: 0, prompts: 0, insights: 0, resolvedBugs: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
+      console.log('[Dashboard] Fetching stats from /api/stats...');
       try {
         const response = await fetch('/api/stats');
+        console.log('[Dashboard] Response status:', response.status);
+
         const data = await response.json();
-        setStats(data);
+        console.log('[Dashboard] Response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        // Validate that we got the expected data structure
+        if (typeof data.testCases === 'number' && typeof data.bugs === 'number') {
+          setStats(data);
+          setError(null);
+          console.log('[Dashboard] Stats updated successfully:', data);
+        } else {
+          throw new Error('Invalid stats data structure received');
+        }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Failed to fetch stats';
+        console.error('[Dashboard] Error fetching stats:', errorMsg, error);
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
+        console.log('[Dashboard] Loading complete');
       }
     }
     fetchStats();
@@ -497,12 +523,24 @@ function Dashboard() {
         </header>
       </MotionWrapper>
 
+      {/* Error State */}
+      {error && (
+        <MotionWrapper>
+          <div className="bg-rose-950/20 border border-rose-900/30 rounded-lg p-4">
+            <p className="text-rose-400 text-sm">
+              ⚠️ Unable to load stats: {error}
+            </p>
+          </div>
+        </MotionWrapper>
+      )}
+
       {/* Feature Showcase Sections */}
       {featureSections.map((feature, index) => (
         <FeatureShowcaseSection
           key={feature.id}
           feature={feature}
-          stats={isLoading ? { testCases: 0, bugs: 0, prompts: 0, insights: 0, resolvedBugs: 0 } : stats}
+          stats={stats}
+          isLoading={isLoading}
           index={index}
           isFirst={index === 0}
         />
