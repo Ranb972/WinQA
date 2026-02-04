@@ -611,7 +611,7 @@ function LandingPage() {
           {/* CTA Buttons */}
           <MotionWrapper delay={0.5}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <div className="flex flex-col items-center">
+              <div className="relative flex flex-col items-center">
                 <SignUpButton mode="modal">
                   <motion.button
                     className="btn-primary text-lg px-8 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center"
@@ -621,7 +621,7 @@ function LandingPage() {
                     Start Testing For Free <ArrowRight className="h-5 w-5" />
                   </motion.button>
                 </SignUpButton>
-                <p className="text-sm text-slate-500 mt-2">No credit card required</p>
+                <p className="text-sm text-slate-500 mt-2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:whitespace-nowrap">No credit card required</p>
               </div>
               <motion.a
                 href="#examples"
