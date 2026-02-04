@@ -3,6 +3,7 @@
 import { Play, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface TestCaseCardProps {
   id: string;
@@ -13,6 +14,7 @@ interface TestCaseCardProps {
   onRun: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onView?: () => void;
 }
 
 export default function TestCaseCard({
@@ -23,24 +25,34 @@ export default function TestCaseCard({
   onRun,
   onEdit,
   onDelete,
+  onView,
 }: TestCaseCardProps) {
   return (
-    <Card className="bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors">
+    <Card
+      className={cn(
+        "bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors h-[320px] flex flex-col",
+        onView && "cursor-pointer"
+      )}
+      onClick={onView}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-slate-100 text-lg">{title}</CardTitle>
+            <CardTitle className="text-slate-100 text-lg line-clamp-2">{title}</CardTitle>
             {description && (
-              <CardDescription className="text-slate-400 mt-1">
+              <CardDescription className="text-slate-400 mt-1 line-clamp-1">
                 {description}
               </CardDescription>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
-              onClick={onEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100"
             >
               <Pencil className="h-4 w-4" />
@@ -48,7 +60,10 @@ export default function TestCaseCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
             >
               <Trash2 className="h-4 w-4" />
@@ -56,7 +71,7 @@ export default function TestCaseCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1 overflow-hidden flex flex-col">
         <div>
           <p className="text-xs font-medium text-slate-500 mb-1">Prompt</p>
           <p className="text-sm text-slate-300 bg-slate-950 rounded-lg p-3 line-clamp-3">
@@ -70,8 +85,11 @@ export default function TestCaseCard({
           </div>
         )}
         <Button
-          onClick={onRun}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white mt-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRun();
+          }}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white mt-auto"
         >
           <Play className="h-4 w-4 mr-2" />
           Run Test

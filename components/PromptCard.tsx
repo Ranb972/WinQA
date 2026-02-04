@@ -19,6 +19,7 @@ interface PromptCardProps {
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onView?: () => void;
 }
 
 export default function PromptCard({
@@ -31,6 +32,7 @@ export default function PromptCard({
   onToggleFavorite,
   onEdit,
   onDelete,
+  onView,
 }: PromptCardProps) {
   const [copiedBad, setCopiedBad] = useState(false);
   const [copiedGood, setCopiedGood] = useState(false);
@@ -52,15 +54,24 @@ export default function PromptCard({
   };
 
   return (
-    <Card className="bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors">
+    <Card
+      className={cn(
+        "bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors h-[420px] flex flex-col",
+        onView && "cursor-pointer"
+      )}
+      onClick={onView}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-slate-100 text-lg">{title}</CardTitle>
-          <div className="flex items-center gap-1">
+          <CardTitle className="text-slate-100 text-lg line-clamp-2">{title}</CardTitle>
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
-              onClick={onToggleFavorite}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
               className={cn(
                 'h-8 w-8 p-0',
                 isFavorite ? 'text-rose-400' : 'text-slate-400 hover:text-rose-400'
@@ -71,7 +82,10 @@ export default function PromptCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100"
             >
               <Pencil className="h-4 w-4" />
@@ -79,7 +93,10 @@ export default function PromptCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
             >
               <Trash2 className="h-4 w-4" />
@@ -99,7 +116,7 @@ export default function PromptCard({
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 overflow-hidden">
         {/* Bad Prompt */}
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -107,7 +124,10 @@ export default function PromptCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleCopy(badPrompt, 'bad')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopy(badPrompt, 'bad');
+              }}
               className="h-6 px-2 text-slate-500 hover:text-slate-300"
             >
               {copiedBad ? (
@@ -131,7 +151,10 @@ export default function PromptCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleCopy(goodPrompt, 'good')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopy(goodPrompt, 'good');
+              }}
               className="h-6 px-2 text-slate-500 hover:text-slate-300"
             >
               {copiedGood ? (
@@ -154,7 +177,7 @@ export default function PromptCard({
             <p className="text-xs font-medium text-slate-500 mb-1">
               Why it matters
             </p>
-            <p className="text-sm text-slate-400">{explanation}</p>
+            <p className="text-sm text-slate-400 line-clamp-2">{explanation}</p>
           </div>
         )}
       </CardContent>

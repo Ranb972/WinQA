@@ -48,6 +48,8 @@ function InsightsPageContent() {
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paramsProcessed, setParamsProcessed] = useState(false);
+  const [viewingInsight, setViewingInsight] = useState<Insight | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -351,12 +353,18 @@ function InsightsPageContent() {
                 whileHover={{ scale: 1.02, y: -4 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               >
-                <Card className="glass-card card-hover group">
+                <Card
+                  className="glass-card card-hover group h-[280px] flex flex-col cursor-pointer"
+                  onClick={() => {
+                    setViewingInsight(insight);
+                    setViewDialogOpen(true);
+                  }}
+                >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5 text-amber-400" />
-                    <CardTitle className="text-slate-100 text-lg">
+                    <CardTitle className="text-slate-100 text-lg line-clamp-2">
                       {insight.title}
                     </CardTitle>
                   </div>
@@ -364,7 +372,10 @@ function InsightsPageContent() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleEdit(insight)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(insight);
+                      }}
                       className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100"
                     >
                       <Pencil className="h-4 w-4" />
@@ -372,7 +383,10 @@ function InsightsPageContent() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(insight._id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(insight._id);
+                      }}
                       className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -380,8 +394,8 @@ function InsightsPageContent() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-slate-300 whitespace-pre-wrap">
+              <CardContent className="space-y-3 flex-1 overflow-hidden">
+                <p className="text-sm text-slate-300 line-clamp-4">
                   {insight.content}
                 </p>
 
@@ -513,6 +527,61 @@ function InsightsPageContent() {
               className="btn-primary"
             >
               {isSubmitting ? 'Saving...' : editingInsight ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-100">
+              {viewingInsight?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-1 block">
+                Content
+              </label>
+              <p className="text-sm text-slate-300 whitespace-pre-wrap bg-slate-950/50 border border-slate-700 rounded-lg p-3">
+                {viewingInsight?.content}
+              </p>
+            </div>
+
+            {viewingInsight?.tags && viewingInsight.tags.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-slate-300 mb-1 block">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {viewingInsight.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <span>Created {formatDate(viewingInsight?.created_at || '')}</span>
+              <span>Updated {formatDate(viewingInsight?.updated_at || '')}</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setViewDialogOpen(false)}
+              className="text-slate-400 hover:text-slate-100"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

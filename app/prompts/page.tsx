@@ -54,6 +54,8 @@ function PromptsPageContent() {
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paramsProcessed, setParamsProcessed] = useState(false);
+  const [viewingPrompt, setViewingPrompt] = useState<Prompt | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -391,6 +393,10 @@ function PromptsPageContent() {
                 onToggleFavorite={() => handleToggleFavorite(prompt._id)}
                 onEdit={() => handleEdit(prompt)}
                 onDelete={() => handleDelete(prompt._id)}
+                onView={() => {
+                  setViewingPrompt(prompt);
+                  setViewDialogOpen(true);
+                }}
               />
             </StaggerItem>
           ))}
@@ -531,6 +537,92 @@ function PromptsPageContent() {
               className="btn-primary w-full sm:w-auto"
             >
               {isSubmitting ? 'Saving...' : editingPrompt ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-100">
+              {viewingPrompt?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Bad Prompt */}
+            <div>
+              <label className="text-sm font-medium text-rose-400 mb-2 block">
+                Bad Prompt
+              </label>
+              <div className="bg-rose-950/30 border border-rose-900/30 rounded-lg p-4">
+                <p className="text-sm text-rose-300/80 whitespace-pre-wrap">
+                  {viewingPrompt?.bad_prompt_example}
+                </p>
+              </div>
+            </div>
+
+            {/* Good Prompt */}
+            <div>
+              <label className="text-sm font-medium text-emerald-400 mb-2 block">
+                Good Prompt
+              </label>
+              <div className="bg-emerald-950/30 border border-emerald-900/30 rounded-lg p-4">
+                <p className="text-sm text-emerald-300/80 whitespace-pre-wrap">
+                  {viewingPrompt?.good_prompt_example}
+                </p>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            {viewingPrompt?.explanation && (
+              <div>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Why it matters
+                </label>
+                <p className="text-sm text-slate-400 bg-slate-950/50 border border-slate-700 rounded-lg p-3">
+                  {viewingPrompt.explanation}
+                </p>
+              </div>
+            )}
+
+            {/* Tags */}
+            {viewingPrompt?.tags && viewingPrompt.tags.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {viewingPrompt.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Favorite Status */}
+            {viewingPrompt?.is_favorite && (
+              <div className="flex items-center gap-2 text-sm text-rose-400">
+                <Heart className="h-4 w-4 fill-current" />
+                <span>Favorited</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setViewDialogOpen(false)}
+              className="text-slate-400 hover:text-slate-100"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

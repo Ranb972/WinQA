@@ -42,6 +42,8 @@ export default function TestCasesPage() {
     expected_outcome: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewingTestCase, setViewingTestCase] = useState<TestCase | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -280,6 +282,10 @@ export default function TestCasesPage() {
                   onRun={() => handleRun(testCase)}
                   onEdit={() => handleEdit(testCase)}
                   onDelete={() => handleDelete(testCase._id)}
+                  onView={() => {
+                    setViewingTestCase(testCase);
+                    setViewDialogOpen(true);
+                  }}
                 />
               </motion.div>
             </StaggerItem>
@@ -373,6 +379,71 @@ export default function TestCasesPage() {
               className="btn-primary"
             >
               {isSubmitting ? 'Saving...' : editingCase ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-100">
+              {viewingTestCase?.title}
+            </DialogTitle>
+            {viewingTestCase?.description && (
+              <DialogDescription className="text-slate-400">
+                {viewingTestCase.description}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Initial Prompt */}
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-2 block">
+                Prompt
+              </label>
+              <div className="bg-slate-950/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">
+                  {viewingTestCase?.initial_prompt}
+                </p>
+              </div>
+            </div>
+
+            {/* Expected Outcome */}
+            {viewingTestCase?.expected_outcome && (
+              <div>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Expected Outcome
+                </label>
+                <div className="bg-slate-950/50 border border-slate-700 rounded-lg p-4">
+                  <p className="text-sm text-slate-400 whitespace-pre-wrap">
+                    {viewingTestCase.expected_outcome}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Created Date */}
+            {viewingTestCase?.created_at && (
+              <div className="text-xs text-slate-500">
+                Created {new Date(viewingTestCase.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setViewDialogOpen(false)}
+              className="text-slate-400 hover:text-slate-100"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
