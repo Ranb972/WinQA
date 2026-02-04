@@ -541,14 +541,14 @@ function LandingPage() {
           WinQA
         </motion.span>
         <motion.div
-          className="flex items-center gap-4"
+          className="flex items-center gap-2 sm:gap-4"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
           <SignInButton mode="modal">
             <motion.button
-              className="text-slate-300 hover:text-white transition-colors px-4 py-2"
+              className="text-slate-300 hover:text-white transition-colors px-3 py-2 text-sm sm:text-base sm:px-4"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -557,11 +557,12 @@ function LandingPage() {
           </SignInButton>
           <SignUpButton mode="modal">
             <motion.button
-              className="btn-primary"
+              className="btn-primary text-sm sm:text-base px-3 py-2 sm:px-5 sm:py-2.5"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Get Started For Free
+              <span className="sm:hidden">Get Started</span>
+              <span className="hidden sm:inline">Get Started For Free</span>
             </motion.button>
           </SignUpButton>
         </motion.div>
@@ -609,7 +610,7 @@ function LandingPage() {
 
           {/* CTA Buttons */}
           <MotionWrapper delay={0.5}>
-            <div className="flex flex-col sm:flex-row items-start justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <div className="flex flex-col items-center">
                 <SignUpButton mode="modal">
                   <motion.button
