@@ -20,59 +20,105 @@ import {
   Rocket,
   Github,
   Shield,
+  Check,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
-// Feature cards data (used by landing page)
-const features = [
+// Feature showcase data (used by landing page)
+const featureShowcases = [
   {
-    href: '/chat-lab',
-    icon: MessageSquare,
+    mockup: 'chat-lab',
+    badge: 'COMPARE & CHAT',
     title: 'Chat Lab',
-    description: 'Chat with any AI model or pit them against each other side-by-side',
-    gradient: 'from-violet-400 to-purple-600',
-    spotlight: 'rgba(139, 92, 246, 0.15)',
+    description: 'Your AI interrogation room. Chat one-on-one or pit models against each other.',
+    bullets: [
+      'Chat with any AI model individually',
+      'Compare multiple models side-by-side',
+      'Switch models mid-conversation',
+      '4 providers: Cohere, Gemini, Groq, OpenRouter',
+    ],
+    badgeText: 'text-violet-400',
+    badgeBg: 'bg-violet-500/10',
+    borderHover: 'hover:border-violet-500/50',
+    glowHover: 'hover:shadow-violet-500/10',
   },
   {
-    href: '/code-testing',
-    icon: Code,
+    mockup: 'code-testing',
+    badge: 'CODE & DEBUG',
     title: 'Code Testing Lab',
-    description: 'Run JavaScript, Python, or TypeScript with AI-powered debugging',
-    gradient: 'from-emerald-400 to-emerald-600',
-    spotlight: 'rgba(52, 211, 153, 0.15)',
+    description: 'Run code instantly. Let AI find and fix your bugs.',
+    bullets: [
+      'JavaScript, Python, TypeScript support',
+      'AI-powered debugging analysis',
+      'Interactive preview for HTML/JS',
+    ],
+    badgeText: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/10',
+    borderHover: 'hover:border-emerald-500/50',
+    glowHover: 'hover:shadow-emerald-500/10',
   },
   {
-    href: '/test-cases',
-    icon: TestTube2,
+    mockup: 'test-cases',
+    badge: 'REPRODUCE & STUDY',
     title: 'Test Cases',
-    description: 'Real scenarios to reproduce and study AI failures firsthand',
-    gradient: 'from-cyan-400 to-blue-600',
-    spotlight: 'rgba(34, 211, 238, 0.15)',
+    description: 'Real scenarios to reproduce and study AI failures firsthand.',
+    bullets: [
+      '20 documented test scenarios',
+      'Each with prompt + expected outcome',
+      'One-click "Run Test" execution',
+    ],
+    badgeText: 'text-cyan-400',
+    badgeBg: 'bg-cyan-500/10',
+    borderHover: 'hover:border-cyan-500/50',
+    glowHover: 'hover:shadow-cyan-500/10',
   },
   {
-    href: '/bugs',
-    icon: Bug,
+    mockup: 'bug-log',
+    badge: 'TRACK & DOCUMENT',
     title: 'Bug Log',
-    description: 'Track hallucinations, logic errors, and refusals with severity ratings',
-    gradient: 'from-rose-400 to-red-600',
-    spotlight: 'rgba(251, 113, 133, 0.15)',
+    description: 'Every AI failure deserves a case file. Tag it. Track it. Solve it.',
+    bullets: [
+      'Categorize: Hallucination, Logic, Formatting, Refusal',
+      'Severity tracking (Low / Medium / High)',
+      'Filter by status, type, or severity',
+    ],
+    badgeText: 'text-rose-400',
+    badgeBg: 'bg-rose-500/10',
+    borderHover: 'hover:border-rose-500/50',
+    glowHover: 'hover:shadow-rose-500/10',
   },
   {
-    href: '/prompts',
-    icon: Library,
+    mockup: 'prompt-library',
+    badge: 'LEARN & IMPROVE',
     title: 'Prompt Library',
-    description: 'Side-by-side Bad vs Good prompts with detailed explanations',
-    gradient: 'from-amber-400 to-orange-600',
-    spotlight: 'rgba(251, 191, 36, 0.15)',
+    description: 'See exactly why good prompts work and bad ones fail.',
+    bullets: [
+      'Side-by-side Bad vs Good prompts',
+      'Detailed explanations for each',
+      'Filter by tags and categories',
+    ],
+    badgeText: 'text-amber-400',
+    badgeBg: 'bg-amber-500/10',
+    borderHover: 'hover:border-amber-500/50',
+    glowHover: 'hover:shadow-amber-500/10',
   },
   {
-    href: '/insights',
-    icon: Lightbulb,
+    mockup: 'insights',
+    badge: 'DISCOVER & SHARE',
     title: 'Insights',
-    description: 'Document patterns and learnings about AI model behavior',
-    gradient: 'from-blue-400 to-indigo-600',
-    spotlight: 'rgba(96, 165, 250, 0.15)',
+    description: 'Document patterns and learnings about AI model behavior.',
+    bullets: [
+      'Document findings with tags',
+      'Track AI behavior patterns',
+      'Build your knowledge base',
+    ],
+    badgeText: 'text-blue-400',
+    badgeBg: 'bg-blue-500/10',
+    borderHover: 'hover:border-blue-500/50',
+    glowHover: 'hover:shadow-blue-500/10',
   },
 ];
 
@@ -595,6 +641,292 @@ function Dashboard() {
   );
 }
 
+// Mockup title bar with traffic light dots
+function MockupTitleBar({ title }: { title?: string }) {
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-2 border-b border-slate-700/50">
+      <div className="w-2 h-2 rounded-full bg-red-500/80" />
+      <div className="w-2 h-2 rounded-full bg-yellow-500/80" />
+      <div className="w-2 h-2 rounded-full bg-green-500/80" />
+      {title && <span className="ml-2 text-xs text-slate-500">{title}</span>}
+    </div>
+  );
+}
+
+// Chat Lab Mockup
+function ChatLabMockup() {
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Chat Lab" />
+      <div className="p-3 space-y-3">
+        {/* Toggle */}
+        <div className="flex gap-1">
+          <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-400">Single</span>
+          <span className="px-2.5 py-1 rounded bg-violet-500/20 text-violet-300 font-medium">Compare</span>
+        </div>
+        {/* Model pills */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 text-[10px]">Cohere Command</span>
+          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 text-[10px]">Google Gemini</span>
+          <span className="px-2 py-0.5 rounded-full bg-green-500/15 text-green-300 text-[10px]">Groq (Llama)</span>
+          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[10px]">OpenRouter</span>
+        </div>
+        {/* User message */}
+        <div className="flex justify-end">
+          <div className="bg-violet-500/20 text-violet-100 px-3 py-1.5 rounded-lg max-w-[70%]">
+            What is machine learning?
+          </div>
+        </div>
+        {/* Response cards */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { model: 'Cohere', color: 'text-orange-400', text: 'ML is a subset of AI that enables systems to learn from data...', time: '0.91s' },
+            { model: 'Gemini', color: 'text-blue-400', text: 'Machine learning is a branch of artificial intelligence...', time: '1.24s' },
+            { model: 'Groq', color: 'text-green-400', text: 'It\'s a method where computers learn patterns without being...', time: '0.34s' },
+            { model: 'OpenRouter', color: 'text-purple-400', text: 'ML refers to algorithms that improve through experience...', time: '0.87s' },
+          ].map((r) => (
+            <div key={r.model} className="bg-slate-900/80 rounded p-2 border border-slate-800/50">
+              <div className="flex items-center justify-between mb-1">
+                <span className={`${r.color} font-medium text-[10px]`}>{r.model}</span>
+                <span className="text-slate-600 text-[10px]">{r.time}</span>
+              </div>
+              <p className="text-slate-400 text-[10px] leading-relaxed line-clamp-2">{r.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Code Testing Lab Mockup
+function CodeTestingMockup() {
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Code Testing Lab" />
+      <div className="p-3 space-y-2">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1">
+            <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 font-medium">Write Code</span>
+            <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-400">Ask AI</span>
+          </div>
+          <span className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px]">
+            JavaScript <ChevronDown className="h-2.5 w-2.5" />
+          </span>
+        </div>
+        {/* Code editor */}
+        <div className="bg-slate-900 rounded p-2.5 font-mono text-[10px] leading-relaxed border border-slate-800/50">
+          <div><span className="text-violet-400">function</span> <span className="text-blue-300">fibonacci</span><span className="text-slate-400">(</span><span className="text-orange-300">n</span><span className="text-slate-400">)</span> <span className="text-slate-400">{'{'}</span></div>
+          <div className="pl-3"><span className="text-violet-400">if</span> <span className="text-slate-400">(</span><span className="text-orange-300">n</span> <span className="text-cyan-300">&lt;=</span> <span className="text-emerald-300">1</span><span className="text-slate-400">)</span> <span className="text-violet-400">return</span> <span className="text-orange-300">n</span><span className="text-slate-400">;</span></div>
+          <div className="pl-3"><span className="text-violet-400">return</span> <span className="text-blue-300">fibonacci</span><span className="text-slate-400">(</span><span className="text-orange-300">n</span><span className="text-cyan-300">-</span><span className="text-emerald-300">1</span><span className="text-slate-400">)</span> <span className="text-cyan-300">+</span> <span className="text-blue-300">fibonacci</span><span className="text-slate-400">(</span><span className="text-orange-300">n</span><span className="text-cyan-300">-</span><span className="text-emerald-300">2</span><span className="text-slate-400">);</span></div>
+          <div><span className="text-slate-400">{'}'}</span></div>
+          <div className="mt-1"><span className="text-blue-300">console</span><span className="text-slate-400">.</span><span className="text-blue-300">log</span><span className="text-slate-400">(</span><span className="text-blue-300">fibonacci</span><span className="text-slate-400">(</span><span className="text-emerald-300">6</span><span className="text-slate-400">));</span></div>
+        </div>
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between">
+          <button className="px-2.5 py-1 rounded bg-slate-800 text-slate-400 text-[10px]">Clear</button>
+          <button className="px-3 py-1 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[10px]">Run Code</button>
+        </div>
+        {/* Output */}
+        <div className="bg-slate-900 rounded p-2 border border-slate-800/50">
+          <span className="text-slate-500 text-[10px]">Output: </span>
+          <span className="text-emerald-400 font-medium text-[10px]">8</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Test Cases Mockup
+function TestCasesMockup() {
+  const cases = [
+    { title: 'Hallucination Trap', prompt: 'Who won the FIFA World Cup in 2030?' },
+    { title: 'Strawberry R Count', prompt: 'How many R\'s in strawberry?' },
+    { title: '9.11 vs 9.9', prompt: 'Which is larger, 9.11 or 9.9?' },
+  ];
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Test Cases" />
+      <div className="p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {cases.map((c) => (
+            <div key={c.title} className="bg-slate-900/80 rounded-lg p-2.5 border border-slate-800/50 space-y-2">
+              <h4 className="text-slate-200 font-medium text-[11px]">{c.title}</h4>
+              <div className="bg-slate-950 rounded p-1.5 text-[10px] text-slate-400 leading-relaxed">
+                &quot;{c.prompt}&quot;
+              </div>
+              <button className="w-full px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[10px]">
+                Run Test
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bug Log Mockup
+function BugLogMockup() {
+  const bugs = [
+    { status: 'Resolved', statusColor: 'bg-emerald-500/15 text-emerald-400', type: 'Hallucination', typeColor: 'bg-pink-500/15 text-pink-400', severity: 'High', sevColor: 'text-red-400', title: 'Air Canada Support Chatbot' },
+    { status: 'Open', statusColor: 'bg-emerald-500/15 text-emerald-400', type: 'Hallucination', typeColor: 'bg-pink-500/15 text-pink-400', severity: 'High', sevColor: 'text-red-400', title: 'ChatGPT (GPT-3.5)' },
+    { status: 'Open', statusColor: 'bg-emerald-500/15 text-emerald-400', type: 'Logic', typeColor: 'bg-red-500/15 text-red-400', severity: 'Medium', sevColor: 'text-yellow-400', title: 'Multiple LLMs' },
+    { status: 'Open', statusColor: 'bg-emerald-500/15 text-emerald-400', type: 'Refusal', typeColor: 'bg-orange-500/15 text-orange-400', severity: 'Low', sevColor: 'text-slate-400', title: 'Llama 2' },
+  ];
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Bug Log" />
+      <div className="p-3 space-y-2">
+        {/* Filters */}
+        <div className="flex gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px]">
+            <Search className="h-2.5 w-2.5" /> Search...
+          </div>
+          {['All Status', 'All Severity', 'All Types'].map((f) => (
+            <span key={f} className="flex items-center gap-0.5 px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px]">
+              {f} <ChevronDown className="h-2 w-2" />
+            </span>
+          ))}
+        </div>
+        {/* Bug rows */}
+        <div className="space-y-1">
+          {bugs.map((b) => (
+            <div key={b.title} className="flex items-center gap-1.5 bg-slate-900/80 rounded p-1.5 border border-slate-800/50">
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${b.statusColor}`}>{b.status}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[9px] ${b.typeColor}`}>{b.type}</span>
+              <span className={`text-[9px] ${b.sevColor}`}>{b.severity}</span>
+              <span className="text-slate-300 text-[10px] truncate flex-1">{b.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Prompt Library Mockup
+function PromptLibraryMockup() {
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Prompt Library" />
+      <div className="p-3 space-y-2.5">
+        {/* Title + tags */}
+        <div>
+          <h4 className="text-slate-200 font-medium text-[11px] mb-1.5">Chain of Thought Prompting</h4>
+          <div className="flex gap-1 flex-wrap">
+            {['reasoning', 'math', 'research-backed'].map((tag) => (
+              <span key={tag} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[9px]">{tag}</span>
+            ))}
+          </div>
+        </div>
+        {/* Bad vs Good */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <span className="text-[9px] font-medium text-red-400 uppercase tracking-wide">Bad Prompt</span>
+            <div className="bg-red-950/30 border border-red-500/20 rounded p-1.5 text-[10px] text-slate-300">
+              &quot;What is 23 + 47?&quot;
+            </div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[9px] font-medium text-emerald-400 uppercase tracking-wide">Good Prompt</span>
+            <div className="bg-emerald-950/30 border border-emerald-500/20 rounded p-1.5 text-[10px] text-slate-300">
+              &quot;What is 23 + 47? Let&apos;s think step by step.&quot;
+            </div>
+          </div>
+        </div>
+        {/* Explanation */}
+        <div className="bg-slate-900/80 rounded p-2 border border-slate-800/50">
+          <span className="text-[10px] font-medium text-slate-300">Why it matters: </span>
+          <span className="text-[10px] text-slate-400">Adding &quot;step by step&quot; triggers chain-of-thought reasoning, reducing errors by up to 40% on math and logic tasks.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Insights Mockup
+function InsightsMockup() {
+  const insights = [
+    { title: '47% of AI Citations Are Fabricated', text: 'Research shows nearly half of academic citations generated by LLMs are completely fabricated.', tags: ['hallucination', 'citations', 'research'] },
+    { title: 'Sycophancy: When AI Agrees with Wrong Answers', text: 'RLHF-trained models often agree with users even when the user is factually incorrect.', tags: ['sycophancy', 'alignment', 'RLHF'] },
+  ];
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="Insights" />
+      <div className="p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {insights.map((ins) => (
+            <div key={ins.title} className="bg-slate-900/80 rounded-lg p-2.5 border border-slate-800/50 space-y-1.5">
+              <div className="flex items-start gap-1.5">
+                <Lightbulb className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <h4 className="text-slate-200 font-medium text-[11px] leading-tight">{ins.title}</h4>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">{ins.text}</p>
+              <div className="flex gap-1 flex-wrap">
+                {ins.tags.map((tag) => (
+                  <span key={tag} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px]">{tag}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Render the correct mockup for a feature
+function FeatureMockup({ mockup }: { mockup: string }) {
+  switch (mockup) {
+    case 'chat-lab': return <ChatLabMockup />;
+    case 'code-testing': return <CodeTestingMockup />;
+    case 'test-cases': return <TestCasesMockup />;
+    case 'bug-log': return <BugLogMockup />;
+    case 'prompt-library': return <PromptLibraryMockup />;
+    case 'insights': return <InsightsMockup />;
+    default: return null;
+  }
+}
+
+// Feature showcase row - alternating layout
+function FeatureShowcaseRow({ feature, index }: { feature: typeof featureShowcases[0]; index: number }) {
+  const isReversed = index % 2 === 1;
+  return (
+    <MotionWrapper delay={index * 0.05}>
+      <motion.div
+        className={`glass-card rounded-2xl p-4 md:p-6 border border-slate-700/30 transition-all duration-300 ${feature.borderHover} ${feature.glowHover} hover:shadow-lg`}
+        whileHover={{ y: -2 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      >
+        <div className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-5 md:gap-8`}>
+          {/* Mockup side */}
+          <div className="md:w-[55%] flex-shrink-0">
+            <FeatureMockup mockup={feature.mockup} />
+          </div>
+          {/* Text side */}
+          <div className="flex-1 flex flex-col justify-center py-1">
+            <span className={`inline-flex w-fit px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase ${feature.badgeText} ${feature.badgeBg} mb-3`}>
+              {feature.badge}
+            </span>
+            <h3 className="text-xl md:text-2xl font-bold text-white mb-2">{feature.title}</h3>
+            <p className="text-sm text-slate-400 mb-4">{feature.description}</p>
+            <ul className="space-y-2">
+              {feature.bullets.map((bullet) => (
+                <li key={bullet} className="flex items-start gap-2 text-sm text-slate-300">
+                  <Check className={`h-4 w-4 flex-shrink-0 mt-0.5 ${feature.badgeText}`} />
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </motion.div>
+    </MotionWrapper>
+  );
+}
+
 // Landing page for signed-out users
 function LandingPage() {
   // Randomly select a tagline on mount
@@ -788,7 +1120,7 @@ function LandingPage() {
           </MotionWrapper>
         </section>
 
-        {/* Features Grid */}
+        {/* Feature Showcase Rows */}
         <section className="mb-12">
           <MotionWrapper>
             <div className="text-center mb-8">
@@ -800,27 +1132,11 @@ function LandingPage() {
               </p>
             </div>
           </MotionWrapper>
-          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <StaggerItem key={feature.href}>
-                  <SpotlightCard
-                    className="glass-card rounded-2xl p-5 md:p-6 h-full flex flex-col"
-                    spotlightColor={feature.spotlight}
-                  >
-                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-3 md:mb-4 transition-transform group-hover:scale-110`}>
-                      <Icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
-                    </div>
-                    <h3 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm md:text-base text-slate-400 flex-1">{feature.description}</p>
-                  </SpotlightCard>
-                </StaggerItem>
-              );
-            })}
-          </StaggerContainer>
+          <div className="space-y-5 max-w-6xl mx-auto">
+            {featureShowcases.map((feature, index) => (
+              <FeatureShowcaseRow key={feature.title} feature={feature} index={index} />
+            ))}
+          </div>
         </section>
 
         {/* Stats Section */}
