@@ -658,7 +658,7 @@ function ChatLabMockup() {
   return (
     <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
       <MockupTitleBar title="Chat Lab" />
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-2.5">
         {/* Toggle */}
         <div className="flex gap-1">
           <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-400">Single</span>
@@ -669,28 +669,34 @@ function ChatLabMockup() {
           <span className="px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 text-[10px]">Cohere Command</span>
           <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 text-[10px]">Google Gemini</span>
           <span className="px-2 py-0.5 rounded-full bg-green-500/15 text-green-300 text-[10px]">Groq (Llama)</span>
-          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[10px]">OpenRouter</span>
+          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[10px]">DeepSeek</span>
         </div>
         {/* User message */}
         <div className="flex justify-end">
-          <div className="bg-violet-500/20 text-violet-100 px-3 py-1.5 rounded-lg max-w-[70%]">
+          <div className="bg-violet-500/20 text-violet-100 px-3 py-1.5 rounded-lg max-w-[75%]">
             What is machine learning?
           </div>
         </div>
-        {/* Response cards */}
-        <div className="grid grid-cols-2 gap-1.5">
+        {/* Vertical chat responses */}
+        <div className="space-y-1.5">
           {[
-            { model: 'Cohere', color: 'text-orange-400', text: 'ML is a subset of AI that enables systems to learn from data...', time: '0.91s' },
-            { model: 'Gemini', color: 'text-blue-400', text: 'Machine learning is a branch of artificial intelligence...', time: '1.24s' },
-            { model: 'Groq', color: 'text-green-400', text: 'It\'s a method where computers learn patterns without being...', time: '0.34s' },
-            { model: 'OpenRouter', color: 'text-purple-400', text: 'ML refers to algorithms that improve through experience...', time: '0.87s' },
+            { provider: 'Cohere', model: 'command-a-03-2025', color: 'text-orange-400', bgColor: 'bg-orange-500/10', text: 'Machine learning is a branch of AI that enables systems to learn from data and improve over time...', time: '0.91s' },
+            { provider: 'Google', model: 'gemini-flash', color: 'text-blue-400', bgColor: 'bg-blue-500/10', text: 'Machine learning is a method of data analysis that automates analytical model building...', time: '1.2s' },
+            { provider: 'Groq', model: 'llama-3.3-70b', color: 'text-green-400', bgColor: 'bg-green-500/10', text: 'Machine learning is a subset of artificial intelligence focused on building systems that learn...', time: '0.35s' },
+            { provider: 'DeepSeek', model: 'deepseek-chat', color: 'text-purple-400', bgColor: 'bg-purple-500/10', text: null, time: '1.7s' },
           ].map((r) => (
-            <div key={r.model} className="bg-slate-900/80 rounded p-2 border border-slate-800/50">
-              <div className="flex items-center justify-between mb-1">
-                <span className={`${r.color} font-medium text-[10px]`}>{r.model}</span>
-                <span className="text-slate-600 text-[10px]">{r.time}</span>
+            <div key={r.provider} className="bg-slate-900/80 rounded-lg p-2 border border-slate-800/50">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-slate-500 text-[10px]">Assistant</span>
+                <span className={`px-1.5 py-0.5 rounded ${r.bgColor} ${r.color} text-[9px] font-medium`}>{r.provider}</span>
+                <span className="text-slate-600 text-[9px]">{r.model}</span>
+                <span className="text-slate-600 text-[9px] ml-auto">{r.time}</span>
               </div>
-              <p className="text-slate-400 text-[10px] leading-relaxed line-clamp-2">{r.text}</p>
+              {r.text ? (
+                <p className="text-slate-400 text-[10px] leading-relaxed">{r.text}</p>
+              ) : (
+                <p className="text-slate-500 text-[10px] italic">Thinking...</p>
+              )}
             </div>
           ))}
         </div>
@@ -741,9 +747,9 @@ function CodeTestingMockup() {
 // Test Cases Mockup
 function TestCasesMockup() {
   const cases = [
-    { title: 'Hallucination Trap', prompt: 'Who won the FIFA World Cup in 2030?' },
-    { title: 'Strawberry R Count', prompt: 'How many R\'s in strawberry?' },
-    { title: '9.11 vs 9.9', prompt: 'Which is larger, 9.11 or 9.9?' },
+    { title: 'Hallucination Trap', desc: 'Test for fabricated information', prompt: 'Who won the FIFA World Cup in 2030?', expected: 'Should acknowledge uncertainty about future events' },
+    { title: 'Strawberry R Count', desc: 'Character counting challenge', prompt: 'How many R\'s in strawberry?', expected: 'Correct answer: 3 R\'s' },
+    { title: '9.11 vs 9.9', desc: 'Numerical comparison test', prompt: 'Which is larger, 9.11 or 9.9?', expected: '9.9 is larger than 9.11' },
   ];
   return (
     <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
@@ -751,14 +757,23 @@ function TestCasesMockup() {
       <div className="p-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {cases.map((c) => (
-            <div key={c.title} className="bg-slate-900/80 rounded-lg p-2.5 border border-slate-800/50 space-y-2">
-              <h4 className="text-slate-200 font-medium text-[11px]">{c.title}</h4>
-              <div className="bg-slate-950 rounded p-1.5 text-[10px] text-slate-400 leading-relaxed">
-                &quot;{c.prompt}&quot;
+            <div key={c.title} className="bg-slate-900/80 rounded-lg border border-slate-800/50 border-l-2 border-l-cyan-500/50 flex flex-col h-full">
+              <div className="p-2.5 flex-1 space-y-1.5">
+                <h4 className="text-slate-200 font-semibold text-[11px]">{c.title}</h4>
+                <p className="text-[9px] text-slate-500">{c.desc}</p>
+                <div className="bg-slate-950 rounded p-1.5 text-[10px] text-cyan-300/80 font-mono leading-relaxed">
+                  &quot;{c.prompt}&quot;
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 font-medium">Expected: </span>
+                  <span className="text-[9px] text-slate-400">{c.expected}</span>
+                </div>
               </div>
-              <button className="w-full px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[10px]">
-                Run Test
-              </button>
+              <div className="px-2.5 pb-2.5">
+                <div className="w-full px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[10px] text-center">
+                  Run Test
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -892,7 +907,6 @@ function FeatureMockup({ mockup }: { mockup: string }) {
 
 // Feature showcase row - alternating layout
 function FeatureShowcaseRow({ feature, index }: { feature: typeof featureShowcases[0]; index: number }) {
-  const isReversed = index % 2 === 1;
   return (
     <MotionWrapper delay={index * 0.05}>
       <motion.div
@@ -900,7 +914,7 @@ function FeatureShowcaseRow({ feature, index }: { feature: typeof featureShowcas
         whileHover={{ y: -2 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
-        <div className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-5 md:gap-8`}>
+        <div className="flex flex-col md:flex-row gap-5 md:gap-8">
           {/* Mockup side */}
           <div className="md:w-[55%] flex-shrink-0">
             <FeatureMockup mockup={feature.mockup} />
