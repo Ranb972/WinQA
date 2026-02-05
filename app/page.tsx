@@ -31,7 +31,8 @@ const features = [
     icon: MessageSquare,
     title: 'Chat Lab',
     description: 'Chat with any AI model or pit them against each other side-by-side',
-    gradient: 'from-emerald-400 to-emerald-600',
+    gradient: 'from-violet-400 to-purple-600',
+    spotlight: 'rgba(139, 92, 246, 0.15)',
   },
   {
     href: '/code-testing',
@@ -39,34 +40,39 @@ const features = [
     title: 'Code Testing Lab',
     description: 'Run JavaScript, Python, or TypeScript with AI-powered debugging',
     gradient: 'from-emerald-400 to-emerald-600',
+    spotlight: 'rgba(52, 211, 153, 0.15)',
   },
   {
     href: '/test-cases',
     icon: TestTube2,
     title: 'Test Cases',
     description: 'Real scenarios to reproduce and study AI failures firsthand',
-    gradient: 'from-emerald-400 to-emerald-600',
+    gradient: 'from-cyan-400 to-blue-600',
+    spotlight: 'rgba(34, 211, 238, 0.15)',
   },
   {
     href: '/bugs',
     icon: Bug,
     title: 'Bug Log',
     description: 'Track hallucinations, logic errors, and refusals with severity ratings',
-    gradient: 'from-emerald-400 to-emerald-600',
+    gradient: 'from-rose-400 to-red-600',
+    spotlight: 'rgba(251, 113, 133, 0.15)',
   },
   {
     href: '/prompts',
     icon: Library,
     title: 'Prompt Library',
     description: 'Side-by-side Bad vs Good prompts with detailed explanations',
-    gradient: 'from-emerald-400 to-emerald-600',
+    gradient: 'from-amber-400 to-orange-600',
+    spotlight: 'rgba(251, 191, 36, 0.15)',
   },
   {
     href: '/insights',
     icon: Lightbulb,
     title: 'Insights',
     description: 'Document patterns and learnings about AI model behavior',
-    gradient: 'from-emerald-400 to-emerald-600',
+    gradient: 'from-blue-400 to-indigo-600',
+    spotlight: 'rgba(96, 165, 250, 0.15)',
   },
 ];
 
@@ -305,7 +311,20 @@ function StatCard({
   );
 }
 
+// Category color mapping for test scenario tags
+function getCategoryColors(category: string): { text: string; bg: string } {
+  const lower = category.toLowerCase();
+  if (lower.includes('security') || lower.includes('injection') || lower.includes('fabricat') || lower.includes('future'))
+    return { text: 'text-rose-400', bg: 'bg-rose-500/10' };
+  if (lower.includes('logic') || lower.includes('reason') || lower.includes('math') || lower.includes('spatial'))
+    return { text: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+  if (lower.includes('refusal') || lower.includes('safety'))
+    return { text: 'text-amber-400', bg: 'bg-amber-500/10' };
+  return { text: 'text-purple-400', bg: 'bg-purple-500/10' };
+}
+
 function ExampleCard({ title, prompt, category, index }: { title: string; prompt: string; category: string; index: number }) {
+  const categoryColors = getCategoryColors(category);
   return (
     <MotionWrapper delay={index * 0.1}>
       <motion.div
@@ -316,7 +335,7 @@ function ExampleCard({ title, prompt, category, index }: { title: string; prompt
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="relative">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full">
+            <span className={`text-xs font-medium ${categoryColors.text} ${categoryColors.bg} px-2 py-1 rounded-full`}>
               {category}
             </span>
           </div>
@@ -677,8 +696,8 @@ function LandingPage() {
         <section className="text-center mb-12">
           {/* Badge */}
           <MotionWrapper delay={0}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6" style={{ borderColor: 'rgba(52, 211, 153, 0.3)' }}>
-              <Shield className="h-4 w-4 text-emerald-400" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+              <Sparkles className="h-4 w-4 text-pink-400" />
               <span className="text-sm text-slate-300">The QA Professional&apos;s Secret Weapon</span>
             </div>
           </MotionWrapper>
@@ -788,7 +807,7 @@ function LandingPage() {
                 <StaggerItem key={feature.href}>
                   <SpotlightCard
                     className="glass-card rounded-2xl p-5 md:p-6 h-full flex flex-col"
-                    spotlightColor="rgba(52, 211, 153, 0.15)"
+                    spotlightColor={feature.spotlight}
                   >
                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-3 md:mb-4 transition-transform group-hover:scale-110`}>
                       <Icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
@@ -807,13 +826,13 @@ function LandingPage() {
         {/* Stats Section */}
         <section className="mb-12">
           <MotionWrapper>
-            <div className="glass-card rounded-2xl p-6 md:p-8 max-w-4xl mx-auto" style={{ borderColor: 'rgba(52, 211, 153, 0.2)' }}>
+            <div className="glass-card rounded-2xl p-6 md:p-8 max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
                 {[
-                  { value: `${stats.bugs}+`, label: 'Documented AI Failures', icon: Bug },
-                  { value: String(stats.testCases), label: 'Reproducible Test Cases', icon: TestTube2 },
-                  { value: String(stats.prompts), label: 'Prompt Examples', icon: Library },
-                  { value: String(stats.insights), label: 'Expert Insights', icon: Lightbulb },
+                  { value: `${stats.bugs}+`, label: 'Documented AI Failures', icon: Bug, color: 'text-rose-400', iconColor: 'text-rose-400/60' },
+                  { value: String(stats.testCases), label: 'Reproducible Test Cases', icon: TestTube2, color: 'text-cyan-400', iconColor: 'text-cyan-400/60' },
+                  { value: String(stats.prompts), label: 'Prompt Examples', icon: Library, color: 'text-amber-400', iconColor: 'text-amber-400/60' },
+                  { value: String(stats.insights), label: 'Expert Insights', icon: Lightbulb, color: 'text-blue-400', iconColor: 'text-blue-400/60' },
                 ].map((stat, index) => {
                   const StatIcon = stat.icon;
                   return (
@@ -825,8 +844,8 @@ function LandingPage() {
                       viewport={{ once: true }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <StatIcon className="h-5 w-5 text-emerald-400/60 mx-auto mb-2" />
-                      <div className="text-3xl md:text-4xl font-bold text-emerald-400 mb-1">{stat.value}</div>
+                      <StatIcon className={`h-5 w-5 ${stat.iconColor} mx-auto mb-2`} />
+                      <div className={`text-3xl md:text-4xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
                       <div className="text-xs md:text-sm text-slate-400">{stat.label}</div>
                     </motion.div>
                   );
