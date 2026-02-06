@@ -437,81 +437,29 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             )}
           </div>
         ) : (
-          // Compare mode: side-by-side layout for assistant messages
-          <div className="space-y-4 max-w-6xl mx-auto px-2">
+          // Compare mode: vertical stack (same layout as single mode)
+          <div className="space-y-4 max-w-4xl mx-auto">
             <AnimatePresence mode="popLayout">
-              {(() => {
-                // Group messages: user messages standalone, assistant messages grouped by timestamp
-                const grouped: { type: 'user' | 'compare'; messages: Message[] }[] = [];
-                let currentGroup: Message[] = [];
-                let currentTimestamp: string | null = null;
-
-                messages.forEach((message) => {
-                  if (message.role === 'user') {
-                    // Flush any pending compare group
-                    if (currentGroup.length > 0) {
-                      grouped.push({ type: 'compare', messages: currentGroup });
-                      currentGroup = [];
-                    }
-                    grouped.push({ type: 'user', messages: [message] });
-                    // Extract timestamp for the next group
-                    currentTimestamp = message.id;
-                  } else {
-                    // Assistant message - add to current group
-                    currentGroup.push(message);
-                  }
-                });
-
-                // Flush remaining group
-                if (currentGroup.length > 0) {
-                  grouped.push({ type: 'compare', messages: currentGroup });
-                }
-
-                return grouped.map((group, groupIndex) => (
-                  <motion.div
-                    key={`group-${groupIndex}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                  >
-                    {group.type === 'user' ? (
-                      // User message - full width
-                      <div className="max-w-4xl mx-auto">
-                        <ChatMessage
-                          role={group.messages[0].role}
-                          content={group.messages[0].content}
-                          onFlagBug={() => handleFlagBug(group.messages[0])}
-                          onSaveToLibrary={handleSaveToLibrary}
-                        />
-                      </div>
-                    ) : (
-                      // Compare group - side by side grid
-                      <div className={`grid gap-3 ${
-                        group.messages.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                        group.messages.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-                        'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4'
-                      }`}>
-                        {group.messages.map((message) => (
-                          <div key={message.id} className="min-w-0">
-                            <ChatMessage
-                              role={message.role}
-                              content={message.content}
-                              model={message.model}
-                              specificModel={message.specificModel}
-                              responseTime={message.responseTime}
-                              fallback={message.fallback}
-                              isLoading={message.isLoading}
-                              onFlagBug={() => handleFlagBug(message)}
-                              onSaveToLibrary={handleSaveToLibrary}
-                              compact
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                ));
-              })()}
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  <ChatMessage
+                    role={message.role}
+                    content={message.content}
+                    model={message.model}
+                    specificModel={message.specificModel}
+                    responseTime={message.responseTime}
+                    fallback={message.fallback}
+                    isLoading={message.isLoading}
+                    onFlagBug={() => handleFlagBug(message)}
+                    onSaveToLibrary={handleSaveToLibrary}
+                  />
+                </motion.div>
+              ))}
             </AnimatePresence>
           </div>
         )}
