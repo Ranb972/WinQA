@@ -423,7 +423,7 @@ function BugsPageContent() {
           </div>
         </MotionWrapper>
       ) : (
-        <StaggerContainer className="space-y-3">
+        <StaggerContainer key={`${statusFilter}-${severityFilter}-${issueTypeFilter}`} className="space-y-3">
           {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
               <div className="glass-card rounded-xl overflow-hidden hover:border-slate-600 transition-colors">

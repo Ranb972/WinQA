@@ -379,7 +379,7 @@ function PromptsPageContent() {
           )}
         </div>
       ) : (
-        <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <StaggerContainer key={`${selectedTag ?? 'all'}-${showFavoritesOnly}`} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredPrompts.map((prompt) => (
             <StaggerItem key={prompt._id}>
               <PromptCard
