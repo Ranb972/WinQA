@@ -1061,7 +1061,7 @@ function LandingPage() {
           {/* Tagline */}
           <MotionWrapper delay={0.2}>
             <p className="text-xl md:text-2xl text-slate-300 mb-4">
-              The playground where QA professionals learn to break AI
+              The playground where curious minds learn to break AI
             </p>
             <p className="text-slate-400 max-w-2xl mx-auto mb-10">
               Test prompts across multiple models, track hallucinations and failures,
@@ -1193,7 +1193,7 @@ function LandingPage() {
                 Ready to break some AI?
               </h2>
               <p className="text-slate-400 mb-6 max-w-lg mx-auto">
-                Join the platform where QA professionals push AI to its limits.
+                Join the platform where AI enthusiasts push models to their limits.
               </p>
               <SignUpButton mode="modal">
                 <motion.button
