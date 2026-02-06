@@ -212,8 +212,11 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 models: model,
                 modelPreferences,
                 customApiKeys,
+                crossProviderFallback: false,
+                maxFallbackAttempts: 2,
+                fallbackDelay: 200,
               }),
-            });
+            }, 30000);
 
             const data = await response.json() as ChatResponse;
 
@@ -259,7 +262,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 models: `custom:${provider.id}`,
                 customProvider: provider,
               }),
-            });
+            }, 30000);
 
             const data = await response.json() as ChatResponse;
 

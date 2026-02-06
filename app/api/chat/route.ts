@@ -11,12 +11,15 @@ interface RequestBody {
   modelPreferences?: Record<LLMProvider, SpecificModel>;
   customApiKeys?: CustomApiKeys;
   customProvider?: CustomProvider; // For custom provider requests
+  crossProviderFallback?: boolean;
+  maxFallbackAttempts?: number;
+  fallbackDelay?: number;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as RequestBody;
-    const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys, customProvider } = body;
+    const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys, customProvider, crossProviderFallback, maxFallbackAttempts, fallbackDelay } = body;
 
     if (!messages || messages.length === 0) {
       return NextResponse.json(
@@ -63,7 +66,14 @@ export async function POST(request: NextRequest) {
 
     // Handle single built-in model
     const specificModel = modelPreferences?.[models as LLMProvider];
-    const response = await chat(messages, models as LLMProvider, temperature, maxTokens, true, specificModel, customApiKeys);
+    const fallbackOverrides = crossProviderFallback !== undefined || maxFallbackAttempts || fallbackDelay
+      ? {
+          enableCrossProviderFallback: crossProviderFallback,
+          maxAttempts: maxFallbackAttempts,
+          delayBetweenAttempts: fallbackDelay,
+        }
+      : undefined;
+    const response = await chat(messages, models as LLMProvider, temperature, maxTokens, true, specificModel, customApiKeys, fallbackOverrides);
     return NextResponse.json(response);
   } catch (error) {
     // Log error message only, never log full error object which could contain API keys

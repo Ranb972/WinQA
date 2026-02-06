@@ -22,11 +22,20 @@ export async function chat(
   maxTokens: number = 1024,
   enableFallback: boolean = true,
   specificModel?: string,
-  customApiKeys?: CustomApiKeys
+  customApiKeys?: CustomApiKeys,
+  fallbackOverrides?: {
+    enableCrossProviderFallback?: boolean;
+    maxAttempts?: number;
+    delayBetweenAttempts?: number;
+  }
 ): Promise<ChatResponse> {
   // Use fallback-enabled chat by default
   if (enableFallback) {
-    return chatWithFallback(messages, model, temperature, maxTokens, { specificModel, customApiKeys });
+    return chatWithFallback(messages, model, temperature, maxTokens, {
+      specificModel,
+      customApiKeys,
+      ...fallbackOverrides,
+    });
   }
 
   // Direct call without fallback

@@ -129,6 +129,7 @@ interface FallbackOptions {
   enableCrossProviderFallback?: boolean;
   maxAttempts?: number;
   delayBetweenAttempts?: number;
+  providerTimeout?: number;
   specificModel?: string;
   customApiKeys?: CustomApiKeys;
 }
@@ -149,6 +150,7 @@ export async function chatWithFallback(
     enableCrossProviderFallback = true,
     maxAttempts = 6,
     delayBetweenAttempts = 500,
+    providerTimeout = 30000,
     specificModel,
     customApiKeys,
   } = options;
@@ -179,14 +181,23 @@ export async function chatWithFallback(
     if (attemptCount >= maxAttempts) break;
     attemptCount++;
 
-    const response = await callProvider(
-      currentProvider,
-      currentModel,
-      messages,
-      temperature,
-      maxTokens,
-      customApiKeys
-    );
+    const response = await Promise.race([
+      callProvider(
+        currentProvider,
+        currentModel,
+        messages,
+        temperature,
+        maxTokens,
+        customApiKeys
+      ),
+      sleep(providerTimeout).then((): ChatResponse => ({
+        content: '',
+        model: currentProvider,
+        specificModel: currentModel,
+        responseTime: providerTimeout,
+        error: `Request timed out after ${providerTimeout / 1000}s`,
+      })),
+    ]);
 
     // Check if the response has an error
     if (response.error) {
