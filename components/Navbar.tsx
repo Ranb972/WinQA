@@ -22,6 +22,7 @@ import {
   FlaskConical,
   Code,
   Settings,
+  Swords,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +54,7 @@ const navItems: NavItem[] = [
       { href: '/chat-lab', label: 'Chat Testing', icon: <Zap className="h-4 w-4" /> },
       { href: '/chat-lab?mode=compare', label: 'Compare Mode', icon: <BarChart3 className="h-4 w-4" /> },
       { href: '/code-testing', label: 'Code Testing', icon: <Code className="h-4 w-4" /> },
+      { href: '/battle', label: 'AI Battle', icon: <Swords className="h-4 w-4" /> },
     ],
   },
   {
