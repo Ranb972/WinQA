@@ -134,6 +134,116 @@ const fetchWithTimeout = async (
 
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
 
+// --- Extracted Components (outside BattlePage to prevent remount on re-render) ---
+
+function StarRating({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-slate-400 w-20">{label}</span>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <motion.button
+            key={star}
+            whileTap={{ scale: 1.3 }}
+            onClick={() => onChange(star)}
+            className="focus:outline-none"
+          >
+            <Star
+              className={`h-5 w-5 transition-colors ${
+                star <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
+              }`}
+            />
+          </motion.button>
+        ))}
+      </div>
+      <span className="text-xs text-slate-500">{value}/5</span>
+    </div>
+  );
+}
+
+function FighterCard({
+  fighter,
+  setFighter,
+  label,
+  onProviderChange,
+}: {
+  fighter: FighterConfig;
+  setFighter: (f: FighterConfig) => void;
+  label: string;
+  onProviderChange: (fighter: 'A' | 'B', provider: LLMProvider) => void;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="bg-slate-900/50 backdrop-blur-xl border border-orange-500/20 rounded-2xl p-6">
+        <h3 className="text-sm font-medium text-slate-400 mb-4">{label}</h3>
+
+        {/* Provider Select */}
+        <div className="mb-3">
+          <label className="text-xs text-slate-500 mb-1 block">Provider</label>
+          <select
+            value={fighter.provider}
+            onChange={(e) =>
+              onProviderChange(
+                label.includes('A') || label.includes('1') ? 'A' : 'B',
+                e.target.value as LLMProvider
+              )
+            }
+            className="w-full bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors"
+          >
+            <option value="">Select Provider</option>
+            {providers.map((p) => (
+              <option key={p} value={p}>
+                {providerDisplayNames[p]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Model Select */}
+        <div>
+          <label className="text-xs text-slate-500 mb-1 block">Model</label>
+          <select
+            value={fighter.model}
+            onChange={(e) =>
+              setFighter({ ...fighter, model: e.target.value })
+            }
+            disabled={!fighter.provider}
+            className="w-full bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors disabled:opacity-50"
+          >
+            <option value="">Select Model</option>
+            {fighter.provider &&
+              PROVIDER_MODELS[fighter.provider]?.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Provider color indicator */}
+        {fighter.provider && (
+          <div className="mt-3 flex items-center gap-2">
+            <div
+              className={`h-2 w-2 rounded-full ${providerColorDots[fighter.provider as LLMProvider]}`}
+            />
+            <span className={`text-xs ${modelColors[fighter.provider as LLMProvider]}`}>
+              {modelDisplayNames[fighter.provider as LLMProvider]}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Component ---
 
 export default function BattlePage() {
@@ -455,117 +565,6 @@ export default function BattlePage() {
     );
   };
 
-  // --- Render helpers ---
-
-  const StarRating = ({
-    value,
-    onChange,
-    label,
-  }: {
-    value: number;
-    onChange: (v: number) => void;
-    label: string;
-  }) => (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-400 w-20">{label}</span>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <motion.button
-            key={star}
-            whileTap={{ scale: 1.3 }}
-            onClick={() => onChange(star)}
-            className="focus:outline-none"
-          >
-            <Star
-              className={`h-5 w-5 transition-colors ${
-                star <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
-              }`}
-            />
-          </motion.button>
-        ))}
-      </div>
-      <span className="text-xs text-slate-500">{value}/5</span>
-    </div>
-  );
-
-  const FighterCard = ({
-    fighter,
-    setFighter,
-    label,
-    direction,
-  }: {
-    fighter: FighterConfig;
-    setFighter: (f: FighterConfig) => void;
-    label: string;
-    direction: 'left' | 'right';
-  }) => (
-    <motion.div
-      initial={{ opacity: 0, x: direction === 'left' ? -60 : 60 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-      className="flex-1 min-w-0"
-    >
-      <div className="bg-slate-900/50 backdrop-blur-xl border border-orange-500/20 rounded-2xl p-6">
-        <h3 className="text-sm font-medium text-slate-400 mb-4">{label}</h3>
-
-        {/* Provider Select */}
-        <div className="mb-3">
-          <label className="text-xs text-slate-500 mb-1 block">Provider</label>
-          <select
-            value={fighter.provider}
-            onChange={(e) =>
-              handleProviderChange(
-                label.includes('A') || label.includes('1') ? 'A' : 'B',
-                e.target.value as LLMProvider
-              )
-            }
-            className="w-full bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors"
-          >
-            <option value="">Select Provider</option>
-            {providers.map((p) => (
-              <option key={p} value={p}>
-                {providerDisplayNames[p]}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Model Select */}
-        <div>
-          <label className="text-xs text-slate-500 mb-1 block">Model</label>
-          <select
-            value={fighter.model}
-            onChange={(e) =>
-              setFighter({ ...fighter, model: e.target.value })
-            }
-            disabled={!fighter.provider}
-            className="w-full bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors disabled:opacity-50"
-          >
-            <option value="">Select Model</option>
-            {fighter.provider &&
-              PROVIDER_MODELS[fighter.provider]?.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        {/* Provider color indicator */}
-        {fighter.provider && (
-          <div className="mt-3 flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${providerColorDots[fighter.provider as LLMProvider]}`}
-            />
-            <span className={`text-xs ${modelColors[fighter.provider as LLMProvider]}`}>
-              {modelDisplayNames[fighter.provider as LLMProvider]}
-            </span>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-
   // --- RENDER ---
 
   return (
@@ -607,11 +606,7 @@ export default function BattlePage() {
               {battleState === 'setup' && (
                 <div>
                   {/* Header */}
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-10"
-                  >
+                  <div className="text-center mb-10">
                     <h1
                       className="text-4xl md:text-5xl font-black mb-3 bg-gradient-to-r from-orange-400 via-amber-400 to-red-400 bg-clip-text text-transparent"
                       style={{ textShadow: '0 0 40px rgba(249, 115, 22, 0.3)' }}
@@ -619,7 +614,7 @@ export default function BattlePage() {
                       AI BATTLE ARENA
                     </h1>
                     <p className="text-slate-400">Pit AI models against each other in epic challenges</p>
-                  </motion.div>
+                  </div>
 
                   {/* Fighter Cards */}
                   <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
@@ -627,7 +622,7 @@ export default function BattlePage() {
                       fighter={fighterA}
                       setFighter={setFighterA}
                       label="Fighter A"
-                      direction="left"
+                      onProviderChange={handleProviderChange}
                     />
 
                     {/* VS Badge */}
@@ -645,7 +640,7 @@ export default function BattlePage() {
                       fighter={fighterB}
                       setFighter={setFighterB}
                       label="Fighter B"
-                      direction="right"
+                      onProviderChange={handleProviderChange}
                     />
                   </div>
 
@@ -935,7 +930,7 @@ export default function BattlePage() {
                             </div>
 
                             {/* Response */}
-                            <div className="text-sm text-slate-300 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
+                            <div className="text-sm text-slate-300 whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
                               {response?.error
                                 ? `Error: ${response.error}`
                                 : response?.content || 'No response'}
