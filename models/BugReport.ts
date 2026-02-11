@@ -6,6 +6,7 @@ export type BugStatus = 'Open' | 'Investigating' | 'Resolved';
 
 export interface IBugReport extends Document {
   _id: mongoose.Types.ObjectId;
+  user_id?: string;
   prompt_context: string;
   model_response: string;
   model_used: string;
@@ -17,6 +18,10 @@ export interface IBugReport extends Document {
 }
 
 const BugReportSchema = new Schema<IBugReport>({
+  user_id: {
+    type: String,
+    index: true,
+  },
   prompt_context: {
     type: String,
     required: [true, 'Prompt context is required'],

@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import Insight from '@/models/Insight';
+import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
 
-// GET - List all insights
+const ALLOWED_PUT_FIELDS = ['title', 'content', 'tags', 'category'];
+
+// GET - List all insights for the authenticated user
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const tag = searchParams.get('tag');
 
-    const filter: Record<string, unknown> = {};
-    if (tag) filter.tags = tag;
+    const filter: Record<string, unknown> = { user_id: userId };
+    if (tag) filter.tags = sanitizeQueryParam(tag);
 
-    const insights = await Insight.find(filter).sort({ updated_at: -1 });
+    let insights = await Insight.find(filter).sort({ updated_at: -1 });
+
+    // Legacy migration: claim unowned docs on first empty result
+    if (insights.length === 0) {
+      const legacyCount = await Insight.countDocuments({ user_id: { $exists: false } });
+      if (legacyCount > 0) {
+        await Insight.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
+        insights = await Insight.find(filter).sort({ updated_at: -1 });
+      }
+    }
+
     return NextResponse.json(insights);
   } catch (error) {
     console.error('Error fetching insights:', error);
@@ -26,12 +45,19 @@ export async function GET(request: NextRequest) {
 // POST - Create new insight
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
 
     const insight = await Insight.create({
+      user_id: userId,
       title: body.title,
       content: body.content,
+      category: body.category,
       tags: body.tags || [],
     });
 
@@ -45,12 +71,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update insight
+// PUT - Update insight (ownership verified)
 export async function PUT(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -59,8 +90,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const insight = await Insight.findByIdAndUpdate(
-      id,
+    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+
+    const insight = await Insight.findOneAndUpdate(
+      { _id: id, user_id: userId },
       { ...updateData, updated_at: new Date() },
       { new: true, runValidators: true }
     );
@@ -79,9 +112,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Remove insight
+// DELETE - Remove insight (ownership verified)
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -93,7 +131,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const insight = await Insight.findByIdAndDelete(id);
+    const insight = await Insight.findOneAndDelete({ _id: id, user_id: userId });
 
     if (!insight) {
       return NextResponse.json({ error: 'Insight not found' }, { status: 404 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
 
 interface TestKeyRequest {
@@ -134,6 +135,11 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json() as TestKeyRequest;
     const { provider, apiKey } = body;
 

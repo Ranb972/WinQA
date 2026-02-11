@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import TestCase from '@/models/TestCase';
+import { pickAllowedFields } from '@/lib/security';
 
-// GET - List all test cases
+const ALLOWED_PUT_FIELDS = ['title', 'description', 'initial_prompt', 'expected_outcome', 'category', 'difficulty'];
+
+// GET - List all test cases for the authenticated user
 export async function GET() {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
-    const testCases = await TestCase.find({}).sort({ created_at: -1 });
+
+    let testCases = await TestCase.find({ user_id: userId }).sort({ created_at: -1 });
+
+    // Legacy migration: claim unowned docs on first empty result
+    if (testCases.length === 0) {
+      const legacyCount = await TestCase.countDocuments({ user_id: { $exists: false } });
+      if (legacyCount > 0) {
+        await TestCase.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
+        testCases = await TestCase.find({ user_id: userId }).sort({ created_at: -1 });
+      }
+    }
+
     return NextResponse.json(testCases);
   } catch (error) {
     console.error('Error fetching test cases:', error);
@@ -20,14 +40,22 @@ export async function GET() {
 // POST - Create new test case
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
 
     const testCase = await TestCase.create({
+      user_id: userId,
       title: body.title,
       description: body.description,
       initial_prompt: body.initial_prompt,
       expected_outcome: body.expected_outcome,
+      category: body.category,
+      difficulty: body.difficulty,
     });
 
     return NextResponse.json(testCase, { status: 201 });
@@ -40,12 +68,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update test case
+// PUT - Update test case (ownership verified)
 export async function PUT(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -54,10 +87,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const testCase = await TestCase.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+
+    const testCase = await TestCase.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     if (!testCase) {
       return NextResponse.json(
@@ -76,9 +112,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Remove test case
+// DELETE - Remove test case (ownership verified)
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -90,7 +131,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const testCase = await TestCase.findByIdAndDelete(id);
+    const testCase = await TestCase.findOneAndDelete({ _id: id, user_id: userId });
 
     if (!testCase) {
       return NextResponse.json(

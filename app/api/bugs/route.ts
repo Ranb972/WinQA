@@ -1,22 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import BugReport from '@/models/BugReport';
+import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
 
-// GET - List all bug reports
+const ALLOWED_PUT_FIELDS = ['prompt_context', 'model_response', 'issue_type', 'severity', 'user_notes', 'status'];
+
+// GET - List all bug reports for the authenticated user
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const model = searchParams.get('model');
     const issueType = searchParams.get('issue_type');
 
-    const filter: Record<string, string> = {};
-    if (status) filter.status = status;
-    if (model) filter.model_used = model;
-    if (issueType) filter.issue_type = issueType;
+    const filter: Record<string, string> = { user_id: userId };
+    if (status) filter.status = sanitizeQueryParam(status);
+    if (model) filter.model_used = sanitizeQueryParam(model);
+    if (issueType) filter.issue_type = sanitizeQueryParam(issueType);
 
-    const bugs = await BugReport.find(filter).sort({ created_at: -1 });
+    let bugs = await BugReport.find(filter).sort({ created_at: -1 });
+
+    // Legacy migration: claim unowned docs on first empty result
+    if (bugs.length === 0) {
+      const legacyCount = await BugReport.countDocuments({ user_id: { $exists: false } });
+      if (legacyCount > 0) {
+        await BugReport.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
+        bugs = await BugReport.find(filter).sort({ created_at: -1 });
+      }
+    }
+
     return NextResponse.json(bugs);
   } catch (error) {
     console.error('Error fetching bug reports:', error);
@@ -30,10 +49,16 @@ export async function GET(request: NextRequest) {
 // POST - Create new bug report
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
 
     const bugReport = await BugReport.create({
+      user_id: userId,
       prompt_context: body.prompt_context,
       model_response: body.model_response,
       model_used: body.model_used,
@@ -53,12 +78,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update bug report
+// PUT - Update bug report (ownership verified)
 export async function PUT(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -67,10 +97,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const bugReport = await BugReport.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+
+    const bugReport = await BugReport.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     if (!bugReport) {
       return NextResponse.json(
@@ -89,9 +122,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Remove bug report
+// DELETE - Remove bug report (ownership verified)
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -103,7 +141,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const bugReport = await BugReport.findByIdAndDelete(id);
+    const bugReport = await BugReport.findOneAndDelete({ _id: id, user_id: userId });
 
     if (!bugReport) {
       return NextResponse.json(

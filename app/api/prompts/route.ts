@@ -1,20 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import PromptLibrary from '@/models/PromptLibrary';
+import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
 
-// GET - List all prompts
+const ALLOWED_PUT_FIELDS = ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags', 'is_favorite'];
+
+// GET - List all prompts for the authenticated user
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const tag = searchParams.get('tag');
     const favorite = searchParams.get('favorite');
 
-    const filter: Record<string, unknown> = {};
-    if (tag) filter.tags = tag;
+    const filter: Record<string, unknown> = { user_id: userId };
+    if (tag) filter.tags = sanitizeQueryParam(tag);
     if (favorite === 'true') filter.is_favorite = true;
 
-    const prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
+    let prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
+
+    // Legacy migration: claim unowned docs on first empty result
+    if (prompts.length === 0) {
+      const legacyCount = await PromptLibrary.countDocuments({ user_id: { $exists: false } });
+      if (legacyCount > 0) {
+        await PromptLibrary.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
+        prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
+      }
+    }
+
     return NextResponse.json(prompts);
   } catch (error) {
     console.error('Error fetching prompts:', error);
@@ -28,10 +47,16 @@ export async function GET(request: NextRequest) {
 // POST - Create new prompt
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
 
     const prompt = await PromptLibrary.create({
+      user_id: userId,
       title: body.title,
       bad_prompt_example: body.bad_prompt_example,
       good_prompt_example: body.good_prompt_example,
@@ -50,12 +75,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update prompt
+// PUT - Update prompt (ownership verified)
 export async function PUT(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -64,10 +94,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const prompt = await PromptLibrary.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+
+    const prompt = await PromptLibrary.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
@@ -83,9 +116,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// PATCH - Toggle favorite
+// PATCH - Toggle favorite (ownership verified)
 export async function PATCH(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
     const { id } = body;
@@ -97,7 +135,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const prompt = await PromptLibrary.findById(id);
+    const prompt = await PromptLibrary.findOne({ _id: id, user_id: userId });
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
@@ -116,9 +154,14 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE - Remove prompt
+// DELETE - Remove prompt (ownership verified)
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -130,7 +173,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const prompt = await PromptLibrary.findByIdAndDelete(id);
+    const prompt = await PromptLibrary.findOneAndDelete({ _id: id, user_id: userId });
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });

@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import Battle from '@/models/Battle';
 import Leaderboard from '@/models/Leaderboard';
+import { validateRating, validateEnum } from '@/lib/security';
 
 interface VoteRequestBody {
   challengeId: string;
@@ -36,6 +37,26 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     const body = (await request.json()) as VoteRequestBody;
+
+    // Validate battleType
+    if (!validateEnum(body.battleType, ['standard', 'blindfold', 'royale'])) {
+      return NextResponse.json({ error: 'Invalid battleType' }, { status: 400 });
+    }
+
+    // Validate winner
+    if (!validateEnum(body.winner, ['modelA', 'modelB', 'modelC', 'modelD', 'tie'])) {
+      return NextResponse.json({ error: 'Invalid winner value' }, { status: 400 });
+    }
+
+    // Validate rating values (0-5)
+    const ratingKeys = ['modelA', 'modelB', 'modelC', 'modelD'] as const;
+    for (const key of ratingKeys) {
+      const r = body.ratings[key];
+      if (!r) continue;
+      if (!validateRating(r.accuracy) || !validateRating(r.creativity) || !validateRating(r.clarity) || !validateRating(r.total)) {
+        return NextResponse.json({ error: `Invalid rating values for ${key}` }, { status: 400 });
+      }
+    }
 
     // Save the battle
     const battle = await Battle.create({
@@ -121,7 +142,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('Battle vote error:', errMsg);
-    console.error('Battle vote error details:', JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2));
     return NextResponse.json({ error: 'Failed to save battle' }, { status: 500 });
   }
 }

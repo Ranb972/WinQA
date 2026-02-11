@@ -2,14 +2,21 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ITestCase extends Document {
   _id: mongoose.Types.ObjectId;
+  user_id?: string;
   title: string;
   description?: string;
   initial_prompt: string;
   expected_outcome?: string;
+  category?: string;
+  difficulty?: string;
   created_at: Date;
 }
 
 const TestCaseSchema = new Schema<ITestCase>({
+  user_id: {
+    type: String,
+    index: true,
+  },
   title: {
     type: String,
     required: [true, 'Title is required'],
@@ -24,6 +31,12 @@ const TestCaseSchema = new Schema<ITestCase>({
     required: [true, 'Initial prompt is required'],
   },
   expected_outcome: {
+    type: String,
+  },
+  category: {
+    type: String,
+  },
+  difficulty: {
     type: String,
   },
   created_at: {

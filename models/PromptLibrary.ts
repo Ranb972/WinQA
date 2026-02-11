@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IPromptLibrary extends Document {
   _id: mongoose.Types.ObjectId;
+  user_id?: string;
   title: string;
   bad_prompt_example: string;
   good_prompt_example: string;
@@ -12,6 +13,10 @@ export interface IPromptLibrary extends Document {
 }
 
 const PromptLibrarySchema = new Schema<IPromptLibrary>({
+  user_id: {
+    type: String,
+    index: true,
+  },
   title: {
     type: String,
     required: [true, 'Title is required'],

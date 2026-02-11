@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import TestCase from '@/models/TestCase';
 import PromptLibrary from '@/models/PromptLibrary';
@@ -11,16 +12,23 @@ import {
   seedBugReports,
 } from '@/lib/seedData';
 
-// GET - Check seeding status
+// GET - Check seeding status (scoped to authenticated user)
 export async function GET() {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
+    const userFilter = { user_id: userId };
+
     const [testCaseCount, promptCount, insightCount, bugCount] = await Promise.all([
-      TestCase.countDocuments(),
-      PromptLibrary.countDocuments(),
-      Insight.countDocuments(),
-      BugReport.countDocuments(),
+      TestCase.countDocuments(userFilter),
+      PromptLibrary.countDocuments(userFilter),
+      Insight.countDocuments(userFilter),
+      BugReport.countDocuments(userFilter),
     ]);
 
     return NextResponse.json({
@@ -47,10 +55,17 @@ export async function GET() {
   }
 }
 
-// POST - Seed empty collections
+// POST - Seed empty collections (scoped to authenticated user)
 export async function POST() {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
+
+    const userFilter = { user_id: userId };
 
     const results = {
       testCases: { seeded: false, count: 0 },
@@ -59,31 +74,31 @@ export async function POST() {
       bugs: { seeded: false, count: 0 },
     };
 
-    // Seed test cases if empty
-    const testCaseCount = await TestCase.countDocuments();
+    // Seed test cases if empty for this user
+    const testCaseCount = await TestCase.countDocuments(userFilter);
     if (testCaseCount === 0) {
-      await TestCase.insertMany(seedTestCases);
+      await TestCase.insertMany(seedTestCases.map(d => ({ ...d, user_id: userId })));
       results.testCases = { seeded: true, count: seedTestCases.length };
     }
 
-    // Seed prompts if empty
-    const promptCount = await PromptLibrary.countDocuments();
+    // Seed prompts if empty for this user
+    const promptCount = await PromptLibrary.countDocuments(userFilter);
     if (promptCount === 0) {
-      await PromptLibrary.insertMany(seedPrompts);
+      await PromptLibrary.insertMany(seedPrompts.map(d => ({ ...d, user_id: userId })));
       results.prompts = { seeded: true, count: seedPrompts.length };
     }
 
-    // Seed insights if empty
-    const insightCount = await Insight.countDocuments();
+    // Seed insights if empty for this user
+    const insightCount = await Insight.countDocuments(userFilter);
     if (insightCount === 0) {
-      await Insight.insertMany(seedInsights);
+      await Insight.insertMany(seedInsights.map(d => ({ ...d, user_id: userId })));
       results.insights = { seeded: true, count: seedInsights.length };
     }
 
-    // Seed bugs if empty
-    const bugCount = await BugReport.countDocuments();
+    // Seed bugs if empty for this user
+    const bugCount = await BugReport.countDocuments(userFilter);
     if (bugCount === 0) {
-      await BugReport.insertMany(seedBugReports);
+      await BugReport.insertMany(seedBugReports.map(d => ({ ...d, user_id: userId })));
       results.bugs = { seeded: true, count: seedBugReports.length };
     }
 
@@ -103,7 +118,7 @@ export async function POST() {
   } catch (error) {
     console.error('Error seeding data:', error);
     return NextResponse.json(
-      { error: 'Failed to seed data', details: String(error) },
+      { error: 'Failed to seed data' },
       { status: 500 }
     );
   }

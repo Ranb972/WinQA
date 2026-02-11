@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { isPrivateUrl } from '@/lib/security';
 
 interface TestCustomProviderRequest {
   baseUrl: string;
@@ -126,12 +128,32 @@ async function testConnection(
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = (await request.json()) as TestCustomProviderRequest;
     const { baseUrl, apiKey, modelId, headerType } = body;
 
     if (!baseUrl || !apiKey || !modelId) {
       return NextResponse.json(
         { valid: false, error: 'Base URL, API key, and model ID are required' },
+        { status: 400 }
+      );
+    }
+
+    // SSRF protection: require https and block private IPs
+    if (!baseUrl.startsWith('https://')) {
+      return NextResponse.json(
+        { valid: false, error: 'Base URL must use HTTPS' },
+        { status: 400 }
+      );
+    }
+
+    if (isPrivateUrl(baseUrl)) {
+      return NextResponse.json(
+        { valid: false, error: 'Base URL must not point to a private/internal address' },
         { status: 400 }
       );
     }
