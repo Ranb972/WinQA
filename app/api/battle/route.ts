@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           messages,
           contender.provider,
           0.7,
-          1024,
+          2048,
           true,
           specificModel,
           customApiKeys,
