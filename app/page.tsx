@@ -249,7 +249,6 @@ const featureSections = [
 
 // Coming soon features
 const comingSoonFeatures = [
-  { emoji: '🔮', text: 'AI Battle Mode - Models compete head-to-head' },
   { emoji: '📈', text: 'Analytics Dashboard - Visualize your testing patterns' },
   { emoji: '🤝', text: 'Team Features - Collaborate on prompt engineering' },
   { emoji: '🌐', text: 'Public Prompt Sharing - Learn from the community' },
