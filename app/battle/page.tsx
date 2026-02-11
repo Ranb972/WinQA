@@ -19,9 +19,14 @@ import {
   Sparkles,
   RotateCcw,
   ArrowRight,
+  Zap,
+  Shield,
+  ScrollText,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { BATTLE_CHALLENGES, BattleChallenge } from '@/lib/battle-challenges';
-import { PROVIDER_MODELS } from '@/lib/llm/models';
+import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { LLMProvider } from '@/lib/llm/types';
 import {
   modelDisplayNames,
@@ -133,6 +138,42 @@ const fetchWithTimeout = async (
 };
 
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
+
+// --- Markdown renderer for battle responses ---
+
+function MarkdownResponse({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        pre: ({ children }) => (
+          <pre className="bg-slate-950 rounded-lg p-3 my-2 overflow-x-auto text-xs">{children}</pre>
+        ),
+        code: ({ children, className }) => {
+          const isBlock = className?.includes('language-');
+          if (isBlock) {
+            return <code className="font-mono text-slate-200">{children}</code>;
+          }
+          return (
+            <code className="bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded text-xs font-mono">
+              {children}
+            </code>
+          );
+        },
+        strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+        em: ({ children }) => <em className="text-slate-200 italic">{children}</em>,
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+        h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-base font-bold text-white mb-1.5">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-sm font-bold text-white mb-1">{children}</h3>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
 
 // --- Extracted Components (outside BattlePage to prevent remount on re-render) ---
 
@@ -305,17 +346,17 @@ export default function BattlePage() {
     const shuffled = [...providers].sort(() => Math.random() - 0.5);
     const pA = shuffled[0];
     const pB = shuffled[1];
-    setFighterA({ provider: pA, model: defaultModels[pA] });
-    setFighterB({ provider: pB, model: defaultModels[pB] });
+    setFighterA({ provider: pA, model: getDefaultModel(pA) || '' });
+    setFighterB({ provider: pB, model: getDefaultModel(pB) || '' });
   };
 
   const handleProviderChange = (
     fighter: 'A' | 'B',
     provider: LLMProvider
   ) => {
-    const defaultModel = defaultModels[provider];
+    const model = getDefaultModel(provider) || '';
     const setter = fighter === 'A' ? setFighterA : setFighterB;
-    setter({ provider, model: defaultModel });
+    setter({ provider, model });
   };
 
   // --- Battle execution ---
@@ -376,7 +417,7 @@ export default function BattlePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },
-        60000
+        50000
       );
 
       const data = await res.json();
@@ -437,7 +478,16 @@ export default function BattlePage() {
     const challenge = selectedChallenge;
     const battleType = isRoyale ? 'royale' : isBlindfold ? 'blindfold' : 'standard';
 
-    const contenders = isRoyale ? providers : [fighterA.provider, fighterB.provider];
+    // Sanitize responses: ensure content is never empty (Mongoose rejects empty required strings)
+    const sanitizeResponse = (r: BattleResponse | null) => {
+      if (!r) return { content: '[No response]', responseTime: 0 };
+      return {
+        content: r.content || (r.error ? `[Error] ${r.error}` : '[No response]'),
+        responseTime: r.responseTime,
+        specificModel: r.specificModel,
+        error: r.error,
+      };
+    };
 
     const body: Record<string, unknown> = {
       challengeId: challenge?.id || 'custom',
@@ -446,8 +496,8 @@ export default function BattlePage() {
       battleType,
       modelA: { provider: fighterA.provider, model: fighterA.model },
       modelB: { provider: fighterB.provider, model: fighterB.model },
-      responseA: responses[0],
-      responseB: responses[1],
+      responseA: sanitizeResponse(responses[0]),
+      responseB: sanitizeResponse(responses[1]),
       ratings: {
         modelA: ratingsA,
         modelB: ratingsB,
@@ -457,10 +507,10 @@ export default function BattlePage() {
 
     if (isRoyale) {
       const royaleProviders = providers;
-      body.modelC = { provider: royaleProviders[2], model: defaultModels[royaleProviders[2]] };
-      body.modelD = { provider: royaleProviders[3], model: defaultModels[royaleProviders[3]] };
-      body.responseC = responses[2];
-      body.responseD = responses[3];
+      body.modelC = { provider: royaleProviders[2], model: getDefaultModel(royaleProviders[2]) || '' };
+      body.modelD = { provider: royaleProviders[3], model: getDefaultModel(royaleProviders[3]) || '' };
+      body.responseC = sanitizeResponse(responses[2]);
+      body.responseD = sanitizeResponse(responses[3]);
       (body.ratings as Record<string, Ratings>).modelC = ratingsC;
       (body.ratings as Record<string, Ratings>).modelD = ratingsD;
     }
@@ -659,7 +709,13 @@ export default function BattlePage() {
                   <div className="mb-8">
                     <h2 className="text-lg font-semibold text-white mb-4">Choose Your Challenge</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {BATTLE_CHALLENGES.map((challenge) => (
+                      {BATTLE_CHALLENGES.map((challenge) => {
+                        const isSelected = selectedChallenge?.id === challenge.id && !useCustomPrompt;
+                        const isMindGames = challenge.category === 'Mind Games';
+                        const hoverClass = isMindGames
+                          ? 'hover:border-violet-500/40 hover:bg-violet-500/5'
+                          : 'hover:border-amber-500/40 hover:bg-amber-500/5';
+                        return (
                         <motion.button
                           key={challenge.id}
                           whileHover={{ scale: 1.02 }}
@@ -669,9 +725,9 @@ export default function BattlePage() {
                             setUseCustomPrompt(false);
                           }}
                           className={`text-left p-4 rounded-xl border transition-all duration-200 ${
-                            selectedChallenge?.id === challenge.id && !useCustomPrompt
-                              ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/10'
-                              : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-600'
+                            isSelected
+                              ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/20 ring-1 ring-orange-500/30'
+                              : `bg-slate-900/40 border-slate-700/50 ${hoverClass}`
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -700,7 +756,8 @@ export default function BattlePage() {
                             </div>
                           </div>
                         </motion.button>
-                      ))}
+                        );
+                      })}
 
                       {/* Custom Prompt Card */}
                       <motion.button
@@ -771,19 +828,26 @@ export default function BattlePage() {
               {battleState === 'battling' && (
                 <div>
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center mb-6"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-8"
                   >
-                    <h2 className="text-2xl font-bold text-orange-400 mb-2">
+                    <motion.h2
+                      animate={{ textShadow: ['0 0 20px rgba(245, 158, 11, 0.3)', '0 0 40px rgba(245, 158, 11, 0.6)', '0 0 20px rgba(245, 158, 11, 0.3)'] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="text-2xl md:text-3xl font-black text-amber-400 mb-2"
+                    >
+                      ⚔️ BATTLE IN PROGRESS
+                    </motion.h2>
+                    <p className="text-sm font-medium text-orange-300/80 mb-1">
                       {selectedChallenge?.name || 'Custom Challenge'}
-                    </h2>
-                    <p className="text-sm text-slate-400 max-w-2xl mx-auto line-clamp-2">
+                    </p>
+                    <p className="text-xs text-slate-500 max-w-2xl mx-auto line-clamp-2">
                       {battlePrompt}
                     </p>
                   </motion.div>
 
-                  <div className={`grid gap-4 ${isRoyale ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
+                  <div className={`grid gap-4 ${isRoyale ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'} relative`}>
                     {(isRoyale ? [0, 1, 2, 3] : [0, 1]).map((idx) => {
                       const fighter = idx === 0 ? fighterA : idx === 1 ? fighterB : { provider: providers[idx] as LLMProvider, model: defaultModels[providers[idx]] };
                       const response = responses[idx];
@@ -793,8 +857,14 @@ export default function BattlePage() {
                         <motion.div
                           key={idx}
                           initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            borderColor: response && !response.error
+                              ? ['rgba(16, 185, 129, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(51, 65, 85, 0.5)']
+                              : 'rgba(51, 65, 85, 0.5)',
+                          }}
+                          transition={{ delay: idx * 0.1, borderColor: { duration: 1.5, times: [0, 0.3, 1] } }}
                           className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5"
                         >
                           <div className="flex items-center justify-between mb-3">
@@ -828,15 +898,20 @@ export default function BattlePage() {
                           {/* Progress / Response */}
                           {!response ? (
                             <div className="space-y-3">
-                              <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
                                 <motion.div
-                                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
+                                  className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 rounded-full"
                                   initial={{ width: '0%' }}
                                   animate={{ width: '100%' }}
-                                  transition={{ duration: 30, ease: 'linear' }}
+                                  transition={{ duration: 45, ease: 'linear' }}
+                                />
+                                <motion.div
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                  animate={{ x: ['-100%', '100%'] }}
+                                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
                                 />
                               </div>
-                              <p className="text-sm text-slate-500 animate-pulse">Generating response...</p>
+                              <p className="text-sm text-amber-400/80 animate-pulse">Generating response...</p>
                             </div>
                           ) : response.error ? (
                             <div className="text-sm text-red-400 bg-red-500/10 rounded-lg p-3">
@@ -846,9 +921,9 @@ export default function BattlePage() {
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              className="text-sm text-slate-300 whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed"
+                              className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed"
                             >
-                              {response.content}
+                              <MarkdownResponse content={response.content} />
                             </motion.div>
                           )}
                         </motion.div>
@@ -930,10 +1005,14 @@ export default function BattlePage() {
                             </div>
 
                             {/* Response */}
-                            <div className="text-sm text-slate-300 whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
-                              {response?.error
-                                ? `Error: ${response.error}`
-                                : response?.content || 'No response'}
+                            <div className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
+                              {response?.error ? (
+                                <span className="text-red-400">Error: {response.error}</span>
+                              ) : response?.content ? (
+                                <MarkdownResponse content={response.content} />
+                              ) : (
+                                <span className="text-slate-500">No response</span>
+                              )}
                             </div>
 
                             {/* Star Ratings */}
@@ -1075,33 +1154,55 @@ export default function BattlePage() {
                   <motion.div
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', damping: 12, stiffness: 200 }}
-                    className="mb-8"
+                    transition={{ type: 'spring', damping: 10, stiffness: 150 }}
+                    className="mb-10"
                   >
                     <motion.div
                       animate={{
                         boxShadow: [
-                          '0 0 20px rgba(249, 115, 22, 0.2)',
-                          '0 0 60px rgba(249, 115, 22, 0.4)',
-                          '0 0 20px rgba(249, 115, 22, 0.2)',
+                          '0 0 30px rgba(245, 158, 11, 0.2)',
+                          '0 0 80px rgba(245, 158, 11, 0.5)',
+                          '0 0 30px rgba(245, 158, 11, 0.2)',
                         ],
                       }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="inline-block bg-slate-900/70 backdrop-blur-xl border border-orange-500/30 rounded-3xl px-10 py-8"
+                      transition={{ repeat: Infinity, duration: 2.5 }}
+                      className="inline-block bg-gradient-to-b from-slate-900/80 to-slate-900/60 backdrop-blur-xl border border-amber-500/40 rounded-3xl px-12 py-10"
                     >
-                      <Trophy className="h-12 w-12 text-amber-400 mx-auto mb-3" />
+                      <motion.div
+                        animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.1, 1] }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                      >
+                        <Trophy className="h-16 w-16 text-amber-400 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                      </motion.div>
                       {winner === 'tie' ? (
-                        <h2 className="text-3xl font-black text-amber-400 mb-2">IT&apos;S A TIE!</h2>
+                        <>
+                          <h2 className="text-4xl md:text-5xl font-black text-amber-400 mb-2 drop-shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                            IT&apos;S A TIE!
+                          </h2>
+                          <p className="text-sm text-slate-400">Both fighters scored equally</p>
+                        </>
                       ) : (
                         <>
-                          <h2 className="text-3xl font-black text-emerald-400 mb-2">WINNER!</h2>
-                          <p className="text-xl text-white font-bold">
+                          <h2 className="text-4xl md:text-5xl font-black text-emerald-400 mb-3 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                            WINNER!
+                          </h2>
+                          <p className="text-2xl text-white font-bold mb-2">
                             {winner === 'modelA'
                               ? getDisplayName(fighterA.provider, fighterA.model)
                               : winner === 'modelB'
                               ? getDisplayName(fighterB.provider, fighterB.model)
                               : `Model ${winner?.replace('model', '')}`}
                           </p>
+                          {(() => {
+                            const winnerRatings = winner === 'modelA' ? ratingsA : ratingsB;
+                            const loserRatings = winner === 'modelA' ? ratingsB : ratingsA;
+                            const diff = winnerRatings.total - loserRatings.total;
+                            return diff > 0 ? (
+                              <p className="text-sm text-amber-400/80 font-medium">
+                                Won by {diff} point{diff !== 1 ? 's' : ''}!
+                              </p>
+                            ) : null;
+                          })()}
                         </>
                       )}
                     </motion.div>
@@ -1118,13 +1219,16 @@ export default function BattlePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 + idx * 0.15 }}
-                        className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 ${
+                        className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 transition-all ${
                           item.isWinner
-                            ? 'border-emerald-500/40'
+                            ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
                             : 'border-slate-700/50'
                         }`}
                       >
-                        <h3 className="font-medium text-white text-sm mb-3">{item.label}</h3>
+                        <div className="flex items-center gap-2 mb-3">
+                          {item.isWinner && <Crown className="h-4 w-4 text-amber-400" />}
+                          <h3 className={`font-medium text-sm ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
+                        </div>
                         <div className="space-y-1 text-xs text-slate-400">
                           <div className="flex justify-between">
                             <span>Accuracy</span>
@@ -1194,20 +1298,32 @@ export default function BattlePage() {
                   <p className="mt-2">Loading leaderboard...</p>
                 </div>
               ) : sortedLeaderboard.length === 0 ? (
-                <div className="text-center py-16">
-                  <Trophy className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-1">No battles yet.</p>
-                  <p className="text-slate-500 text-sm">Start your first battle!</p>
-                  <button
+                <div className="text-center py-20">
+                  <div className="relative inline-block mb-6">
+                    <Trophy className="h-16 w-16 text-slate-700 mx-auto" />
+                    <motion.div
+                      animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
+                      transition={{ repeat: Infinity, duration: 2.5 }}
+                      className="absolute -top-1 -right-1"
+                    >
+                      <Sparkles className="h-5 w-5 text-amber-500/60" />
+                    </motion.div>
+                    <Swords className="h-6 w-6 text-slate-600 absolute -bottom-1 -left-2 rotate-[-20deg]" />
+                  </div>
+                  <p className="text-lg font-semibold text-slate-300 mb-1">No battles yet</p>
+                  <p className="text-slate-500 text-sm mb-6">Time to enter the arena!</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => {
                       setActiveTab('battle');
                       resetBattle();
                     }}
-                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500/20 text-orange-300 text-sm hover:bg-orange-500/30 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-shadow"
                   >
                     <Swords className="h-4 w-4" />
-                    Start Battle
-                  </button>
+                    Start Your First Battle
+                  </motion.button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1342,10 +1458,32 @@ export default function BattlePage() {
                   <p className="mt-2">Loading history...</p>
                 </div>
               ) : history.length === 0 ? (
-                <div className="text-center py-16">
-                  <History className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-1">No battle history yet.</p>
-                  <p className="text-slate-500 text-sm">Complete a battle to see it here.</p>
+                <div className="text-center py-20">
+                  <div className="relative inline-block mb-6">
+                    <ScrollText className="h-16 w-16 text-slate-700 mx-auto" />
+                    <motion.div
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="absolute -top-1 -right-2"
+                    >
+                      <Zap className="h-5 w-5 text-amber-500/60" />
+                    </motion.div>
+                    <Shield className="h-6 w-6 text-slate-600 absolute -bottom-1 -left-2" />
+                  </div>
+                  <p className="text-lg font-semibold text-slate-300 mb-1">No battle history yet</p>
+                  <p className="text-slate-500 text-sm mb-6">Time to enter the arena!</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setActiveTab('battle');
+                      resetBattle();
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-shadow"
+                  >
+                    <Swords className="h-4 w-4" />
+                    Start Your First Battle
+                  </motion.button>
                 </div>
               ) : (
                 <div className="space-y-3">

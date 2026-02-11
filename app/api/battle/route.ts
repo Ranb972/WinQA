@@ -47,11 +47,12 @@ export async function POST(request: NextRequest) {
 
     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
-    // Battle settings: 30s timeout, 2 retries, no cross-provider fallback
+    // Battle settings: 45s timeout, 2 retries, no cross-provider fallback
     const fallbackOverrides = {
       enableCrossProviderFallback: false,
       maxAttempts: 2,
       delayBetweenAttempts: 300,
+      providerTimeout: 45000,
     };
 
     // Build list of contenders

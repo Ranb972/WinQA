@@ -27,6 +27,7 @@ export async function chat(
     enableCrossProviderFallback?: boolean;
     maxAttempts?: number;
     delayBetweenAttempts?: number;
+    providerTimeout?: number;
   }
 ): Promise<ChatResponse> {
   // Use fallback-enabled chat by default

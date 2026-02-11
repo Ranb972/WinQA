@@ -66,6 +66,7 @@ const ResponseSchema = new Schema(
     content: { type: String, required: true },
     responseTime: { type: Number, required: true },
     specificModel: { type: String },
+    error: { type: String },
   },
   { _id: false }
 );

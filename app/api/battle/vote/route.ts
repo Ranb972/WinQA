@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(battle, { status: 201 });
   } catch (error) {
-    console.error('Battle vote error:', error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('Battle vote error:', errMsg);
+    console.error('Battle vote error details:', JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2));
     return NextResponse.json({ error: 'Failed to save battle' }, { status: 500 });
   }
 }
