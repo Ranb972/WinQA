@@ -1044,7 +1044,7 @@ function LandingPage() {
           <MotionWrapper delay={0}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
               <Sparkles className="h-4 w-4 text-pink-400" />
-              <span className="text-sm text-slate-300">The QA Professional&apos;s Secret Weapon</span>
+              <span className="text-sm text-slate-300">Break AI Before It Breaks You</span>
             </div>
           </MotionWrapper>
 
