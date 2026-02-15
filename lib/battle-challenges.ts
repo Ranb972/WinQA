@@ -5,7 +5,7 @@ export interface BattleChallenge {
   icon: string;
   category: 'Mind Games' | 'Spectacular';
   singleRoundPrompt: string;
-  special?: 'blindfold' | 'royale';
+  special?: 'blindfold' | 'royale' | 'code-duel';
 }
 
 export const BATTLE_CHALLENGES: BattleChallenge[] = [
@@ -54,7 +54,8 @@ export const BATTLE_CHALLENGES: BattleChallenge[] = [
     icon: '⚔️',
     category: 'Spectacular',
     singleRoundPrompt:
-      'Write a JavaScript function that checks if a string is a palindrome. Include 3 test cases.',
+      "Write a JavaScript function called isPalindrome(str) that returns true if the string is a palindrome (ignoring spaces, punctuation, and capitalization). Then run these test cases:\n\nconsole.log(isPalindrome('racecar'));  // true\nconsole.log(isPalindrome('hello'));    // false\nconsole.log(isPalindrome('A man a plan a canal Panama'));  // true",
+    special: 'code-duel',
   },
   {
     id: 'ascii-artist',

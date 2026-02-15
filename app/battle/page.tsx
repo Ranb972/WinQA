@@ -35,6 +35,9 @@ import {
   specificModelDisplayNames,
   defaultModels,
 } from '@/lib/llm';
+import CodeDuelJudging from './components/CodeDuelJudging';
+import BlindfoldReveal from './components/BlindfoldReveal';
+import BattleRoyaleArena, { type RoyaleRanking } from './components/BattleRoyaleArena';
 
 // --- Types ---
 
@@ -317,6 +320,12 @@ export default function BattlePage() {
   const [winner, setWinner] = useState<Winner | null>(null);
   const [blindfoldRevealed, setBlindfoldRevealed] = useState(false);
 
+  // Blindfold reveal overlay
+  const [showBlindfoldReveal, setShowBlindfoldReveal] = useState(false);
+
+  // Royale rankings (stored after champion crowned)
+  const [royaleRankings, setRoyaleRankings] = useState<RoyaleRanking[] | null>(null);
+
   // Results
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -331,9 +340,10 @@ export default function BattlePage() {
     dir: 'desc',
   });
 
-  // Royale state (4 fighters)
+  // Special challenge types
   const isRoyale = selectedChallenge?.special === 'royale';
   const isBlindfold = selectedChallenge?.special === 'blindfold';
+  const isCodeDuel = selectedChallenge?.special === 'code-duel';
 
   // --- Setup helpers ---
 
@@ -530,6 +540,91 @@ export default function BattlePage() {
     }
   };
 
+  // --- Blindfold submit handler ---
+
+  const handleBlindfoldOrSubmit = () => {
+    if (isBlindfold && !blindfoldRevealed) {
+      setShowBlindfoldReveal(true);
+    } else {
+      submitVote();
+    }
+  };
+
+  // --- Royale complete handler ---
+
+  const handleRoyaleComplete = async (finalRankings: RoyaleRanking[]) => {
+    setRoyaleRankings(finalRankings);
+    setSaveStatus('saving');
+
+    const challenge = selectedChallenge;
+    const championRanking = finalRankings.find((r) => r.rank === 1)!;
+
+    // Map rankings to model keys
+    const modelKeys = ['modelA', 'modelB', 'modelC', 'modelD'] as const;
+    const allFighters = providers.map((p) => ({ provider: p, model: defaultModels[p] }));
+
+    // Find which model key the champion corresponds to
+    const championIdx = allFighters.findIndex(
+      (f) => f.provider === championRanking.provider && f.model === championRanking.model
+    );
+    const winnerKey = championIdx >= 0 ? modelKeys[championIdx] : 'modelA';
+
+    const sanitizeResponse = (r: BattleResponse | null) => {
+      if (!r) return { content: '[No response]', responseTime: 0 };
+      return {
+        content: r.content || (r.error ? `[Error] ${r.error}` : '[No response]'),
+        responseTime: r.responseTime,
+        specificModel: r.specificModel,
+        error: r.error,
+      };
+    };
+
+    // Build ratings from rankings
+    const ratingsMap: Record<string, { accuracy: number; creativity: number; clarity: number; total: number }> = {};
+    for (let i = 0; i < allFighters.length; i++) {
+      const ranking = finalRankings.find(
+        (r) => r.provider === allFighters[i].provider && r.model === allFighters[i].model
+      );
+      ratingsMap[modelKeys[i]] = ranking?.ratings || { accuracy: 0, creativity: 0, clarity: 0, total: 0 };
+    }
+
+    const body: Record<string, unknown> = {
+      challengeId: challenge?.id || 'custom',
+      challengeName: challenge?.name || 'Custom Challenge',
+      prompt: battlePrompt,
+      battleType: 'royale',
+      modelA: { provider: allFighters[0].provider, model: allFighters[0].model },
+      modelB: { provider: allFighters[1].provider, model: allFighters[1].model },
+      modelC: { provider: allFighters[2].provider, model: allFighters[2].model },
+      modelD: { provider: allFighters[3].provider, model: allFighters[3].model },
+      responseA: sanitizeResponse(responses[0]),
+      responseB: sanitizeResponse(responses[1]),
+      responseC: sanitizeResponse(responses[2]),
+      responseD: sanitizeResponse(responses[3]),
+      ratings: ratingsMap,
+      winner: winnerKey,
+      rankings: finalRankings.map((r) => ({
+        model: r.model,
+        provider: r.provider,
+        rank: r.rank,
+        score: r.score,
+      })),
+    };
+
+    try {
+      const res = await fetch('/api/battle/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      setSaveStatus('saved');
+      setBattleState('results');
+    } catch {
+      setSaveStatus('error');
+    }
+  };
+
   // --- Leaderboard & History ---
 
   const fetchLeaderboard = useCallback(async () => {
@@ -584,6 +679,8 @@ export default function BattlePage() {
     setRatingsD(emptyRatings());
     setWinner(null);
     setBlindfoldRevealed(false);
+    setShowBlindfoldReveal(false);
+    setRoyaleRankings(null);
     setSaveStatus('idle');
     setBattlePrompt('');
   };
@@ -746,7 +843,7 @@ export default function BattlePage() {
                                 </span>
                                 {challenge.special && (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-500/20 text-red-300">
-                                    {challenge.special === 'blindfold' ? 'Blindfold' : 'Royale'}
+                                    {challenge.special === 'blindfold' ? 'Blindfold' : challenge.special === 'royale' ? 'Royale' : 'Live Code'}
                                   </span>
                                 )}
                               </div>
@@ -935,216 +1032,220 @@ export default function BattlePage() {
 
               {/* --- JUDGING STATE --- */}
               {battleState === 'judging' && (
-                <div>
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-8"
-                  >
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Trophy className="h-6 w-6 text-amber-400" />
-                      <h2 className="text-2xl font-bold text-white">WHO WINS?</h2>
-                      <Trophy className="h-6 w-6 text-amber-400" />
-                    </div>
-                    <p className="text-sm text-slate-400">Rate each response and pick a winner</p>
-                  </motion.div>
+                <>
+                  {/* Code Duel: special judging with live code execution */}
+                  {isCodeDuel ? (
+                    <CodeDuelJudging
+                      responses={responses}
+                      fighterA={fighterA}
+                      fighterB={fighterB}
+                      ratingsA={ratingsA}
+                      setRatingsA={setRatingsA}
+                      ratingsB={ratingsB}
+                      setRatingsB={setRatingsB}
+                      winner={winner}
+                      setWinner={setWinner}
+                      onSubmitVote={submitVote}
+                      saveStatus={saveStatus}
+                    />
+                  ) : isRoyale ? (
+                    /* Battle Royale: multi-round elimination */
+                    <BattleRoyaleArena
+                      responses={responses}
+                      fighters={providers.map((p) => ({ provider: p, model: defaultModels[p] }))}
+                      onChampionCrowned={handleRoyaleComplete}
+                    />
+                  ) : (
+                    /* Standard / Blindfold judging */
+                    <div>
+                      <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center mb-8"
+                      >
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <Trophy className="h-6 w-6 text-amber-400" />
+                          <h2 className="text-2xl font-bold text-white">WHO WINS?</h2>
+                          <Trophy className="h-6 w-6 text-amber-400" />
+                        </div>
+                        <p className="text-sm text-slate-400">Rate each response and pick a winner</p>
+                      </motion.div>
 
-                  {/* Response Cards + Ratings */}
-                  <div className={`grid gap-6 mb-8 ${isRoyale ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
-                    {(isRoyale ? [0, 1, 2, 3] : [0, 1]).map((idx) => {
-                      const keys = ['A', 'B', 'C', 'D'] as const;
-                      const key = keys[idx];
-                      const fighter =
-                        idx === 0
-                          ? fighterA
-                          : idx === 1
-                          ? fighterB
-                          : { provider: providers[idx] as LLMProvider, model: defaultModels[providers[idx]] };
-                      const response = responses[idx];
-                      const ratings = [ratingsA, ratingsB, ratingsC, ratingsD][idx];
-                      const showName = !isBlindfold || blindfoldRevealed;
-                      const label = showName
-                        ? getDisplayName(fighter.provider, fighter.model)
-                        : `Mystery ${key}`;
+                      {/* Response Cards + Ratings */}
+                      <div className="grid gap-6 mb-8 grid-cols-1 md:grid-cols-2">
+                        {[0, 1].map((idx) => {
+                          const keys = ['A', 'B'] as const;
+                          const key = keys[idx];
+                          const fighter = idx === 0 ? fighterA : fighterB;
+                          const response = responses[idx];
+                          const ratings = [ratingsA, ratingsB][idx];
+                          const showName = !isBlindfold || blindfoldRevealed;
+                          const label = showName
+                            ? getDisplayName(fighter.provider, fighter.model)
+                            : `Mystery ${key}`;
 
-                      return (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-5 transition-all ${
-                            winner === `model${key}`
-                              ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10'
-                              : 'border-slate-700/50'
+                          return (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-5 transition-all ${
+                                winner === `model${key}`
+                                  ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10'
+                                  : 'border-slate-700/50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  {showName ? (
+                                    <div
+                                      className={`h-2 w-2 rounded-full ${
+                                        providerColorDots[fighter.provider as LLMProvider] || 'bg-slate-500'
+                                      }`}
+                                    />
+                                  ) : (
+                                    <EyeOff className="h-4 w-4 text-slate-400" />
+                                  )}
+                                  <span className="font-medium text-white text-sm">{label}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-slate-500">
+                                  <Clock className="h-3 w-3" />
+                                  {response ? `${(response.responseTime / 1000).toFixed(1)}s` : '-'}
+                                </div>
+                              </div>
+
+                              {/* Response */}
+                              <div className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
+                                {response?.error ? (
+                                  <span className="text-red-400">Error: {response.error}</span>
+                                ) : response?.content ? (
+                                  <MarkdownResponse content={response.content} />
+                                ) : (
+                                  <span className="text-slate-500">No response</span>
+                                )}
+                              </div>
+
+                              {/* Star Ratings */}
+                              <div className="space-y-2">
+                                <StarRating
+                                  value={ratings.accuracy}
+                                  onChange={(v) => updateRating(key, 'accuracy', v)}
+                                  label="Accuracy"
+                                />
+                                <StarRating
+                                  value={ratings.creativity}
+                                  onChange={(v) => updateRating(key, 'creativity', v)}
+                                  label="Creativity"
+                                />
+                                <StarRating
+                                  value={ratings.clarity}
+                                  onChange={(v) => updateRating(key, 'clarity', v)}
+                                  label="Clarity"
+                                />
+                                <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
+                                  <span className="text-xs font-medium text-amber-400">
+                                    Total: {ratings.total}/15
+                                  </span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Vote Buttons */}
+                      <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+                        {(['modelA', 'modelB'] as const).map((key) => {
+                          const idx = key === 'modelA' ? 0 : 1;
+                          const fighter = idx === 0 ? fighterA : fighterB;
+                          const label =
+                            isBlindfold && !blindfoldRevealed
+                              ? `Mystery ${String.fromCharCode(65 + idx)} Wins`
+                              : `${getDisplayName(fighter.provider, fighter.model)} Wins`;
+
+                          return (
+                            <motion.button
+                              key={key}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setWinner(key)}
+                              className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                                winner === key
+                                  ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300'
+                                  : 'bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-slate-600'
+                              }`}
+                            >
+                              <Crown className="h-4 w-4 inline mr-1.5" />
+                              {label}
+                            </motion.button>
+                          );
+                        })}
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setWinner('tie')}
+                          className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                            winner === 'tie'
+                              ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-300'
+                              : 'bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-slate-600'
                           }`}
                         >
-                          {/* Blindfold flip card effect */}
-                          <div
-                            className={`transition-all duration-500 ${
-                              isBlindfold && !blindfoldRevealed ? '' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                {showName ? (
-                                  <div
-                                    className={`h-2 w-2 rounded-full ${
-                                      providerColorDots[fighter.provider as LLMProvider] || 'bg-slate-500'
-                                    }`}
-                                  />
-                                ) : (
-                                  <EyeOff className="h-4 w-4 text-slate-400" />
-                                )}
-                                <span className="font-medium text-white text-sm">{label}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-xs text-slate-500">
-                                <Clock className="h-3 w-3" />
-                                {response ? `${(response.responseTime / 1000).toFixed(1)}s` : '-'}
-                              </div>
-                            </div>
+                          Tie
+                        </motion.button>
+                      </div>
 
-                            {/* Response */}
-                            <div className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
-                              {response?.error ? (
-                                <span className="text-red-400">Error: {response.error}</span>
-                              ) : response?.content ? (
-                                <MarkdownResponse content={response.content} />
-                              ) : (
-                                <span className="text-slate-500">No response</span>
-                              )}
-                            </div>
-
-                            {/* Star Ratings */}
-                            <div className="space-y-2">
-                              <StarRating
-                                value={ratings.accuracy}
-                                onChange={(v) => updateRating(key, 'accuracy', v)}
-                                label="Accuracy"
-                              />
-                              <StarRating
-                                value={ratings.creativity}
-                                onChange={(v) => updateRating(key, 'creativity', v)}
-                                label="Creativity"
-                              />
-                              <StarRating
-                                value={ratings.clarity}
-                                onChange={(v) => updateRating(key, 'clarity', v)}
-                                label="Clarity"
-                              />
-                              <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
-                                <span className="text-xs font-medium text-amber-400">
-                                  Total: {ratings.total}/15
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Vote Buttons */}
-                  <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-                    {(isRoyale ? ['modelA', 'modelB', 'modelC', 'modelD'] : ['modelA', 'modelB']).map(
-                      (key) => {
-                        const idx = key === 'modelA' ? 0 : key === 'modelB' ? 1 : key === 'modelC' ? 2 : 3;
-                        const fighter =
-                          idx === 0
-                            ? fighterA
-                            : idx === 1
-                            ? fighterB
-                            : {
-                                provider: providers[idx] as LLMProvider,
-                                model: defaultModels[providers[idx]],
-                              };
-                        const label =
-                          isBlindfold && !blindfoldRevealed
-                            ? `Mystery ${String.fromCharCode(65 + idx)} Wins`
-                            : `${getDisplayName(fighter.provider, fighter.model)} Wins`;
-
-                        return (
-                          <motion.button
-                            key={key}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setWinner(key as Winner)}
-                            className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-                              winner === key
-                                ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300'
-                                : 'bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-slate-600'
-                            }`}
-                          >
-                            <Crown className="h-4 w-4 inline mr-1.5" />
-                            {label}
-                          </motion.button>
-                        );
-                      }
-                    )}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setWinner('tie')}
-                      className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-                        winner === 'tie'
-                          ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-300'
-                          : 'bg-slate-800/60 border border-slate-700 text-slate-300 hover:border-slate-600'
-                      }`}
-                    >
-                      Tie
-                    </motion.button>
-                  </div>
-
-                  {/* Blindfold Reveal */}
-                  {isBlindfold && !blindfoldRevealed && winner && (
-                    <div className="text-center mb-6">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setBlindfoldRevealed(true)}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-medium text-sm hover:bg-purple-500/30 transition-all"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Reveal Identities
-                      </motion.button>
+                      {/* Submit Vote */}
+                      <div className="text-center">
+                        <motion.button
+                          whileHover={winner ? { scale: 1.05 } : {}}
+                          whileTap={winner ? { scale: 0.95 } : {}}
+                          onClick={handleBlindfoldOrSubmit}
+                          disabled={!winner || saveStatus === 'saving'}
+                          className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-base transition-all ${
+                            winner
+                              ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
+                              : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                          }`}
+                        >
+                          {saveStatus === 'saving' ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </motion.div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4" />
+                              Submit Vote
+                            </>
+                          )}
+                        </motion.button>
+                        {saveStatus === 'error' && (
+                          <p className="text-sm text-red-400 mt-2">Failed to save. Try again.</p>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {/* Submit Vote */}
-                  <div className="text-center">
-                    <motion.button
-                      whileHover={winner ? { scale: 1.05 } : {}}
-                      whileTap={winner ? { scale: 0.95 } : {}}
-                      onClick={submitVote}
-                      disabled={!winner || saveStatus === 'saving'}
-                      className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-base transition-all ${
-                        winner
-                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
-                          : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {saveStatus === 'saving' ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </motion.div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Submit Vote
-                        </>
-                      )}
-                    </motion.button>
-                    {saveStatus === 'error' && (
-                      <p className="text-sm text-red-400 mt-2">Failed to save. Try again.</p>
-                    )}
-                  </div>
-                </div>
+                  {/* Blindfold Reveal Overlay */}
+                  {showBlindfoldReveal && (
+                    <BlindfoldReveal
+                      fighterA={fighterA}
+                      fighterB={fighterB}
+                      winner={winner!}
+                      onComplete={() => {
+                        setShowBlindfoldReveal(false);
+                        setBlindfoldRevealed(true);
+                        submitVote();
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               {/* --- RESULTS STATE --- */}
@@ -1187,7 +1288,12 @@ export default function BattlePage() {
                             WINNER!
                           </h2>
                           <p className="text-2xl text-white font-bold mb-2">
-                            {winner === 'modelA'
+                            {royaleRankings
+                              ? getDisplayName(
+                                  royaleRankings.find((r) => r.rank === 1)!.provider,
+                                  royaleRankings.find((r) => r.rank === 1)!.model
+                                )
+                              : winner === 'modelA'
                               ? getDisplayName(fighterA.provider, fighterA.model)
                               : winner === 'modelB'
                               ? getDisplayName(fighterB.provider, fighterB.model)
@@ -1209,47 +1315,84 @@ export default function BattlePage() {
                   </motion.div>
 
                   {/* Score Breakdown */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8">
-                    {[
-                      { label: isBlindfold ? 'Fighter A' : getDisplayName(fighterA.provider, fighterA.model), ratings: ratingsA, isWinner: winner === 'modelA' },
-                      { label: isBlindfold ? 'Fighter B' : getDisplayName(fighterB.provider, fighterB.model), ratings: ratingsB, isWinner: winner === 'modelB' },
-                    ].map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + idx * 0.15 }}
-                        className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 transition-all ${
-                          item.isWinner
-                            ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
-                            : 'border-slate-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-3">
-                          {item.isWinner && <Crown className="h-4 w-4 text-amber-400" />}
-                          <h3 className={`font-medium text-sm ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
-                        </div>
-                        <div className="space-y-1 text-xs text-slate-400">
-                          <div className="flex justify-between">
-                            <span>Accuracy</span>
-                            <span className="text-amber-400">{item.ratings.accuracy}/5</span>
+                  {royaleRankings ? (
+                    /* Battle Royale Rankings */
+                    <div className="max-w-xl mx-auto mb-8 space-y-3">
+                      {[...royaleRankings]
+                        .sort((a, b) => a.rank - b.rank)
+                        .map((r, idx) => {
+                          const medal =
+                            r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : '#4';
+                          return (
+                            <motion.div
+                              key={r.rank}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.3 + idx * 0.15 }}
+                              className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 flex items-center gap-4 ${
+                                r.rank === 1
+                                  ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
+                                  : 'border-slate-700/50'
+                              }`}
+                            >
+                              <span className="text-2xl">{medal}</span>
+                              <div className="flex-1 min-w-0">
+                                <h3 className={`font-medium text-sm ${r.rank === 1 ? 'text-amber-300' : 'text-white'}`}>
+                                  {getDisplayName(r.provider, r.model)}
+                                </h3>
+                                <span className="text-xs text-slate-500">
+                                  {providerDisplayNames[r.provider as LLMProvider] || r.provider}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-amber-400">{r.score}/15</span>
+                            </motion.div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    /* Standard / Blindfold Score Breakdown */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8">
+                      {[
+                        { label: isBlindfold ? 'Fighter A' : getDisplayName(fighterA.provider, fighterA.model), ratings: ratingsA, isWinner: winner === 'modelA' },
+                        { label: isBlindfold ? 'Fighter B' : getDisplayName(fighterB.provider, fighterB.model), ratings: ratingsB, isWinner: winner === 'modelB' },
+                      ].map((item, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + idx * 0.15 }}
+                          className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 transition-all ${
+                            item.isWinner
+                              ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
+                              : 'border-slate-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            {item.isWinner && <Crown className="h-4 w-4 text-amber-400" />}
+                            <h3 className={`font-medium text-sm ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Creativity</span>
-                            <span className="text-amber-400">{item.ratings.creativity}/5</span>
+                          <div className="space-y-1 text-xs text-slate-400">
+                            <div className="flex justify-between">
+                              <span>Accuracy</span>
+                              <span className="text-amber-400">{item.ratings.accuracy}/5</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Creativity</span>
+                              <span className="text-amber-400">{item.ratings.creativity}/5</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Clarity</span>
+                              <span className="text-amber-400">{item.ratings.clarity}/5</span>
+                            </div>
+                            <div className="flex justify-between pt-1 border-t border-slate-700/50 font-medium">
+                              <span className="text-white">Total</span>
+                              <span className="text-amber-400">{item.ratings.total}/15</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Clarity</span>
-                            <span className="text-amber-400">{item.ratings.clarity}/5</span>
-                          </div>
-                          <div className="flex justify-between pt-1 border-t border-slate-700/50 font-medium">
-                            <span className="text-white">Total</span>
-                            <span className="text-amber-400">{item.ratings.total}/15</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex flex-wrap items-center justify-center gap-3">
