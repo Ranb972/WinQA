@@ -20,7 +20,7 @@ export const fallbackChains: Record<LLMProvider, SpecificModel[]> = {
   gemini: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
   cohere: ['command-a-03-2025', 'command-r-plus-08-2024', 'command-r-08-2024', 'command-r7b-12-2024'],
-  openrouter: ['deepseek/deepseek-r1-0528:free', 'tngtech/deepseek-r1t-chimera:free', 'tngtech/deepseek-r1t2-chimera:free'],
+  openrouter: ['meta-llama/llama-3-8b-instruct:free', 'microsoft/phi-3-mini-128k-instruct:free', 'deepseek/deepseek-r1-0528:free'],
 };
 
 // Cross-provider fallback order when all models in a provider fail
@@ -31,7 +31,7 @@ export const defaultModels: Record<LLMProvider, SpecificModel> = {
   cohere: 'command-a-03-2025',
   gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'deepseek/deepseek-r1-0528:free',
+  openrouter: 'meta-llama/llama-3-8b-instruct:free',
 };
 
 // Display names for specific models (for UI)
@@ -45,6 +45,8 @@ export const specificModelDisplayNames: Record<SpecificModel, string> = {
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
+  'meta-llama/llama-3-8b-instruct:free': 'Llama 3 8B',
+  'microsoft/phi-3-mini-128k-instruct:free': 'Phi-3 Mini',
   'deepseek/deepseek-r1-0528:free': 'DeepSeek R1',
   'tngtech/deepseek-r1t-chimera:free': 'DeepSeek R1T',
   'tngtech/deepseek-r1t2-chimera:free': 'DeepSeek R1T2',

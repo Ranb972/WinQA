@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       if (!challenge) {
         return NextResponse.json({ error: 'Invalid challenge ID' }, { status: 400 });
       }
-      prompt = challenge.singleRoundPrompt;
+      prompt = challenge.prompts[Math.floor(Math.random() * challenge.prompts.length)];
       challengeName = challenge.name;
     } else if (customPrompt) {
       prompt = customPrompt;

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Star,
   Crown,
   Trophy,
-  Sparkles,
   RotateCcw,
   Clock,
   Zap,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -85,40 +85,14 @@ function getDisplayName(provider: string, model: string): string {
 
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
 
-// --- Sub-components ---
-
-function StarRating({
-  value,
-  onChange,
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-400 w-20">{label}</span>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <motion.button
-            key={star}
-            whileTap={{ scale: 1.3 }}
-            onClick={() => onChange(star)}
-            className="focus:outline-none"
-          >
-            <Star
-              className={`h-5 w-5 transition-colors ${
-                star <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
-              }`}
-            />
-          </motion.button>
-        ))}
-      </div>
-      <span className="text-xs text-slate-500">{value}/5</span>
-    </div>
-  );
+function isErrorResponse(response: BattleResponse | null): boolean {
+  if (!response) return true;
+  if (response.error) return true;
+  if (!response.content || response.content.trim() === '') return true;
+  return false;
 }
+
+// --- Sub-components ---
 
 function MarkdownResponse({ content }: { content: string }) {
   return (
@@ -163,135 +137,168 @@ export default function BattleRoyaleArena({
   const [round, setRound] = useState(1);
   const [eliminatedIndices, setEliminatedIndices] = useState<number[]>([]);
   const [rankings, setRankings] = useState<RoyaleRanking[]>([]);
-  const [roundRatings, setRoundRatings] = useState<Record<number, Ratings>>({
-    0: emptyRatings(),
-    1: emptyRatings(),
-    2: emptyRatings(),
-    3: emptyRatings(),
-  });
   const [eliminationPhase, setEliminationPhase] = useState<EliminationPhase>('idle');
   const [eliminatingIdx, setEliminatingIdx] = useState<number | null>(null);
   const [spotlightIdx, setSpotlightIdx] = useState<number | null>(null);
   const [champion, setChampion] = useState<number | null>(null);
+  const [autoEliminatedIds, setAutoEliminatedIds] = useState<Set<number>>(new Set());
+  const autoEliminateProcessed = useRef(false);
 
   const activeIndices = [0, 1, 2, 3].filter((i) => !eliminatedIndices.includes(i));
+  const isFinalRound = activeIndices.length === 2;
 
-  const updateRating = (
-    idx: number,
-    field: 'accuracy' | 'creativity' | 'clarity',
-    value: number
-  ) => {
-    setRoundRatings((prev) => {
-      const current = prev[idx] || emptyRatings();
-      const updated = { ...current, [field]: value };
-      updated.total = updated.accuracy + updated.creativity + updated.clarity;
-      return { ...prev, [idx]: updated };
-    });
-  };
+  // --- Bugfix: Auto-eliminate errored models ---
+  useEffect(() => {
+    if (autoEliminateProcessed.current || eliminationPhase !== 'idle' || champion !== null) return;
 
-  const allActiveRated = activeIndices.every((idx) => {
-    const r = roundRatings[idx];
-    return r && r.accuracy > 0 && r.creativity > 0 && r.clarity > 0;
-  });
+    const erroredActive = activeIndices.filter((idx) => isErrorResponse(responses[idx]));
+    if (erroredActive.length === 0) return;
 
-  const runElimination = useCallback(() => {
-    // Find lowest scoring active model
-    let lowestIdx = activeIndices[0];
-    let lowestScore = roundRatings[lowestIdx]?.total || 0;
-    for (const idx of activeIndices) {
-      const score = roundRatings[idx]?.total || 0;
-      if (score < lowestScore) {
-        lowestScore = score;
-        lowestIdx = idx;
-      }
+    // If all active models errored, we can't auto-eliminate all
+    const healthyActive = activeIndices.filter((idx) => !isErrorResponse(responses[idx]));
+    if (healthyActive.length === 0) return;
+
+    autoEliminateProcessed.current = true;
+
+    // Mark errored models for auto-elimination badge
+    setAutoEliminatedIds(new Set(erroredActive));
+
+    // Auto-eliminate errored models one by one with a short delay
+    let delay = 500;
+    const newEliminated = [...eliminatedIndices];
+    const newRankings = [...rankings];
+
+    for (const errIdx of erroredActive) {
+      const rank = 4 - newEliminated.length;
+      const fighter = fighters[errIdx];
+      newRankings.push({
+        provider: fighter.provider as string,
+        model: fighter.model,
+        rank,
+        score: 0,
+        ratings: emptyRatings(),
+      });
+      newEliminated.push(errIdx);
     }
 
-    // Start elimination sequence
-    setEliminationPhase('suspense');
-
-    // Spotlight sweep across active cards
     setTimeout(() => {
-      setEliminationPhase('spotlight');
-      let spotlightStep = 0;
-      const spotlightInterval = setInterval(() => {
-        setSpotlightIdx(activeIndices[spotlightStep % activeIndices.length]);
-        spotlightStep++;
-        if (spotlightStep >= activeIndices.length * 2) {
-          clearInterval(spotlightInterval);
-          setSpotlightIdx(lowestIdx);
-          // Start shaking
-          setTimeout(() => {
-            setEliminatingIdx(lowestIdx);
-            setEliminationPhase('shaking');
+      setEliminatedIndices(newEliminated);
+      setRankings(newRankings);
 
-            // Eliminated
+      // Check if only one remains after auto-elimination
+      const remaining = [0, 1, 2, 3].filter((i) => !newEliminated.includes(i));
+      if (remaining.length === 1) {
+        const champIdx = remaining[0];
+        setChampion(champIdx);
+        const champFighter = fighters[champIdx];
+        const champRanking: RoyaleRanking = {
+          provider: champFighter.provider as string,
+          model: champFighter.model,
+          rank: 1,
+          score: 0,
+          ratings: emptyRatings(),
+        };
+        const finalRankings = [...newRankings, champRanking].sort((a, b) => a.rank - b.rank);
+        setTimeout(() => onChampionCrowned(finalRankings), 3000);
+      } else if (remaining.length <= 3) {
+        setRound((r) => r + (erroredActive.length > 1 ? erroredActive.length - 1 : 1));
+      }
+    }, delay);
+  }, [responses, activeIndices, eliminatedIndices, rankings, fighters, eliminationPhase, champion, onChampionCrowned]);
+
+  // --- Elimination by user click ---
+  const eliminateModel = useCallback(
+    (targetIdx: number) => {
+      if (eliminationPhase !== 'idle' || champion !== null) return;
+
+      // Start elimination animation sequence
+      setEliminationPhase('suspense');
+
+      // Spotlight sweep
+      setTimeout(() => {
+        setEliminationPhase('spotlight');
+        let spotlightStep = 0;
+        const spotlightInterval = setInterval(() => {
+          setSpotlightIdx(activeIndices[spotlightStep % activeIndices.length]);
+          spotlightStep++;
+          if (spotlightStep >= activeIndices.length * 2) {
+            clearInterval(spotlightInterval);
+            setSpotlightIdx(targetIdx);
+
+            // Start shaking
             setTimeout(() => {
-              setEliminationPhase('eliminated');
+              setEliminatingIdx(targetIdx);
+              setEliminationPhase('shaking');
 
-              // Calculate rank (4th for first elimination, 3rd for second, etc.)
-              const rank = 4 - eliminatedIndices.length;
-              const fighter = fighters[lowestIdx];
-              const newRanking: RoyaleRanking = {
-                provider: fighter.provider as string,
-                model: fighter.model,
-                rank,
-                score: lowestScore,
-                ratings: roundRatings[lowestIdx] || emptyRatings(),
-              };
-
+              // Eliminated
               setTimeout(() => {
-                const newEliminated = [...eliminatedIndices, lowestIdx];
-                setEliminatedIndices(newEliminated);
-                setRankings((prev) => [...prev, newRanking]);
-                setEliminationPhase('idle');
-                setEliminatingIdx(null);
-                setSpotlightIdx(null);
+                setEliminationPhase('eliminated');
 
-                // Reset ratings for next round
-                setRoundRatings({
-                  0: emptyRatings(),
-                  1: emptyRatings(),
-                  2: emptyRatings(),
-                  3: emptyRatings(),
-                });
+                const rank = 4 - eliminatedIndices.length;
+                const fighter = fighters[targetIdx];
+                const newRanking: RoyaleRanking = {
+                  provider: fighter.provider as string,
+                  model: fighter.model,
+                  rank,
+                  score: 0,
+                  ratings: emptyRatings(),
+                };
 
-                // Check if final round
-                const remaining = [0, 1, 2, 3].filter((i) => !newEliminated.includes(i));
-                if (remaining.length === 1) {
-                  // We have a champion!
-                  const champIdx = remaining[0];
-                  setChampion(champIdx);
+                setTimeout(() => {
+                  const newEliminated = [...eliminatedIndices, targetIdx];
+                  setEliminatedIndices(newEliminated);
+                  setRankings((prev) => [...prev, newRanking]);
+                  setEliminationPhase('idle');
+                  setEliminatingIdx(null);
+                  setSpotlightIdx(null);
 
-                  const champFighter = fighters[champIdx];
-                  const champRating = roundRatings[champIdx] || emptyRatings();
-                  const champRanking: RoyaleRanking = {
-                    provider: champFighter.provider as string,
-                    model: champFighter.model,
-                    rank: 1,
-                    score: champRating.total,
-                    ratings: champRating,
-                  };
+                  // Check if final: only 1 remains
+                  const remaining = [0, 1, 2, 3].filter((i) => !newEliminated.includes(i));
+                  if (remaining.length === 1) {
+                    const champIdx = remaining[0];
+                    setChampion(champIdx);
 
-                  const finalRankings = [...rankings, newRanking, champRanking].sort(
-                    (a, b) => a.rank - b.rank
-                  );
+                    const champFighter = fighters[champIdx];
+                    const champRanking: RoyaleRanking = {
+                      provider: champFighter.provider as string,
+                      model: champFighter.model,
+                      rank: 1,
+                      score: 0,
+                      ratings: emptyRatings(),
+                    };
 
-                  // Delay to show champion animation
-                  setTimeout(() => {
-                    onChampionCrowned(finalRankings);
-                  }, 3000);
-                } else {
-                  setRound((r) => r + 1);
-                }
-              }, 1000);
-            }, 800);
-          }, 300);
-        }
-      }, 200);
-    }, 1500);
-  }, [activeIndices, roundRatings, eliminatedIndices, fighters, rankings, onChampionCrowned]);
+                    const finalRankings = [...rankings, newRanking, champRanking].sort(
+                      (a, b) => a.rank - b.rank
+                    );
 
-  const isFinalRound = activeIndices.length === 2;
+                    setTimeout(() => {
+                      onChampionCrowned(finalRankings);
+                    }, 3000);
+                  } else {
+                    setRound((r) => r + 1);
+                  }
+                }, 1000);
+              }, 800);
+            }, 300);
+          }
+        }, 200);
+      }, 1500);
+    },
+    [activeIndices, eliminatedIndices, fighters, rankings, onChampionCrowned, eliminationPhase, champion]
+  );
+
+  // --- Crown champion (final round) ---
+  const crownChampion = useCallback(
+    (champIdx: number) => {
+      if (eliminationPhase !== 'idle' || champion !== null) return;
+
+      // The other model is eliminated
+      const otherIdx = activeIndices.find((i) => i !== champIdx)!;
+      eliminateModel(otherIdx);
+    },
+    [activeIndices, eliminateModel, eliminationPhase, champion]
+  );
+
   const roundLabel =
     round === 1
       ? 'Round 1: Eliminate the Weakest!'
@@ -320,6 +327,11 @@ export default function BattleRoyaleArena({
         >
           {roundLabel}
         </motion.p>
+        <p className="text-xs text-slate-500 mt-1">
+          {isFinalRound
+            ? 'Click CROWN THIS CHAMPION on your winner'
+            : 'Click ELIMINATE on the weakest model'}
+        </p>
       </motion.div>
 
       {/* Suspense Text */}
@@ -414,9 +426,6 @@ export default function BattleRoyaleArena({
                       <span className="text-sm font-medium text-white">
                         {getDisplayName(r.provider, r.model)}
                       </span>
-                      <span className="text-xs text-slate-400 ml-2">
-                        {r.score}/15
-                      </span>
                     </motion.div>
                   );
                 })}
@@ -444,10 +453,11 @@ export default function BattleRoyaleArena({
             {activeIndices.map((idx) => {
               const fighter = fighters[idx];
               const response = responses[idx];
-              const r = roundRatings[idx] || emptyRatings();
               const label = getDisplayName(fighter.provider, fighter.model);
               const isEliminating = eliminatingIdx === idx;
               const isSpotlight = spotlightIdx === idx;
+              const isErrored = isErrorResponse(response);
+              const wasAutoEliminated = autoEliminatedIds.has(idx);
 
               return (
                 <motion.div
@@ -503,6 +513,18 @@ export default function BattleRoyaleArena({
                     </motion.div>
                   )}
 
+                  {/* Auto-eliminated error badge */}
+                  {wasAutoEliminated && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-3 flex items-center gap-2 bg-red-500/15 border border-red-500/30 rounded-lg px-3 py-2"
+                    >
+                      <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                      <span className="text-xs font-bold text-red-400">FAILED — AUTO-ELIMINATED</span>
+                    </motion.div>
+                  )}
+
                   {/* Model Header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -529,7 +551,10 @@ export default function BattleRoyaleArena({
                   {/* Response */}
                   <div className="text-sm text-slate-300 max-h-48 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
                     {response?.error ? (
-                      <span className="text-red-400">Error: {response.error}</span>
+                      <div className="flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-red-400">Error: {response.error}</span>
+                      </div>
                     ) : response?.content ? (
                       <MarkdownResponse content={response.content} />
                     ) : (
@@ -537,69 +562,35 @@ export default function BattleRoyaleArena({
                     )}
                   </div>
 
-                  {/* Ratings */}
-                  <div className="space-y-2">
-                    <StarRating
-                      value={r.accuracy}
-                      onChange={(v) => updateRating(idx, 'accuracy', v)}
-                      label="Accuracy"
-                    />
-                    <StarRating
-                      value={r.creativity}
-                      onChange={(v) => updateRating(idx, 'creativity', v)}
-                      label="Creativity"
-                    />
-                    <StarRating
-                      value={r.clarity}
-                      onChange={(v) => updateRating(idx, 'clarity', v)}
-                      label="Clarity"
-                    />
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
-                      <span className="text-xs font-medium text-amber-400">
-                        Total: {r.total}/15
-                      </span>
-                    </div>
-                  </div>
+                  {/* Action Button - ELIMINATE or CROWN */}
+                  {eliminationPhase === 'idle' && !isErrored && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => isFinalRound ? crownChampion(idx) : eliminateModel(idx)}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                        isFinalRound
+                          ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 hover:from-amber-500/30 hover:to-yellow-500/30'
+                          : 'bg-gradient-to-r from-red-500/15 to-orange-500/15 border border-red-500/30 text-red-300 hover:from-red-500/25 hover:to-orange-500/25'
+                      }`}
+                    >
+                      {isFinalRound ? (
+                        <>
+                          <Crown className="h-4 w-4" />
+                          CROWN THIS CHAMPION
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-4 w-4" />
+                          ELIMINATE THIS MODEL
+                        </>
+                      )}
+                    </motion.button>
+                  )}
                 </motion.div>
               );
             })}
           </AnimatePresence>
-        </div>
-      )}
-
-      {/* Eliminate / Crown Button */}
-      {champion === null && eliminationPhase === 'idle' && (
-        <div className="text-center">
-          <motion.button
-            whileHover={allActiveRated ? { scale: 1.05 } : {}}
-            whileTap={allActiveRated ? { scale: 0.95 } : {}}
-            onClick={runElimination}
-            disabled={!allActiveRated}
-            className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-base transition-all ${
-              allActiveRated
-                ? isFinalRound
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 shadow-lg shadow-amber-500/30'
-                  : 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg shadow-red-500/30'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-            }`}
-          >
-            {isFinalRound ? (
-              <>
-                <Crown className="h-5 w-5" />
-                CROWN THE CHAMPION!
-              </>
-            ) : (
-              <>
-                <Zap className="h-5 w-5" />
-                ELIMINATE!
-              </>
-            )}
-          </motion.button>
-          {!allActiveRated && (
-            <p className="text-xs text-slate-500 mt-2">
-              Rate all {activeIndices.length} models to continue
-            </p>
-          )}
         </div>
       )}
     </div>

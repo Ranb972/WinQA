@@ -375,7 +375,7 @@ export default function BattlePage() {
     if (!canStartBattle) return;
 
     const challenge = selectedChallenge;
-    const prompt = useCustomPrompt ? customPrompt : challenge?.singleRoundPrompt || '';
+    const prompt = useCustomPrompt ? customPrompt : challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
     setBattlePrompt(prompt);
     setBattleState('battling');
 
@@ -1047,6 +1047,7 @@ export default function BattlePage() {
                       setWinner={setWinner}
                       onSubmitVote={submitVote}
                       saveStatus={saveStatus}
+                      ratingCategories={selectedChallenge?.ratingCategories}
                     />
                   ) : isRoyale ? (
                     /* Battle Royale: multi-round elimination */
@@ -1131,17 +1132,17 @@ export default function BattlePage() {
                                 <StarRating
                                   value={ratings.accuracy}
                                   onChange={(v) => updateRating(key, 'accuracy', v)}
-                                  label="Accuracy"
+                                  label={selectedChallenge?.ratingCategories?.[0] || 'Accuracy'}
                                 />
                                 <StarRating
                                   value={ratings.creativity}
                                   onChange={(v) => updateRating(key, 'creativity', v)}
-                                  label="Creativity"
+                                  label={selectedChallenge?.ratingCategories?.[1] || 'Creativity'}
                                 />
                                 <StarRating
                                   value={ratings.clarity}
                                   onChange={(v) => updateRating(key, 'clarity', v)}
-                                  label="Clarity"
+                                  label={selectedChallenge?.ratingCategories?.[2] || 'Clarity'}
                                 />
                                 <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
                                   <span className="text-xs font-medium text-amber-400">
@@ -1373,15 +1374,15 @@ export default function BattlePage() {
                           </div>
                           <div className="space-y-1 text-xs text-slate-400">
                             <div className="flex justify-between">
-                              <span>Accuracy</span>
+                              <span>{selectedChallenge?.ratingCategories?.[0] || 'Accuracy'}</span>
                               <span className="text-amber-400">{item.ratings.accuracy}/5</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Creativity</span>
+                              <span>{selectedChallenge?.ratingCategories?.[1] || 'Creativity'}</span>
                               <span className="text-amber-400">{item.ratings.creativity}/5</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Clarity</span>
+                              <span>{selectedChallenge?.ratingCategories?.[2] || 'Clarity'}</span>
                               <span className="text-amber-400">{item.ratings.clarity}/5</span>
                             </div>
                             <div className="flex justify-between pt-1 border-t border-slate-700/50 font-medium">

@@ -65,6 +65,7 @@ interface CodeDuelJudgingProps {
   setWinner: (w: Winner) => void;
   onSubmitVote: () => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  ratingCategories?: string[];
 }
 
 // --- Helpers ---
@@ -182,6 +183,7 @@ export default function CodeDuelJudging({
   setWinner,
   onSubmitVote,
   saveStatus,
+  ratingCategories,
 }: CodeDuelJudgingProps) {
   const [extractedCodes, setExtractedCodes] = useState<(string | null)[]>([null, null]);
   const [codeOutputs, setCodeOutputs] = useState<(CodeExecutionResult | null)[]>([null, null]);
@@ -434,17 +436,17 @@ export default function CodeDuelJudging({
                 <StarRating
                   value={ratings[idx].accuracy}
                   onChange={(v) => updateRating(idx, 'accuracy', v)}
-                  label="Accuracy"
+                  label={ratingCategories?.[0] || 'Accuracy'}
                 />
                 <StarRating
                   value={ratings[idx].creativity}
                   onChange={(v) => updateRating(idx, 'creativity', v)}
-                  label="Creativity"
+                  label={ratingCategories?.[1] || 'Creativity'}
                 />
                 <StarRating
                   value={ratings[idx].clarity}
                   onChange={(v) => updateRating(idx, 'clarity', v)}
-                  label="Clarity"
+                  label={ratingCategories?.[2] || 'Clarity'}
                 />
                 <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
                   <span className="text-xs font-medium text-amber-400">

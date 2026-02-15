@@ -10,7 +10,7 @@ export async function openrouterChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'deepseek/deepseek-r1-0528:free';
+  const modelToUse = modelOverride || 'meta-llama/llama-3-8b-instruct:free';
 
   try {
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
