@@ -4,7 +4,7 @@ export type LLMProvider = 'cohere' | 'gemini' | 'groq' | 'openrouter';
 export type CohereModel = 'command-a-03-2025' | 'command-r-plus-08-2024' | 'command-r-08-2024' | 'command-r7b-12-2024';
 export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.0-flash' | 'gemini-2.5-flash-lite';
 export type GroqModel = 'llama-3.3-70b-versatile' | 'llama-3.1-8b-instant';
-export type OpenRouterModel = 'qwen/qwen3-4b:free' | 'qwen/qwen3-next-80b-a3b-instruct:free' | 'deepseek/deepseek-r1-0528:free';
+export type OpenRouterModel = 'nvidia/nemotron-3-nano-30b-a3b:free' | 'nvidia/nemotron-nano-9b-v2:free';
 
 export type SpecificModel = CohereModel | GeminiModel | GroqModel | OpenRouterModel;
 

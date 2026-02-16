@@ -10,7 +10,13 @@ export async function openrouterChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'qwen/qwen3-4b:free';
+  const modelToUse = modelOverride || 'nvidia/nemotron-3-nano-30b-a3b:free';
+
+  // NVIDIA Nemotron models are thinking/reasoning models that use tokens for
+  // internal reasoning before generating content. With low max_tokens the
+  // reasoning consumes all tokens and content is empty. Minimum 4096 ensures
+  // enough room for both reasoning and the actual response.
+  const effectiveMaxTokens = Math.max(maxTokens, 4096);
 
   try {
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
@@ -28,7 +34,7 @@ export async function openrouterChat(
           content: msg.content,
         })),
         temperature,
-        max_tokens: maxTokens,
+        max_tokens: effectiveMaxTokens,
       }),
     });
 
@@ -46,8 +52,13 @@ export async function openrouterChat(
 
     const data = await response.json();
 
+    // Thinking models put chain-of-thought in `reasoning` and the answer in `content`.
+    // If content is empty (reasoning consumed all tokens), fall back to reasoning text.
+    const message = data.choices[0]?.message;
+    const content = message?.content || message?.reasoning || '';
+
     return {
-      content: data.choices[0]?.message?.content || '',
+      content,
       model: 'openrouter',
       specificModel: modelToUse,
       responseTime,

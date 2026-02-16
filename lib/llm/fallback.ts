@@ -20,7 +20,7 @@ export const fallbackChains: Record<LLMProvider, SpecificModel[]> = {
   gemini: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
   cohere: ['command-a-03-2025', 'command-r-plus-08-2024', 'command-r-08-2024', 'command-r7b-12-2024'],
-  openrouter: ['qwen/qwen3-4b:free', 'qwen/qwen3-next-80b-a3b-instruct:free', 'deepseek/deepseek-r1-0528:free'],
+  openrouter: ['nvidia/nemotron-3-nano-30b-a3b:free', 'nvidia/nemotron-nano-9b-v2:free'],
 };
 
 // Cross-provider fallback order when all models in a provider fail
@@ -31,7 +31,7 @@ export const defaultModels: Record<LLMProvider, SpecificModel> = {
   cohere: 'command-a-03-2025',
   gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'qwen/qwen3-4b:free',
+  openrouter: 'nvidia/nemotron-3-nano-30b-a3b:free',
 };
 
 // Display names for specific models (for UI)
@@ -45,9 +45,8 @@ export const specificModelDisplayNames: Record<SpecificModel, string> = {
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
-  'qwen/qwen3-4b:free': 'Qwen3 4B',
-  'qwen/qwen3-next-80b-a3b-instruct:free': 'Qwen3 Instruct',
-  'deepseek/deepseek-r1-0528:free': 'DeepSeek R1',
+  'nvidia/nemotron-3-nano-30b-a3b:free': 'Nemotron 30B',
+  'nvidia/nemotron-nano-9b-v2:free': 'Nemotron 9B',
 };
 
 // Detect if an error is a rate limit or quota error

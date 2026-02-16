@@ -30,9 +30,8 @@ export const PROVIDER_MODELS: Record<string, ModelDefinition[]> = {
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
   ],
   openrouter: [
-    { id: 'qwen/qwen3-4b:free', name: 'Qwen3 4B (Free)', default: true },
-    { id: 'qwen/qwen3-next-80b-a3b-instruct:free', name: 'Qwen3 Instruct (Free)' },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 (Free)' },
+    { id: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 30B (Free)', default: true },
+    { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'Nemotron 9B (Free)' },
   ],
 };
 
