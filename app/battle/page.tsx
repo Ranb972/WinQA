@@ -370,20 +370,79 @@ export default function BattlePage() {
     setter({ provider, model });
   };
 
+  // --- Single-model fetch for progressive display ---
+
+  const fetchSingleResponse = async (
+    fighter: FighterConfig,
+    prompt: string,
+    idx: number
+  ): Promise<BattleResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      const res = await fetch('/api/battle/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: fighter.provider,
+          model: fighter.model,
+          prompt,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { content: '', responseTime: 0, error: data.error || 'Request failed' };
+      }
+      return {
+        content: data.content || '',
+        responseTime: data.responseTime || 0,
+        specificModel: data.specificModel,
+        error: data.error,
+      };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      return {
+        content: '',
+        responseTime: 0,
+        error: err instanceof Error ? err.message : 'Request failed',
+      };
+    }
+  };
+
+  // --- Fetch responses for a round (used by BattleRoyaleArena for rounds 2+) ---
+
+  const fetchRoundResponses = async (
+    roundFighters: FighterConfig[],
+    prompt: string
+  ): Promise<BattleResponse[]> => {
+    const promises = roundFighters.map((fighter) =>
+      fetchSingleResponse(fighter, prompt, 0)
+    );
+    return Promise.all(promises);
+  };
+
   // --- Battle execution ---
 
   const startBattle = async () => {
     if (!canStartBattle) return;
 
     const challenge = selectedChallenge;
-    const prompt = useCustomPrompt ? customPrompt : challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
+    // For Royale, always use the first prompt (rounds 2/3 get their own prompts)
+    const prompt = useCustomPrompt
+      ? customPrompt
+      : isRoyale
+      ? challenge?.prompts?.[0] || ''
+      : challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
     setBattlePrompt(prompt);
     setBattleState('battling');
 
     // Setup models
     let contenders: FighterConfig[];
     if (isRoyale) {
-      // All 4 providers
       contenders = providers.map((p) => ({ provider: p, model: defaultModels[p] }));
       setResponses([null, null, null, null]);
       setElapsedTimes([0, 0, 0, 0]);
@@ -406,65 +465,42 @@ export default function BattlePage() {
       }, 100);
     });
 
-    try {
-      const body: Record<string, unknown> = {
-        modelA: { provider: contenders[0].provider, model: contenders[0].model },
-        modelB: { provider: contenders[1].provider, model: contenders[1].model },
-      };
-      if (isRoyale && contenders[2] && contenders[3]) {
-        body.modelC = { provider: contenders[2].provider, model: contenders[2].model };
-        body.modelD = { provider: contenders[3].provider, model: contenders[3].model };
-      }
-      if (challenge && !useCustomPrompt) {
-        body.challengeId = challenge.id;
-      } else {
-        body.customPrompt = prompt;
-      }
+    // Fire N parallel single-model requests — each updates its slot progressively
+    const promises = contenders.map((fighter, idx) =>
+      fetchSingleResponse(fighter, prompt, idx).then((response) => {
+        // Stop this model's timer
+        if (timerRefs.current[idx]) {
+          clearInterval(timerRefs.current[idx]);
+        }
+        // Update elapsed time from actual response time
+        setElapsedTimes((prev) => {
+          const next = [...prev];
+          next[idx] = response.responseTime / 1000;
+          return next;
+        });
+        // Set this model's response immediately (progressive display)
+        setResponses((prev) => {
+          const next = [...prev];
+          next[idx] = response;
+          return next;
+        });
+        return response;
+      })
+    );
 
-      const res = await fetchWithTimeout(
-        '/api/battle',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-        50000
-      );
+    // Wait for all to finish, then transition to judging
+    await Promise.allSettled(promises);
 
-      const data = await res.json();
+    timerRefs.current.forEach(clearInterval);
+    timerRefs.current = [];
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Battle failed');
-      }
-
-      // Update responses
-      const newResponses = data.responses as BattleResponse[];
-      setResponses(newResponses);
-
-      // Stop timers
-      timerRefs.current.forEach(clearInterval);
-      timerRefs.current = [];
-
-      // Update final elapsed times from actual response times
-      setElapsedTimes(newResponses.map((r: BattleResponse) => r.responseTime / 1000));
-
-      // If royale, update fighters to match the actual models used
-      if (isRoyale) {
-        const models = data.models as { provider: string; model: string }[];
-        setFighterA({ provider: models[0].provider as LLMProvider, model: models[0].model });
-        setFighterB({ provider: models[1].provider as LLMProvider, model: models[1].model });
-      }
-
-      setBattleState('judging');
-    } catch (err) {
-      timerRefs.current.forEach(clearInterval);
-      timerRefs.current = [];
-      const errorMsg = err instanceof Error ? err.message : 'Battle failed';
-      setResponses((prev) =>
-        prev.map((r) => r || { content: '', responseTime: 0, error: errorMsg })
-      );
-      setBattleState('judging');
+    // If royale, update fighters to match the actual models used
+    if (isRoyale) {
+      setFighterA({ provider: contenders[0].provider as LLMProvider, model: contenders[0].model });
+      setFighterB({ provider: contenders[1].provider as LLMProvider, model: contenders[1].model });
     }
+
+    setBattleState('judging');
   };
 
   // --- Judging ---
@@ -1083,6 +1119,8 @@ export default function BattlePage() {
                     <BattleRoyaleArena
                       responses={responses}
                       fighters={providers.map((p) => ({ provider: p, model: defaultModels[p] }))}
+                      prompts={selectedChallenge?.prompts || [battlePrompt]}
+                      fetchNextRound={fetchRoundResponses}
                       onChampionCrowned={handleRoyaleComplete}
                     />
                   ) : (

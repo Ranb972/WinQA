@@ -53,6 +53,8 @@ export interface RoyaleRanking {
 interface BattleRoyaleArenaProps {
   responses: (BattleResponse | null)[];
   fighters: FighterConfig[];
+  prompts: string[];
+  fetchNextRound: (fighters: FighterConfig[], prompt: string) => Promise<BattleResponse[]>;
   onChampionCrowned: (rankings: RoyaleRanking[]) => void;
 }
 
@@ -132,6 +134,8 @@ function MarkdownResponse({ content }: { content: string }) {
 export default function BattleRoyaleArena({
   responses,
   fighters,
+  prompts,
+  fetchNextRound,
   onChampionCrowned,
 }: BattleRoyaleArenaProps) {
   const [round, setRound] = useState(1);
@@ -144,18 +148,54 @@ export default function BattleRoyaleArena({
   const [autoEliminatedIds, setAutoEliminatedIds] = useState<Set<number>>(new Set());
   const autoEliminateProcessed = useRef(false);
 
+  // Multi-round state: each round gets fresh responses
+  const [roundResponses, setRoundResponses] = useState<(BattleResponse | null)[]>(responses);
+  const [roundLoading, setRoundLoading] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState(prompts[0] || '');
+
+  // Sync initial responses from props
+  useEffect(() => {
+    setRoundResponses(responses);
+  }, [responses]);
+
   const activeIndices = [0, 1, 2, 3].filter((i) => !eliminatedIndices.includes(i));
   const isFinalRound = activeIndices.length === 2;
 
+  // --- Fetch new responses for the next round ---
+  const startNextRound = useCallback(
+    async (remainingIndices: number[], nextRoundIdx: number) => {
+      const nextPrompt = prompts[nextRoundIdx] || prompts[0] || '';
+      setCurrentPrompt(nextPrompt);
+      setRoundLoading(true);
+
+      const remainingFighters = remainingIndices.map((i) => fighters[i]);
+      const newResponses = await fetchNextRound(remainingFighters, nextPrompt);
+
+      // Map responses back to 4-slot array
+      setRoundResponses((prev) => {
+        const updated = [...prev];
+        remainingIndices.forEach((slotIdx, responseIdx) => {
+          updated[slotIdx] = newResponses[responseIdx] || null;
+        });
+        return updated;
+      });
+
+      setRoundLoading(false);
+      // Reset auto-eliminate flag so new errors can be caught
+      autoEliminateProcessed.current = false;
+    },
+    [fighters, prompts, fetchNextRound]
+  );
+
   // --- Bugfix: Auto-eliminate errored models ---
   useEffect(() => {
-    if (autoEliminateProcessed.current || eliminationPhase !== 'idle' || champion !== null) return;
+    if (autoEliminateProcessed.current || eliminationPhase !== 'idle' || champion !== null || roundLoading) return;
 
-    const erroredActive = activeIndices.filter((idx) => isErrorResponse(responses[idx]));
+    const erroredActive = activeIndices.filter((idx) => isErrorResponse(roundResponses[idx]));
     if (erroredActive.length === 0) return;
 
     // If all active models errored, we can't auto-eliminate all
-    const healthyActive = activeIndices.filter((idx) => !isErrorResponse(responses[idx]));
+    const healthyActive = activeIndices.filter((idx) => !isErrorResponse(roundResponses[idx]));
     if (healthyActive.length === 0) return;
 
     autoEliminateProcessed.current = true;
@@ -164,7 +204,7 @@ export default function BattleRoyaleArena({
     setAutoEliminatedIds(new Set(erroredActive));
 
     // Auto-eliminate errored models one by one with a short delay
-    let delay = 500;
+    const delay = 500;
     const newEliminated = [...eliminatedIndices];
     const newRankings = [...rankings];
 
@@ -201,15 +241,18 @@ export default function BattleRoyaleArena({
         const finalRankings = [...newRankings, champRanking].sort((a, b) => a.rank - b.rank);
         setTimeout(() => onChampionCrowned(finalRankings), 3000);
       } else if (remaining.length <= 3) {
-        setRound((r) => r + (erroredActive.length > 1 ? erroredActive.length - 1 : 1));
+        const newRound = round + (erroredActive.length > 1 ? erroredActive.length - 1 : 1);
+        setRound(newRound);
+        // Fetch new responses for the next round
+        startNextRound(remaining, newRound - 1);
       }
     }, delay);
-  }, [responses, activeIndices, eliminatedIndices, rankings, fighters, eliminationPhase, champion, onChampionCrowned]);
+  }, [roundResponses, activeIndices, eliminatedIndices, rankings, fighters, eliminationPhase, champion, onChampionCrowned, roundLoading, round, startNextRound]);
 
   // --- Elimination by user click ---
   const eliminateModel = useCallback(
     (targetIdx: number) => {
-      if (eliminationPhase !== 'idle' || champion !== null) return;
+      if (eliminationPhase !== 'idle' || champion !== null || roundLoading) return;
 
       // Start elimination animation sequence
       setEliminationPhase('suspense');
@@ -275,7 +318,10 @@ export default function BattleRoyaleArena({
                       onChampionCrowned(finalRankings);
                     }, 3000);
                   } else {
-                    setRound((r) => r + 1);
+                    // Move to next round with new prompt + new responses
+                    const nextRound = round + 1;
+                    setRound(nextRound);
+                    startNextRound(remaining, nextRound - 1);
                   }
                 }, 1000);
               }, 800);
@@ -284,7 +330,7 @@ export default function BattleRoyaleArena({
         }, 200);
       }, 1500);
     },
-    [activeIndices, eliminatedIndices, fighters, rankings, onChampionCrowned, eliminationPhase, champion]
+    [activeIndices, eliminatedIndices, fighters, rankings, onChampionCrowned, eliminationPhase, champion, roundLoading, round, startNextRound]
   );
 
   // --- Crown champion (final round) ---
@@ -332,7 +378,38 @@ export default function BattleRoyaleArena({
             ? 'Click CROWN THIS CHAMPION on your winner'
             : 'Click ELIMINATE on the weakest model'}
         </p>
+        {/* Current prompt */}
+        <p className="text-xs text-slate-400 italic mt-2 max-w-2xl mx-auto line-clamp-2">
+          &ldquo;{currentPrompt}&rdquo;
+        </p>
       </motion.div>
+
+      {/* Loading overlay between rounds */}
+      <AnimatePresence>
+        {roundLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-6 text-center"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              className="inline-block mb-3"
+            >
+              <RotateCcw className="h-6 w-6 text-amber-400" />
+            </motion.div>
+            <p className="text-amber-300 font-bold text-lg mb-1">
+              Round {round} starting...
+            </p>
+            <p className="text-sm text-slate-400">New challenge incoming!</p>
+            <p className="text-xs text-slate-500 italic mt-2 max-w-xl mx-auto line-clamp-2">
+              &ldquo;{currentPrompt}&rdquo;
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Suspense Text */}
       <AnimatePresence>
@@ -452,7 +529,7 @@ export default function BattleRoyaleArena({
           <AnimatePresence>
             {activeIndices.map((idx) => {
               const fighter = fighters[idx];
-              const response = responses[idx];
+              const response = roundResponses[idx];
               const label = getDisplayName(fighter.provider, fighter.model);
               const isEliminating = eliminatingIdx === idx;
               const isSpotlight = spotlightIdx === idx;
@@ -563,7 +640,7 @@ export default function BattleRoyaleArena({
                   </div>
 
                   {/* Action Button - ELIMINATE or CROWN */}
-                  {eliminationPhase === 'idle' && !isErrored && (
+                  {eliminationPhase === 'idle' && !isErrored && !roundLoading && (
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}

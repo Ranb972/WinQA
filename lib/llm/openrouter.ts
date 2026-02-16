@@ -10,7 +10,7 @@ export async function openrouterChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'stepfun/step-3.5-flash:free';
+  const modelToUse = modelOverride || 'qwen/qwen3-4b:free';
 
   try {
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {

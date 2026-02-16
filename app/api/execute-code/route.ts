@@ -9,7 +9,7 @@ import {
 
 const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com';
-const JUDGE0_CE_URL = 'https://judge0-ce.p.sealos.run';
+const JUDGE0_CE_URL = 'https://ce.judge0.com';
 
 // Timeout for code execution (10 seconds)
 const EXECUTION_TIMEOUT = 10000;
@@ -245,32 +245,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try Piston first
+    // Try Judge0 CE first (free, no API key, most reliable)
+    console.log('[CodeExec] Trying Judge0 CE (ce.judge0.com)...');
     try {
-      const result = await executeWithPiston(language as SupportedLanguage, code, stdin);
+      const result = await executeWithJudge0CE(language as SupportedLanguage, code, stdin);
+      console.log('[CodeExec] Judge0 CE succeeded');
       return NextResponse.json(result);
-    } catch (pistonError) {
-      console.error('Piston execution failed, trying Judge0 CE:', pistonError);
+    } catch (judge0CEError) {
+      console.error('[CodeExec] Judge0 CE failed:', judge0CEError);
 
-      // Fallback to Judge0 CE (free, no API key)
+      // Fallback to Piston
+      console.log('[CodeExec] Trying Piston...');
       try {
-        const result = await executeWithJudge0CE(language as SupportedLanguage, code, stdin);
+        const result = await executeWithPiston(language as SupportedLanguage, code, stdin);
+        console.log('[CodeExec] Piston succeeded');
         return NextResponse.json(result);
-      } catch (judge0CEError) {
-        console.error('Judge0 CE failed:', judge0CEError);
+      } catch (pistonError) {
+        console.error('[CodeExec] Piston failed:', pistonError);
 
         // Fallback to Judge0 RapidAPI if API key is configured
         if (process.env.JUDGE0_API_KEY) {
+          console.log('[CodeExec] Trying Judge0 RapidAPI...');
           try {
             const result = await executeWithJudge0(language as SupportedLanguage, code, stdin);
+            console.log('[CodeExec] Judge0 RapidAPI succeeded');
             return NextResponse.json(result);
           } catch (judge0Error) {
-            console.error('Judge0 RapidAPI also failed:', judge0Error);
+            console.error('[CodeExec] Judge0 RapidAPI also failed:', judge0Error);
           }
         }
       }
 
       // All engines failed
+      console.error('[CodeExec] All engines failed');
       return NextResponse.json(
         {
           success: false,
