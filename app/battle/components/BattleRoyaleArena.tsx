@@ -312,7 +312,7 @@ export default function BattleRoyaleArena({
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-6"
+        className="text-center mb-4"
       >
         <div className="flex items-center justify-center gap-2 mb-2">
           <Crown className="h-6 w-6 text-amber-400" />
@@ -448,7 +448,7 @@ export default function BattleRoyaleArena({
 
       {/* Response Cards */}
       {champion === null && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <AnimatePresence>
             {activeIndices.map((idx) => {
               const fighter = fighters[idx];
@@ -480,7 +480,7 @@ export default function BattleRoyaleArena({
                     opacity: { duration: 0.5 },
                     scale: { duration: 0.5 },
                   }}
-                  className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-5 transition-colors relative overflow-hidden ${
+                  className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-3 transition-colors relative overflow-hidden ${
                     isEliminating && eliminationPhase === 'shaking'
                       ? 'border-red-500/60'
                       : isEliminating && eliminationPhase === 'eliminated'
@@ -526,7 +526,7 @@ export default function BattleRoyaleArena({
                   )}
 
                   {/* Model Header */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div
                         className={`h-2 w-2 rounded-full ${
@@ -549,7 +549,7 @@ export default function BattleRoyaleArena({
                   </div>
 
                   {/* Response */}
-                  <div className="text-sm text-slate-300 max-h-48 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
+                  <div className="text-sm text-slate-300 max-h-32 overflow-y-auto scroll-smooth leading-snug mb-2 bg-slate-800/40 rounded-lg p-2">
                     {response?.error ? (
                       <div className="flex items-start gap-2">
                         <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
@@ -568,7 +568,7 @@ export default function BattleRoyaleArena({
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => isFinalRound ? crownChampion(idx) : eliminateModel(idx)}
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
                         isFinalRound
                           ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 hover:from-amber-500/30 hover:to-yellow-500/30'
                           : 'bg-gradient-to-r from-red-500/15 to-orange-500/15 border border-red-500/30 text-red-300 hover:from-red-500/25 hover:to-orange-500/25'

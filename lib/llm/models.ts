@@ -30,8 +30,8 @@ export const PROVIDER_MODELS: Record<string, ModelDefinition[]> = {
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
   ],
   openrouter: [
-    { id: 'meta-llama/llama-3-8b-instruct:free', name: 'Llama 3 8B (Free)', default: true },
-    { id: 'microsoft/phi-3-mini-128k-instruct:free', name: 'Phi-3 Mini (Free)' },
+    { id: 'stepfun/step-3.5-flash:free', name: 'Step 3.5 Flash (Free)', default: true },
+    { id: 'upstage/solar-pro-3:free', name: 'Solar Pro 3 (Free)' },
     { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 (Free)' },
   ],
 };

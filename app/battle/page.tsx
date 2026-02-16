@@ -347,10 +347,11 @@ export default function BattlePage() {
 
   // --- Setup helpers ---
 
-  const canStartBattle =
-    fighterA.provider &&
-    fighterB.provider &&
-    (selectedChallenge || (useCustomPrompt && customPrompt.trim()));
+  const canStartBattle = isRoyale
+    ? !!selectedChallenge
+    : fighterA.provider &&
+      fighterB.provider &&
+      (selectedChallenge || (useCustomPrompt && customPrompt.trim()));
 
   const handleRandomMatchup = () => {
     const shuffled = [...providers].sort(() => Math.random() - 0.5);
@@ -763,44 +764,72 @@ export default function BattlePage() {
                     <p className="text-slate-400">Pit AI models against each other in epic challenges</p>
                   </div>
 
-                  {/* Fighter Cards */}
-                  <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
-                    <FighterCard
-                      fighter={fighterA}
-                      setFighter={setFighterA}
-                      label="Fighter A"
-                      onProviderChange={handleProviderChange}
-                    />
+                  {/* Fighter Cards (hidden for Royale — auto-selects all 4 providers) */}
+                  {!isRoyale && (
+                    <>
+                      <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
+                        <FighterCard
+                          fighter={fighterA}
+                          setFighter={setFighterA}
+                          label="Fighter A"
+                          onProviderChange={handleProviderChange}
+                        />
 
-                    {/* VS Badge */}
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex-shrink-0"
-                    >
-                      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-full h-14 w-14 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-orange-500/30">
-                        VS
+                        {/* VS Badge */}
+                        <motion.div
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="flex-shrink-0"
+                        >
+                          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-full h-14 w-14 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-orange-500/30">
+                            VS
+                          </div>
+                        </motion.div>
+
+                        <FighterCard
+                          fighter={fighterB}
+                          setFighter={setFighterB}
+                          label="Fighter B"
+                          onProviderChange={handleProviderChange}
+                        />
                       </div>
-                    </motion.div>
 
-                    <FighterCard
-                      fighter={fighterB}
-                      setFighter={setFighterB}
-                      label="Fighter B"
-                      onProviderChange={handleProviderChange}
-                    />
-                  </div>
+                      {/* Random Matchup */}
+                      <div className="text-center mb-8">
+                        <button
+                          onClick={handleRandomMatchup}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-300 hover:text-white hover:border-orange-500/40 transition-all text-sm"
+                        >
+                          <Shuffle className="h-4 w-4" />
+                          Random Matchup
+                        </button>
+                      </div>
+                    </>
+                  )}
 
-                  {/* Random Matchup */}
-                  <div className="text-center mb-8">
-                    <button
-                      onClick={handleRandomMatchup}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-300 hover:text-white hover:border-orange-500/40 transition-all text-sm"
-                    >
-                      <Shuffle className="h-4 w-4" />
-                      Random Matchup
-                    </button>
-                  </div>
+                  {/* Royale Info Banner — shows auto-selected models */}
+                  {isRoyale && (
+                    <div className="mb-8 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Crown className="h-5 w-5 text-amber-400" />
+                        <span className="font-bold text-amber-300 text-sm">Battle Royale — one model from each provider</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {providers.map((p) => (
+                          <div
+                            key={p}
+                            className="flex items-center gap-1.5 bg-slate-800/60 border border-slate-700/50 rounded-lg px-3 py-1.5"
+                          >
+                            <div className={`h-2 w-2 rounded-full ${providerColorDots[p]}`} />
+                            <span className="text-xs text-slate-400">{providerDisplayNames[p]}:</span>
+                            <span className="text-xs font-medium text-white">
+                              {specificModelDisplayNames[defaultModels[p] as keyof typeof specificModelDisplayNames] || defaultModels[p]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Challenge Grid */}
                   <div className="mb-8">

@@ -9,6 +9,7 @@ import {
 
 const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com';
+const JUDGE0_CE_URL = 'https://judge0-ce.p.sealos.run';
 
 // Timeout for code execution (10 seconds)
 const EXECUTION_TIMEOUT = 10000;
@@ -158,6 +159,66 @@ async function executeWithJudge0(
   };
 }
 
+/**
+ * Execute code using Judge0 CE (free, no API key required)
+ */
+async function executeWithJudge0CE(
+  language: SupportedLanguage,
+  code: string,
+  stdin: string
+): Promise<CodeExecutionResult> {
+  const languageId = JUDGE0_LANGUAGE_IDS[language];
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), EXECUTION_TIMEOUT);
+
+  try {
+    const submitResponse = await fetch(
+      `${JUDGE0_CE_URL}/submissions?base64_encoded=true&wait=true`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language_id: languageId,
+          source_code: Buffer.from(code).toString('base64'),
+          stdin: stdin ? Buffer.from(stdin).toString('base64') : '',
+          cpu_time_limit: 10,
+          wall_time_limit: 15,
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!submitResponse.ok) {
+      throw new Error(`Judge0 CE returned ${submitResponse.status}`);
+    }
+
+    const result: Judge0Response = await submitResponse.json();
+
+    const stdout = result.stdout ? Buffer.from(result.stdout, 'base64').toString() : '';
+    const stderr = result.stderr ? Buffer.from(result.stderr, 'base64').toString() : '';
+    const compileOutput = result.compile_output
+      ? Buffer.from(result.compile_output, 'base64').toString()
+      : '';
+
+    const isSuccess = result.status.id === 3;
+    const errorOutput = stderr || compileOutput || (isSuccess ? '' : result.status.description);
+
+    return {
+      success: isSuccess,
+      output: stdout,
+      error: errorOutput,
+      executionTime: result.time ? parseFloat(result.time) * 1000 : undefined,
+      engine: 'judge0',
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -189,19 +250,27 @@ export async function POST(request: NextRequest) {
       const result = await executeWithPiston(language as SupportedLanguage, code, stdin);
       return NextResponse.json(result);
     } catch (pistonError) {
-      console.error('Piston execution failed, trying Judge0:', pistonError);
+      console.error('Piston execution failed, trying Judge0 CE:', pistonError);
 
-      // Fallback to Judge0 if API key is configured
-      if (process.env.JUDGE0_API_KEY) {
-        try {
-          const result = await executeWithJudge0(language as SupportedLanguage, code, stdin);
-          return NextResponse.json(result);
-        } catch (judge0Error) {
-          console.error('Judge0 execution also failed:', judge0Error);
+      // Fallback to Judge0 CE (free, no API key)
+      try {
+        const result = await executeWithJudge0CE(language as SupportedLanguage, code, stdin);
+        return NextResponse.json(result);
+      } catch (judge0CEError) {
+        console.error('Judge0 CE failed:', judge0CEError);
+
+        // Fallback to Judge0 RapidAPI if API key is configured
+        if (process.env.JUDGE0_API_KEY) {
+          try {
+            const result = await executeWithJudge0(language as SupportedLanguage, code, stdin);
+            return NextResponse.json(result);
+          } catch (judge0Error) {
+            console.error('Judge0 RapidAPI also failed:', judge0Error);
+          }
         }
       }
 
-      // Both failed or Judge0 not configured
+      // All engines failed
       return NextResponse.json(
         {
           success: false,
