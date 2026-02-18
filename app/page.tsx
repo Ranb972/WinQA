@@ -47,6 +47,23 @@ const featureShowcases = [
     glowHover: 'hover:shadow-violet-500/10',
   },
   {
+    mockup: 'battle',
+    badge: 'COMPETE & CONQUER',
+    title: 'AI Battle Arena',
+    description: 'Pit AI models against each other in head-to-head challenges.',
+    bullets: [
+      '9 unique battle types from code duels to emoji wars',
+      'Blindfold mode - vote before the reveal',
+      'Battle Royale - 4 models enter, 1 survives',
+      'Live leaderboard tracks every victory',
+      'Watch AI models compete in real-time',
+    ],
+    badgeText: 'text-orange-400',
+    badgeBg: 'bg-orange-500/10',
+    borderHover: 'hover:border-orange-500/50',
+    glowHover: 'hover:shadow-orange-500/10',
+  },
+  {
     mockup: 'code-testing',
     badge: 'CODE & DEBUG',
     title: 'Code Testing Lab',
@@ -915,10 +932,85 @@ function InsightsMockup() {
   );
 }
 
+// AI Battle Arena Mockup
+function BattleMockup() {
+  return (
+    <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
+      <MockupTitleBar title="AI Battle Arena" />
+      <div className="p-3 space-y-2.5">
+        {/* Challenge header */}
+        <div className="flex items-center justify-between">
+          <span className="px-2.5 py-1 rounded bg-orange-500/20 text-orange-300 font-medium">Code Duel</span>
+          <span className="text-[10px] text-slate-500">Round 1 of 3</span>
+        </div>
+
+        {/* Challenge prompt */}
+        <div className="bg-slate-900/80 rounded p-2 border border-slate-800/50">
+          <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wide">Challenge</span>
+          <p className="text-[10px] text-slate-300 mt-0.5">&quot;Write a function that reverses a string without using built-in methods&quot;</p>
+        </div>
+
+        {/* Two-column battle responses */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Model A */}
+          <div className="bg-slate-900/80 rounded-lg p-2 border border-blue-500/20">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <span className="text-[10px] font-medium text-blue-300">Model A</span>
+              <div className="ml-auto flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-blue-400/60 animate-pulse" />
+                <div className="w-1 h-1 rounded-full bg-blue-400/40 animate-pulse [animation-delay:150ms]" />
+                <div className="w-1 h-1 rounded-full bg-blue-400/20 animate-pulse [animation-delay:300ms]" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="h-1.5 bg-blue-500/10 rounded w-full" />
+              <div className="h-1.5 bg-blue-500/10 rounded w-[85%]" />
+              <div className="h-1.5 bg-blue-500/10 rounded w-[70%]" />
+            </div>
+          </div>
+
+          {/* Model B */}
+          <div className="bg-slate-900/80 rounded-lg p-2 border border-orange-500/20">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+              <span className="text-[10px] font-medium text-orange-300">Model B</span>
+              <div className="ml-auto flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-orange-400/60 animate-pulse" />
+                <div className="w-1 h-1 rounded-full bg-orange-400/40 animate-pulse [animation-delay:150ms]" />
+                <div className="w-1 h-1 rounded-full bg-orange-400/20 animate-pulse [animation-delay:300ms]" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="h-1.5 bg-orange-500/10 rounded w-full" />
+              <div className="h-1.5 bg-orange-500/10 rounded w-[90%]" />
+              <div className="h-1.5 bg-orange-500/10 rounded w-[60%]" />
+            </div>
+          </div>
+        </div>
+
+        {/* Voting buttons */}
+        <div className="flex gap-1.5">
+          <button className="flex-1 px-2 py-1.5 rounded bg-blue-500/15 text-blue-300 font-medium text-[10px] text-center">A Wins</button>
+          <button className="flex-1 px-2 py-1.5 rounded bg-slate-800 text-slate-400 font-medium text-[10px] text-center">Tie</button>
+          <button className="flex-1 px-2 py-1.5 rounded bg-orange-500/15 text-orange-300 font-medium text-[10px] text-center">B Wins</button>
+        </div>
+
+        {/* Stats bar */}
+        <div className="flex items-center justify-between text-[9px] text-slate-500">
+          <span>9 battle challenges available</span>
+          <span className="text-orange-400/60">Live</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Render the correct mockup for a feature
 function FeatureMockup({ mockup }: { mockup: string }) {
   switch (mockup) {
     case 'chat-lab': return <ChatLabMockup />;
+    case 'battle': return <BattleMockup />;
     case 'code-testing': return <CodeTestingMockup />;
     case 'test-cases': return <TestCasesMockup />;
     case 'bug-log': return <BugLogMockup />;
@@ -1165,7 +1257,7 @@ function LandingPage() {
                 Your AI Testing Arsenal
               </h2>
               <p className="text-slate-400">
-                Six tools. Zero blind spots.
+                Seven tools. Zero blind spots.
               </p>
             </div>
           </MotionWrapper>
