@@ -5,6 +5,7 @@ import TestCase from '@/models/TestCase';
 import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
 import Insight from '@/models/Insight';
+import Battle from '@/models/Battle';
 
 // GET - Fetch counts for dashboard stats (scoped to authenticated user)
 export async function GET() {
@@ -18,12 +19,13 @@ export async function GET() {
 
     const userFilter = { user_id: userId };
 
-    const [testCases, bugs, prompts, insights, resolvedBugs] = await Promise.all([
+    const [testCases, bugs, prompts, insights, resolvedBugs, battles] = await Promise.all([
       TestCase.countDocuments(userFilter),
       BugReport.countDocuments(userFilter),
       PromptLibrary.countDocuments(userFilter),
       Insight.countDocuments(userFilter),
       BugReport.countDocuments({ ...userFilter, status: 'Resolved' }),
+      Battle.countDocuments(userFilter),
     ]);
 
     return NextResponse.json({
@@ -32,6 +34,7 @@ export async function GET() {
       prompts,
       insights,
       resolvedBugs,
+      battles,
     });
   } catch (error) {
     console.error('Error fetching stats:', error);

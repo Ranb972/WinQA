@@ -23,6 +23,7 @@ import {
   Check,
   Search,
   ChevronDown,
+  Swords,
 } from 'lucide-react';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -126,7 +127,7 @@ const featureShowcases = [
 const featureSections = [
   {
     id: 'chat-lab',
-    title: 'CHAT LAB',
+    title: 'CHAT LAB \u00b7 COMPARE MODE',
     icon: FlaskConical,
     href: '/chat-lab',
     borderColor: 'border-purple-500/30',
@@ -163,6 +164,29 @@ const featureSections = [
       { emoji: '🎮', text: 'Watch your creations come alive' },
     ],
     statsTemplate: () => 'Run code instantly in your browser',
+  },
+  {
+    id: 'battle',
+    title: 'AI BATTLE',
+    icon: Swords,
+    href: '/battle',
+    borderColor: 'border-orange-500/30',
+    hoverGlow: 'hover:shadow-orange-500/20',
+    gradient: 'from-orange-500 to-amber-600',
+    iconBg: 'bg-orange-500/20',
+    dotColor: 'bg-orange-500',
+    images: ['/images/dashboard/battle.png', '/images/dashboard/battle-2.png'],
+    bullets: [
+      { emoji: '⚔️', text: 'Two AIs, one challenge - only one survives' },
+      { emoji: '🎯', text: '9 unique battle types from code duels to emoji wars' },
+      { emoji: '🎭', text: 'Blindfold mode - guess who wrote what before the reveal' },
+      { emoji: '👑', text: 'Battle Royale - 4 models enter, 1 champion remains' },
+      { emoji: '📊', text: 'Live leaderboard tracks every victory' },
+    ],
+    statsTemplate: (stats: { battles: number }) =>
+      stats.battles > 0
+        ? `${stats.battles} battles fought | 9 battle challenges`
+        : '9 battle challenges',
   },
   {
     id: 'test-cases',
@@ -442,7 +466,7 @@ function FeatureShowcaseSection({
   isFirst = false,
 }: {
   feature: typeof featureSections[0];
-  stats: { testCases: number; bugs: number; prompts: number; insights: number; resolvedBugs: number };
+  stats: { testCases: number; bugs: number; prompts: number; insights: number; resolvedBugs: number; battles: number };
   isLoading?: boolean;
   index: number;
   isFirst?: boolean;
@@ -559,7 +583,7 @@ function ComingSoonSection() {
 
 // Dashboard component for signed-in users
 function Dashboard() {
-  const [stats, setStats] = useState({ testCases: 0, bugs: 0, prompts: 0, insights: 0, resolvedBugs: 0 });
+  const [stats, setStats] = useState({ testCases: 0, bugs: 0, prompts: 0, insights: 0, resolvedBugs: 0, battles: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
