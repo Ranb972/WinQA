@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       messages,
       provider,
       0.7,
-      2048,
+      4096,
       true,
       model,
       customApiKeys,

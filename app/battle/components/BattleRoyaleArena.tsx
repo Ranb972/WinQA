@@ -53,7 +53,7 @@ export interface RoyaleRanking {
 interface BattleRoyaleArenaProps {
   responses: (BattleResponse | null)[];
   fighters: FighterConfig[];
-  prompts: string[];
+  prompts: { prompt: string; explanation: string }[];
   challengeDescription?: string;
   fetchNextRound: (fighters: FighterConfig[], prompt: string) => Promise<BattleResponse[]>;
   onChampionCrowned: (rankings: RoyaleRanking[]) => void;
@@ -153,7 +153,8 @@ export default function BattleRoyaleArena({
   // Multi-round state: each round gets fresh responses
   const [roundResponses, setRoundResponses] = useState<(BattleResponse | null)[]>(responses);
   const [roundLoading, setRoundLoading] = useState(false);
-  const [currentPrompt, setCurrentPrompt] = useState(prompts[0] || '');
+  const [currentPrompt, setCurrentPrompt] = useState(prompts[0]?.prompt || '');
+  const [currentExplanation, setCurrentExplanation] = useState(prompts[0]?.explanation || '');
 
   // Sync initial responses from props
   useEffect(() => {
@@ -166,8 +167,11 @@ export default function BattleRoyaleArena({
   // --- Fetch new responses for the next round ---
   const startNextRound = useCallback(
     async (remainingIndices: number[], nextRoundIdx: number) => {
-      const nextPrompt = prompts[nextRoundIdx] || prompts[0] || '';
+      const nextItem = prompts[nextRoundIdx] || prompts[0];
+      const nextPrompt = nextItem?.prompt || '';
+      const nextExplanation = nextItem?.explanation || '';
       setCurrentPrompt(nextPrompt);
+      setCurrentExplanation(nextExplanation);
       setRoundLoading(true);
 
       const remainingFighters = remainingIndices.map((i) => fighters[i]);
@@ -385,8 +389,13 @@ export default function BattleRoyaleArena({
             ? 'Click CROWN THIS CHAMPION on your winner'
             : 'Click ELIMINATE on the weakest model'}
         </p>
+        {currentExplanation && (
+          <p className="text-base text-slate-200 mt-3 mb-1 max-w-2xl mx-auto">
+            {currentExplanation}
+          </p>
+        )}
         {/* Current prompt */}
-        <div className="mt-3 bg-slate-800/50 border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+        <div className="mt-2 bg-slate-800/50 border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-sm">🎯</span>
             <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>

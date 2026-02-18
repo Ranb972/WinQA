@@ -276,7 +276,8 @@ export default function BattlePage() {
   const [responses, setResponses] = useState<(BattleResponse | null)[]>([null, null]);
   const [elapsedTimes, setElapsedTimes] = useState<number[]>([0, 0]);
   const [battlePrompt, setBattlePrompt] = useState('');
-  const [royalePrompts, setRoyalePrompts] = useState<string[]>([]);
+  const [battleExplanation, setBattleExplanation] = useState('');
+  const [royalePrompts, setRoyalePrompts] = useState<{ prompt: string; explanation: string }[]>([]);
   const timerRefs = useRef<ReturnType<typeof setInterval>[]>([]);
 
   // Judging
@@ -399,7 +400,8 @@ export default function BattlePage() {
 
     const challenge = selectedChallenge;
     let prompt: string;
-    let selectedRoyalePrompts: string[] = [];
+    let explanation = '';
+    let selectedRoyalePrompts: { prompt: string; explanation: string }[] = [];
     if (useCustomPrompt) {
       prompt = customPrompt;
     } else if (isRoyale && challenge) {
@@ -407,12 +409,16 @@ export default function BattlePage() {
       const setCount = Math.floor(challenge.prompts.length / 3);
       const setIdx = Math.floor(Math.random() * setCount) * 3;
       selectedRoyalePrompts = challenge.prompts.slice(setIdx, setIdx + 3);
-      prompt = selectedRoyalePrompts[0];
+      prompt = selectedRoyalePrompts[0].prompt;
+      explanation = selectedRoyalePrompts[0].explanation;
       setRoyalePrompts(selectedRoyalePrompts);
     } else {
-      prompt = challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
+      const selected = challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)];
+      prompt = selected?.prompt || '';
+      explanation = selected?.explanation || '';
     }
     setBattlePrompt(prompt);
+    setBattleExplanation(explanation);
     setBattleState('battling');
 
     // Setup models
@@ -683,6 +689,7 @@ export default function BattlePage() {
     setRoyalePrompts([]);
     setSaveStatus('idle');
     setBattlePrompt('');
+    setBattleExplanation('');
   };
 
   // --- Leaderboard sorting ---
@@ -970,6 +977,11 @@ export default function BattlePage() {
                         {selectedChallenge.userDescription}
                       </p>
                     )}
+                    {battleExplanation && (
+                      <p className="text-base text-slate-200 mt-2 mb-2 max-w-2xl mx-auto">
+                        {battleExplanation}
+                      </p>
+                    )}
                     <div className="mt-2 bg-slate-800/50 border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-sm">🎯</span>
@@ -1083,13 +1095,14 @@ export default function BattlePage() {
                       challengeName={selectedChallenge?.name}
                       challengeDescription={selectedChallenge?.userDescription}
                       prompt={battlePrompt}
+                      explanation={battleExplanation}
                     />
                   ) : isRoyale ? (
                     /* Battle Royale: multi-round elimination */
                     <BattleRoyaleArena
                       responses={responses}
                       fighters={providers.map((p) => ({ provider: p, model: defaultModels[p] }))}
-                      prompts={royalePrompts.length > 0 ? royalePrompts : [battlePrompt]}
+                      prompts={royalePrompts.length > 0 ? royalePrompts : [{ prompt: battlePrompt, explanation: battleExplanation }]}
                       challengeDescription={selectedChallenge?.userDescription}
                       fetchNextRound={fetchRoundResponses}
                       onChampionCrowned={handleRoyaleComplete}
@@ -1107,7 +1120,6 @@ export default function BattlePage() {
                           <h2 className="text-2xl font-bold text-white">WHO WINS?</h2>
                           <Trophy className="h-6 w-6 text-amber-400" />
                         </div>
-                        <p className="text-sm text-slate-400">Read both responses and pick a winner</p>
                         {selectedChallenge && (
                           <div className="mt-3">
                             <p className="text-sm font-medium text-orange-300/80">
@@ -1120,8 +1132,13 @@ export default function BattlePage() {
                             )}
                           </div>
                         )}
+                        {battleExplanation && (
+                          <p className="text-base text-slate-200 mt-3 mb-1 max-w-2xl mx-auto">
+                            {battleExplanation}
+                          </p>
+                        )}
                         {battlePrompt && (
-                          <div className="mt-3 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+                          <div className="mt-2 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-sm">🎯</span>
                               <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>

@@ -56,6 +56,7 @@ interface CodeDuelJudgingProps {
   challengeName?: string;
   challengeDescription?: string;
   prompt?: string;
+  explanation?: string;
 }
 
 // --- Helpers ---
@@ -139,6 +140,7 @@ export default function CodeDuelJudging({
   challengeName,
   challengeDescription,
   prompt,
+  explanation,
 }: CodeDuelJudgingProps) {
   const [extractedCodes, setExtractedCodes] = useState<(string | null)[]>([null, null]);
   const [codeOutputs, setCodeOutputs] = useState<(CodeExecutionResult | null)[]>([null, null]);
@@ -232,16 +234,18 @@ export default function CodeDuelJudging({
           <h2 className="text-2xl font-bold text-white">CODE DUEL</h2>
           <span className="text-2xl">⚔️</span>
         </div>
-        <p className="text-sm text-slate-400">
-          Review the code, run it live, then judge the results
-        </p>
         {challengeDescription && (
           <p className="text-sm italic text-slate-300 mt-1">
             {challengeDescription}
           </p>
         )}
+        {explanation && (
+          <p className="text-base text-slate-200 mt-3 mb-1 max-w-2xl mx-auto">
+            {explanation}
+          </p>
+        )}
         {prompt && (
-          <div className="mt-3 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+          <div className="mt-2 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-sm">🎯</span>
               <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
