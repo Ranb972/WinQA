@@ -236,14 +236,17 @@ export default function CodeDuelJudging({
           Review the code, run it live, then judge the results
         </p>
         {challengeDescription && (
-          <p className="text-xs italic text-slate-400 mt-1">
+          <p className="text-sm italic text-slate-300 mt-1">
             {challengeDescription}
           </p>
         )}
         {prompt && (
-          <div className="mt-2 bg-slate-800/40 border border-slate-700/30 rounded-lg px-4 py-2 max-w-2xl mx-auto">
-            <span className="text-xs text-slate-500 font-medium">Mission: </span>
-            <span className="text-xs text-slate-300 line-clamp-2">{prompt}</span>
+          <div className="mt-3 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm">🎯</span>
+              <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+            </div>
+            <p className="text-sm text-slate-200 line-clamp-3">{prompt}</p>
           </div>
         )}
       </motion.div>

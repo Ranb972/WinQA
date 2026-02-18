@@ -368,7 +368,7 @@ export default function BattleRoyaleArena({
           <Crown className="h-6 w-6 text-amber-400" />
         </div>
         {challengeDescription && (
-          <p className="text-xs italic text-slate-400 mb-1">
+          <p className="text-sm italic text-slate-300 mb-1">
             {challengeDescription}
           </p>
         )}
@@ -386,9 +386,13 @@ export default function BattleRoyaleArena({
             : 'Click ELIMINATE on the weakest model'}
         </p>
         {/* Current prompt */}
-        <p className="text-xs text-slate-400 italic mt-2 max-w-2xl mx-auto line-clamp-2">
-          &ldquo;{currentPrompt}&rdquo;
-        </p>
+        <div className="mt-3 bg-slate-800/50 border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-sm">🎯</span>
+            <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+          </div>
+          <p className="text-sm text-slate-200 line-clamp-2">{currentPrompt}</p>
+        </div>
       </motion.div>
 
       {/* Loading overlay between rounds */}

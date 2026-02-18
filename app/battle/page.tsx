@@ -699,8 +699,6 @@ export default function BattlePage() {
         return (a.wins - b.wins) * dir;
       case 'totalBattles':
         return (a.totalBattles - b.totalBattles) * dir;
-      case 'avgTotal':
-        return (a.avgTotal - b.avgTotal) * dir;
       default:
         return 0;
     }
@@ -968,13 +966,19 @@ export default function BattlePage() {
                       {selectedChallenge?.name || 'Custom Challenge'}
                     </p>
                     {selectedChallenge?.userDescription && (
-                      <p className="text-sm italic text-slate-400 mb-1">
+                      <p className="text-sm italic text-slate-300 mb-1">
                         {selectedChallenge.userDescription}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500 max-w-2xl mx-auto line-clamp-2">
-                      {battlePrompt}
-                    </p>
+                    <div className="mt-2 bg-slate-800/50 border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-sm">🎯</span>
+                        <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+                      </div>
+                      <p className="text-sm text-slate-200 line-clamp-2">
+                        {battlePrompt}
+                      </p>
+                    </div>
                   </motion.div>
 
                   <div className={`grid gap-4 ${isRoyale ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'} relative`}>
@@ -1117,9 +1121,12 @@ export default function BattlePage() {
                           </div>
                         )}
                         {battlePrompt && (
-                          <div className="mt-2 bg-slate-800/40 border border-slate-700/30 rounded-lg px-4 py-2 max-w-2xl mx-auto">
-                            <span className="text-xs text-slate-500 font-medium">Mission: </span>
-                            <span className="text-xs text-slate-300">{battlePrompt}</span>
+                          <div className="mt-3 bg-slate-800/50 border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-sm">🎯</span>
+                              <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+                            </div>
+                            <p className="text-sm text-slate-200">{battlePrompt}</p>
                           </div>
                         )}
                       </motion.div>
@@ -1327,16 +1334,9 @@ export default function BattlePage() {
                               ? getDisplayName(fighterB.provider, fighterB.model)
                               : `Model ${winner?.replace('model', '')}`}
                           </p>
-                          {(() => {
-                            const winnerRatings = winner === 'modelA' ? ratingsA : ratingsB;
-                            const loserRatings = winner === 'modelA' ? ratingsB : ratingsA;
-                            const diff = winnerRatings.total - loserRatings.total;
-                            return diff > 0 ? (
-                              <p className="text-sm text-amber-400/80 font-medium">
-                                Won by {diff} point{diff !== 1 ? 's' : ''}!
-                              </p>
-                            ) : null;
-                          })()}
+                          <p className="text-sm text-slate-400 mt-1">
+                            Voted champion by you
+                          </p>
                         </>
                       )}
                     </motion.div>
@@ -1372,51 +1372,39 @@ export default function BattlePage() {
                                   {providerDisplayNames[r.provider as LLMProvider] || r.provider}
                                 </span>
                               </div>
-                              <span className="text-sm font-medium text-amber-400">{r.score}/15</span>
+                              {r.rank === 1 && <Crown className="h-4 w-4 text-amber-400" />}
                             </motion.div>
                           );
                         })}
                     </div>
                   ) : (
-                    /* Standard / Blindfold Score Breakdown */
+                    /* Standard / Blindfold — simple side-by-side with winner crown */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8">
                       {[
-                        { label: isBlindfold ? 'Fighter A' : getDisplayName(fighterA.provider, fighterA.model), ratings: ratingsA, isWinner: winner === 'modelA' },
-                        { label: isBlindfold ? 'Fighter B' : getDisplayName(fighterB.provider, fighterB.model), ratings: ratingsB, isWinner: winner === 'modelB' },
+                        { label: isBlindfold ? 'Fighter A' : getDisplayName(fighterA.provider, fighterA.model), provider: fighterA.provider, isWinner: winner === 'modelA' },
+                        { label: isBlindfold ? 'Fighter B' : getDisplayName(fighterB.provider, fighterB.model), provider: fighterB.provider, isWinner: winner === 'modelB' },
                       ].map((item, idx) => (
                         <motion.div
                           key={idx}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 + idx * 0.15 }}
-                          className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-4 transition-all ${
+                          className={`bg-slate-900/50 backdrop-blur-xl border rounded-xl p-5 transition-all ${
                             item.isWinner
                               ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
                               : 'border-slate-700/50'
                           }`}
                         >
-                          <div className="flex items-center gap-2 mb-3">
-                            {item.isWinner && <Crown className="h-4 w-4 text-amber-400" />}
-                            <h3 className={`font-medium text-sm ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
+                          <div className="flex items-center justify-center gap-2">
+                            {item.isWinner && <Crown className="h-5 w-5 text-amber-400" />}
+                            <h3 className={`font-medium text-base ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
                           </div>
-                          <div className="space-y-1 text-xs text-slate-400">
-                            <div className="flex justify-between">
-                              <span>{selectedChallenge?.ratingCategories?.[0] || 'Accuracy'}</span>
-                              <span className="text-amber-400">{item.ratings.accuracy}/5</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>{selectedChallenge?.ratingCategories?.[1] || 'Creativity'}</span>
-                              <span className="text-amber-400">{item.ratings.creativity}/5</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>{selectedChallenge?.ratingCategories?.[2] || 'Clarity'}</span>
-                              <span className="text-amber-400">{item.ratings.clarity}/5</span>
-                            </div>
-                            <div className="flex justify-between pt-1 border-t border-slate-700/50 font-medium">
-                              <span className="text-white">Total</span>
-                              <span className="text-amber-400">{item.ratings.total}/15</span>
-                            </div>
-                          </div>
+                          <p className="text-center text-xs text-slate-500 mt-1">
+                            {providerDisplayNames[item.provider as LLMProvider] || item.provider}
+                          </p>
+                          {item.isWinner && (
+                            <p className="text-center text-xs text-amber-400/70 mt-2 font-medium">Champion</p>
+                          )}
                         </motion.div>
                       ))}
                     </div>
@@ -1518,12 +1506,6 @@ export default function BattlePage() {
                         </th>
                         <th
                           className="text-center py-3 px-3 font-medium cursor-pointer hover:text-white transition-colors"
-                          onClick={() => toggleSort('avgTotal')}
-                        >
-                          Avg Score {leaderboardSort.key === 'avgTotal' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
-                        </th>
-                        <th
-                          className="text-center py-3 px-3 font-medium cursor-pointer hover:text-white transition-colors"
                           onClick={() => toggleSort('totalBattles')}
                         >
                           Battles {leaderboardSort.key === 'totalBattles' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
@@ -1589,9 +1571,6 @@ export default function BattlePage() {
                               >
                                 {winRate}%
                               </span>
-                            </td>
-                            <td className="py-3 px-3 text-center text-slate-300">
-                              {entry.avgTotal.toFixed(1)}/15
                             </td>
                             <td className="py-3 px-3 text-center text-slate-400">
                               {entry.totalBattles}
