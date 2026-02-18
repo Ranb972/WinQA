@@ -2,7 +2,7 @@ export type LLMProvider = 'cohere' | 'gemini' | 'groq' | 'openrouter';
 
 // Specific model types for fallback chains
 export type CohereModel = 'command-a-03-2025' | 'command-r-plus-08-2024' | 'command-r-08-2024' | 'command-r7b-12-2024';
-export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.0-flash' | 'gemini-2.5-flash-lite';
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-flash-lite';
 export type GroqModel = 'llama-3.3-70b-versatile' | 'llama-3.1-8b-instant';
 export type OpenRouterModel = 'nvidia/nemotron-3-nano-30b-a3b:free' | 'nvidia/nemotron-nano-9b-v2:free';
 

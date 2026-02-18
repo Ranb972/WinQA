@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
   RotateCcw,
-  Star,
   Crown,
   Sparkles,
   Clock,
@@ -25,13 +24,6 @@ import {
 import { PROVIDER_MODELS } from '@/lib/llm/models';
 
 // --- Types ---
-
-interface Ratings {
-  accuracy: number;
-  creativity: number;
-  clarity: number;
-  total: number;
-}
 
 interface BattleResponse {
   content: string;
@@ -57,15 +49,13 @@ interface CodeDuelJudgingProps {
   responses: (BattleResponse | null)[];
   fighterA: FighterConfig;
   fighterB: FighterConfig;
-  ratingsA: Ratings;
-  setRatingsA: (r: Ratings) => void;
-  ratingsB: Ratings;
-  setRatingsB: (r: Ratings) => void;
   winner: Winner | null;
   setWinner: (w: Winner) => void;
   onSubmitVote: () => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
-  ratingCategories?: string[];
+  challengeName?: string;
+  challengeDescription?: string;
+  prompt?: string;
 }
 
 // --- Helpers ---
@@ -97,39 +87,6 @@ function extractCodeBlock(content: string): string | null {
 }
 
 // --- Sub-components ---
-
-function StarRating({
-  value,
-  onChange,
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-400 w-20">{label}</span>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <motion.button
-            key={star}
-            whileTap={{ scale: 1.3 }}
-            onClick={() => onChange(star)}
-            className="focus:outline-none"
-          >
-            <Star
-              className={`h-5 w-5 transition-colors ${
-                star <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
-              }`}
-            />
-          </motion.button>
-        ))}
-      </div>
-      <span className="text-xs text-slate-500">{value}/5</span>
-    </div>
-  );
-}
 
 function MarkdownResponse({ content }: { content: string }) {
   return (
@@ -175,15 +132,13 @@ export default function CodeDuelJudging({
   responses,
   fighterA,
   fighterB,
-  ratingsA,
-  setRatingsA,
-  ratingsB,
-  setRatingsB,
   winner,
   setWinner,
   onSubmitVote,
   saveStatus,
-  ratingCategories,
+  challengeName,
+  challengeDescription,
+  prompt,
 }: CodeDuelJudgingProps) {
   const [extractedCodes, setExtractedCodes] = useState<(string | null)[]>([null, null]);
   const [codeOutputs, setCodeOutputs] = useState<(CodeExecutionResult | null)[]>([null, null]);
@@ -263,19 +218,6 @@ export default function CodeDuelJudging({
     : null;
 
   const fighters = [fighterA, fighterB];
-  const ratings = [ratingsA, ratingsB];
-  const setRatings = [setRatingsA, setRatingsB];
-
-  const updateRating = (
-    idx: number,
-    field: 'accuracy' | 'creativity' | 'clarity',
-    value: number
-  ) => {
-    const current = ratings[idx];
-    const updated = { ...current, [field]: value };
-    updated.total = updated.accuracy + updated.creativity + updated.clarity;
-    setRatings[idx](updated);
-  };
 
   return (
     <div>
@@ -293,6 +235,17 @@ export default function CodeDuelJudging({
         <p className="text-sm text-slate-400">
           Review the code, run it live, then judge the results
         </p>
+        {challengeDescription && (
+          <p className="text-xs italic text-slate-400 mt-1">
+            {challengeDescription}
+          </p>
+        )}
+        {prompt && (
+          <div className="mt-2 bg-slate-800/40 border border-slate-700/30 rounded-lg px-4 py-2 max-w-2xl mx-auto">
+            <span className="text-xs text-slate-500 font-medium">Mission: </span>
+            <span className="text-xs text-slate-300 line-clamp-2">{prompt}</span>
+          </div>
+        )}
       </motion.div>
 
       {/* Run Both Button */}
@@ -431,29 +384,6 @@ export default function CodeDuelJudging({
                 )}
               </AnimatePresence>
 
-              {/* Star Ratings */}
-              <div className="space-y-2">
-                <StarRating
-                  value={ratings[idx].accuracy}
-                  onChange={(v) => updateRating(idx, 'accuracy', v)}
-                  label={ratingCategories?.[0] || 'Accuracy'}
-                />
-                <StarRating
-                  value={ratings[idx].creativity}
-                  onChange={(v) => updateRating(idx, 'creativity', v)}
-                  label={ratingCategories?.[1] || 'Creativity'}
-                />
-                <StarRating
-                  value={ratings[idx].clarity}
-                  onChange={(v) => updateRating(idx, 'clarity', v)}
-                  label={ratingCategories?.[2] || 'Clarity'}
-                />
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
-                  <span className="text-xs font-medium text-amber-400">
-                    Total: {ratings[idx].total}/15
-                  </span>
-                </div>
-              </div>
             </motion.div>
           );
         })}

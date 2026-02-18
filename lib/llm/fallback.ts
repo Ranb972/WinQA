@@ -17,7 +17,7 @@ import { openrouterChat } from './openrouter';
 
 // Fallback chains: ordered from preferred to least preferred
 export const fallbackChains: Record<LLMProvider, SpecificModel[]> = {
-  gemini: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-flash-lite'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
   cohere: ['command-a-03-2025', 'command-r-plus-08-2024', 'command-r-08-2024', 'command-r7b-12-2024'],
   openrouter: ['nvidia/nemotron-3-nano-30b-a3b:free', 'nvidia/nemotron-nano-9b-v2:free'],
@@ -41,7 +41,6 @@ export const specificModelDisplayNames: Record<SpecificModel, string> = {
   'command-r-08-2024': 'Command R',
   'command-r7b-12-2024': 'Command R 7B',
   'gemini-2.5-flash': 'Gemini 2.5 Flash',
-  'gemini-2.0-flash': 'Gemini 2.0 Flash',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',

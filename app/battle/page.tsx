@@ -8,7 +8,6 @@ import {
   Trophy,
   History,
   Shuffle,
-  Star,
   Clock,
   ChevronDown,
   ChevronUp,
@@ -180,39 +179,6 @@ function MarkdownResponse({ content }: { content: string }) {
 
 // --- Extracted Components (outside BattlePage to prevent remount on re-render) ---
 
-function StarRating({
-  value,
-  onChange,
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-400 w-20">{label}</span>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <motion.button
-            key={star}
-            whileTap={{ scale: 1.3 }}
-            onClick={() => onChange(star)}
-            className="focus:outline-none"
-          >
-            <Star
-              className={`h-5 w-5 transition-colors ${
-                star <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
-              }`}
-            />
-          </motion.button>
-        ))}
-      </div>
-      <span className="text-xs text-slate-500">{value}/5</span>
-    </div>
-  );
-}
-
 function FighterCard({
   fighter,
   setFighter,
@@ -310,6 +276,7 @@ export default function BattlePage() {
   const [responses, setResponses] = useState<(BattleResponse | null)[]>([null, null]);
   const [elapsedTimes, setElapsedTimes] = useState<number[]>([0, 0]);
   const [battlePrompt, setBattlePrompt] = useState('');
+  const [royalePrompts, setRoyalePrompts] = useState<string[]>([]);
   const timerRefs = useRef<ReturnType<typeof setInterval>[]>([]);
 
   // Judging
@@ -431,12 +398,20 @@ export default function BattlePage() {
     if (!canStartBattle) return;
 
     const challenge = selectedChallenge;
-    // For Royale, always use the first prompt (rounds 2/3 get their own prompts)
-    const prompt = useCustomPrompt
-      ? customPrompt
-      : isRoyale
-      ? challenge?.prompts?.[0] || ''
-      : challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
+    let prompt: string;
+    let selectedRoyalePrompts: string[] = [];
+    if (useCustomPrompt) {
+      prompt = customPrompt;
+    } else if (isRoyale && challenge) {
+      // Pick a random set of 3 from the 30 prompts (10 sets of 3 consecutive)
+      const setCount = Math.floor(challenge.prompts.length / 3);
+      const setIdx = Math.floor(Math.random() * setCount) * 3;
+      selectedRoyalePrompts = challenge.prompts.slice(setIdx, setIdx + 3);
+      prompt = selectedRoyalePrompts[0];
+      setRoyalePrompts(selectedRoyalePrompts);
+    } else {
+      prompt = challenge?.prompts?.[Math.floor(Math.random() * challenge.prompts.length)] || '';
+    }
     setBattlePrompt(prompt);
     setBattleState('battling');
 
@@ -504,19 +479,6 @@ export default function BattlePage() {
   };
 
   // --- Judging ---
-
-  const updateRating = (
-    fighter: 'A' | 'B' | 'C' | 'D',
-    field: 'accuracy' | 'creativity' | 'clarity',
-    value: number
-  ) => {
-    const setters = { A: setRatingsA, B: setRatingsB, C: setRatingsC, D: setRatingsD };
-    const ratings = { A: ratingsA, B: ratingsB, C: ratingsC, D: ratingsD };
-    const current = ratings[fighter];
-    const updated = { ...current, [field]: value };
-    updated.total = updated.accuracy + updated.creativity + updated.clarity;
-    setters[fighter](updated);
-  };
 
   const submitVote = async () => {
     if (!winner) return;
@@ -718,6 +680,7 @@ export default function BattlePage() {
     setBlindfoldRevealed(false);
     setShowBlindfoldReveal(false);
     setRoyaleRankings(null);
+    setRoyalePrompts([]);
     setSaveStatus('idle');
     setBattlePrompt('');
   };
@@ -1004,6 +967,11 @@ export default function BattlePage() {
                     <p className="text-sm font-medium text-orange-300/80 mb-1">
                       {selectedChallenge?.name || 'Custom Challenge'}
                     </p>
+                    {selectedChallenge?.userDescription && (
+                      <p className="text-sm italic text-slate-400 mb-1">
+                        {selectedChallenge.userDescription}
+                      </p>
+                    )}
                     <p className="text-xs text-slate-500 max-w-2xl mx-auto line-clamp-2">
                       {battlePrompt}
                     </p>
@@ -1104,22 +1072,21 @@ export default function BattlePage() {
                       responses={responses}
                       fighterA={fighterA}
                       fighterB={fighterB}
-                      ratingsA={ratingsA}
-                      setRatingsA={setRatingsA}
-                      ratingsB={ratingsB}
-                      setRatingsB={setRatingsB}
                       winner={winner}
                       setWinner={setWinner}
                       onSubmitVote={submitVote}
                       saveStatus={saveStatus}
-                      ratingCategories={selectedChallenge?.ratingCategories}
+                      challengeName={selectedChallenge?.name}
+                      challengeDescription={selectedChallenge?.userDescription}
+                      prompt={battlePrompt}
                     />
                   ) : isRoyale ? (
                     /* Battle Royale: multi-round elimination */
                     <BattleRoyaleArena
                       responses={responses}
                       fighters={providers.map((p) => ({ provider: p, model: defaultModels[p] }))}
-                      prompts={selectedChallenge?.prompts || [battlePrompt]}
+                      prompts={royalePrompts.length > 0 ? royalePrompts : [battlePrompt]}
+                      challengeDescription={selectedChallenge?.userDescription}
                       fetchNextRound={fetchRoundResponses}
                       onChampionCrowned={handleRoyaleComplete}
                     />
@@ -1136,17 +1103,34 @@ export default function BattlePage() {
                           <h2 className="text-2xl font-bold text-white">WHO WINS?</h2>
                           <Trophy className="h-6 w-6 text-amber-400" />
                         </div>
-                        <p className="text-sm text-slate-400">Rate each response and pick a winner</p>
+                        <p className="text-sm text-slate-400">Read both responses and pick a winner</p>
+                        {selectedChallenge && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-orange-300/80">
+                              {selectedChallenge.name}
+                            </p>
+                            {selectedChallenge.userDescription && (
+                              <p className="text-xs italic text-slate-400 mt-0.5">
+                                {selectedChallenge.userDescription}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {battlePrompt && (
+                          <div className="mt-2 bg-slate-800/40 border border-slate-700/30 rounded-lg px-4 py-2 max-w-2xl mx-auto">
+                            <span className="text-xs text-slate-500 font-medium">Mission: </span>
+                            <span className="text-xs text-slate-300">{battlePrompt}</span>
+                          </div>
+                        )}
                       </motion.div>
 
-                      {/* Response Cards + Ratings */}
+                      {/* Response Cards */}
                       <div className="grid gap-6 mb-8 grid-cols-1 md:grid-cols-2">
                         {[0, 1].map((idx) => {
                           const keys = ['A', 'B'] as const;
                           const key = keys[idx];
                           const fighter = idx === 0 ? fighterA : fighterB;
                           const response = responses[idx];
-                          const ratings = [ratingsA, ratingsB][idx];
                           const showName = !isBlindfold || blindfoldRevealed;
                           const label = showName
                             ? getDisplayName(fighter.provider, fighter.model)
@@ -1184,7 +1168,7 @@ export default function BattlePage() {
                               </div>
 
                               {/* Response */}
-                              <div className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed mb-4 bg-slate-800/40 rounded-lg p-3">
+                              <div className="text-sm text-slate-300 max-h-96 overflow-y-auto scroll-smooth leading-relaxed bg-slate-800/40 rounded-lg p-3">
                                 {response?.error ? (
                                   <span className="text-red-400">Error: {response.error}</span>
                                 ) : response?.content ? (
@@ -1192,30 +1176,6 @@ export default function BattlePage() {
                                 ) : (
                                   <span className="text-slate-500">No response</span>
                                 )}
-                              </div>
-
-                              {/* Star Ratings */}
-                              <div className="space-y-2">
-                                <StarRating
-                                  value={ratings.accuracy}
-                                  onChange={(v) => updateRating(key, 'accuracy', v)}
-                                  label={selectedChallenge?.ratingCategories?.[0] || 'Accuracy'}
-                                />
-                                <StarRating
-                                  value={ratings.creativity}
-                                  onChange={(v) => updateRating(key, 'creativity', v)}
-                                  label={selectedChallenge?.ratingCategories?.[1] || 'Creativity'}
-                                />
-                                <StarRating
-                                  value={ratings.clarity}
-                                  onChange={(v) => updateRating(key, 'clarity', v)}
-                                  label={selectedChallenge?.ratingCategories?.[2] || 'Clarity'}
-                                />
-                                <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
-                                  <span className="text-xs font-medium text-amber-400">
-                                    Total: {ratings.total}/15
-                                  </span>
-                                </div>
                               </div>
                             </motion.div>
                           );

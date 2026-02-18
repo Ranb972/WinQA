@@ -54,6 +54,7 @@ interface BattleRoyaleArenaProps {
   responses: (BattleResponse | null)[];
   fighters: FighterConfig[];
   prompts: string[];
+  challengeDescription?: string;
   fetchNextRound: (fighters: FighterConfig[], prompt: string) => Promise<BattleResponse[]>;
   onChampionCrowned: (rankings: RoyaleRanking[]) => void;
 }
@@ -135,6 +136,7 @@ export default function BattleRoyaleArena({
   responses,
   fighters,
   prompts,
+  challengeDescription,
   fetchNextRound,
   onChampionCrowned,
 }: BattleRoyaleArenaProps) {
@@ -365,6 +367,11 @@ export default function BattleRoyaleArena({
           <h2 className="text-2xl font-bold text-white">BATTLE ROYALE</h2>
           <Crown className="h-6 w-6 text-amber-400" />
         </div>
+        {challengeDescription && (
+          <p className="text-xs italic text-slate-400 mb-1">
+            {challengeDescription}
+          </p>
+        )}
         <motion.p
           key={round}
           initial={{ opacity: 0, y: 5 }}

@@ -50,7 +50,6 @@ const modelDescriptions: Record<string, string> = {
   'command-r7b-12-2024': 'Smallest, fastest',
   // Gemini
   'gemini-2.5-flash': 'Latest, most capable',
-  'gemini-2.0-flash': 'Fast and capable',
   'gemini-2.5-flash-lite': 'Lightweight',
   // Groq
   'llama-3.3-70b-versatile': 'Most capable',
