@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     for (const key of ratingKeys) {
       const r = body.ratings[key];
       if (!r) continue;
-      if (!validateRating(r.accuracy) || !validateRating(r.creativity) || !validateRating(r.clarity) || !validateRating(r.total)) {
+      if (!validateRating(r.accuracy) || !validateRating(r.creativity) || !validateRating(r.clarity) || typeof r.total !== 'number' || r.total < 0 || r.total > 15) {
         return NextResponse.json({ error: `Invalid rating values for ${key}` }, { status: 400 });
       }
     }
