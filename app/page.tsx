@@ -33,7 +33,7 @@ const featureShowcases = [
   {
     mockup: 'chat-lab',
     badge: 'COMPARE & CHAT',
-    title: 'Chat Lab',
+    title: 'Chat Lab \u00b7 Compare Mode',
     description: 'Your AI interrogation room. Chat one-on-one or pit models against each other.',
     bullets: [
       'Chat with any AI model individually',
@@ -45,6 +45,21 @@ const featureShowcases = [
     badgeBg: 'bg-violet-500/10',
     borderHover: 'hover:border-violet-500/50',
     glowHover: 'hover:shadow-violet-500/10',
+  },
+  {
+    mockup: 'code-testing',
+    badge: 'CODE & DEBUG',
+    title: 'Code Testing Lab',
+    description: 'Run code instantly. Let AI find and fix your bugs.',
+    bullets: [
+      'JavaScript, Python, TypeScript support',
+      'AI-powered debugging analysis',
+      'Interactive preview for HTML/JS',
+    ],
+    badgeText: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/10',
+    borderHover: 'hover:border-emerald-500/50',
+    glowHover: 'hover:shadow-emerald-500/10',
   },
   {
     mockup: 'battle',
@@ -62,21 +77,6 @@ const featureShowcases = [
     badgeBg: 'bg-orange-500/10',
     borderHover: 'hover:border-orange-500/50',
     glowHover: 'hover:shadow-orange-500/10',
-  },
-  {
-    mockup: 'code-testing',
-    badge: 'CODE & DEBUG',
-    title: 'Code Testing Lab',
-    description: 'Run code instantly. Let AI find and fix your bugs.',
-    bullets: [
-      'JavaScript, Python, TypeScript support',
-      'AI-powered debugging analysis',
-      'Interactive preview for HTML/JS',
-    ],
-    badgeText: 'text-emerald-400',
-    badgeBg: 'bg-emerald-500/10',
-    borderHover: 'hover:border-emerald-500/50',
-    glowHover: 'hover:shadow-emerald-500/10',
   },
   {
     mockup: 'test-cases',
@@ -937,69 +937,69 @@ function BattleMockup() {
   return (
     <div className="bg-slate-950 rounded-lg border border-slate-700/50 overflow-hidden text-xs">
       <MockupTitleBar title="AI Battle Arena" />
-      <div className="p-3 space-y-2.5">
+      <div className="p-3 space-y-2">
         {/* Challenge header */}
-        <div className="flex items-center justify-between">
-          <span className="px-2.5 py-1 rounded bg-orange-500/20 text-orange-300 font-medium">Code Duel</span>
-          <span className="text-[10px] text-slate-500">Round 1 of 3</span>
+        <div className="text-center">
+          <span className="text-amber-400 font-bold text-[11px] tracking-wider">&#9876;&#65039; CODE DUEL &#9876;&#65039;</span>
         </div>
 
-        {/* Challenge prompt */}
-        <div className="bg-slate-900/80 rounded p-2 border border-slate-800/50">
-          <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wide">Challenge</span>
-          <p className="text-[10px] text-slate-300 mt-0.5">&quot;Write a function that reverses a string without using built-in methods&quot;</p>
+        {/* Mission card */}
+        <div className="bg-slate-900/80 rounded p-2 border border-amber-500/30">
+          <div className="flex items-start gap-1.5">
+            <span className="text-[10px]">&#127919;</span>
+            <p className="text-[10px] text-slate-300">Write a function that checks if a string is a palindrome</p>
+          </div>
         </div>
 
-        {/* Two-column battle responses */}
+        {/* Two side-by-side response cards */}
         <div className="grid grid-cols-2 gap-2">
-          {/* Model A */}
-          <div className="bg-slate-900/80 rounded-lg p-2 border border-blue-500/20">
-            <div className="flex items-center gap-1.5 mb-1.5">
+          {/* Gemini - Left */}
+          <div className="bg-slate-900/80 rounded p-2 border border-blue-500/30">
+            <div className="flex items-center gap-1 mb-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-              <span className="text-[10px] font-medium text-blue-300">Model A</span>
-              <div className="ml-auto flex gap-0.5">
-                <div className="w-1 h-1 rounded-full bg-blue-400/60 animate-pulse" />
-                <div className="w-1 h-1 rounded-full bg-blue-400/40 animate-pulse [animation-delay:150ms]" />
-                <div className="w-1 h-1 rounded-full bg-blue-400/20 animate-pulse [animation-delay:300ms]" />
-              </div>
+              <span className="text-[10px] font-medium text-slate-200">Gemini 2.5 Flash</span>
+              <span className="px-1 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[8px] ml-auto">Google</span>
             </div>
-            <div className="space-y-1">
-              <div className="h-1.5 bg-blue-500/10 rounded w-full" />
-              <div className="h-1.5 bg-blue-500/10 rounded w-[85%]" />
-              <div className="h-1.5 bg-blue-500/10 rounded w-[70%]" />
+            <div className="bg-slate-950 rounded p-1.5 font-mono text-[9px] leading-relaxed">
+              <div><span className="text-violet-400">function</span> <span className="text-blue-300">isPalindrome</span><span className="text-slate-400">(</span><span className="text-orange-300">str</span><span className="text-slate-400">) {'{'}</span></div>
+              <div className="pl-2"><span className="text-violet-400">let</span> <span className="text-blue-300">rev</span> <span className="text-slate-400">=</span> <span className="text-emerald-300">&apos;&apos;</span><span className="text-slate-400">;</span></div>
+              <div className="pl-2"><span className="text-violet-400">for</span> <span className="text-slate-400">(</span><span className="text-violet-400">let</span> <span className="text-blue-300">i</span> <span className="text-slate-400">=</span> <span className="text-orange-300">str</span><span className="text-slate-400">.length -</span> <span className="text-emerald-300">1</span><span className="text-slate-400">;</span></div>
+              <div className="pl-2"><span className="text-blue-300">i</span> <span className="text-slate-400">&gt;=</span> <span className="text-emerald-300">0</span><span className="text-slate-400">;</span> <span className="text-blue-300">i</span><span className="text-slate-400">--)</span> <span className="text-blue-300">rev</span> <span className="text-slate-400">+=</span> <span className="text-orange-300">str</span><span className="text-slate-400">[</span><span className="text-blue-300">i</span><span className="text-slate-400">];</span></div>
+              <div className="pl-2"><span className="text-violet-400">return</span> <span className="text-orange-300">str</span> <span className="text-slate-400">===</span> <span className="text-blue-300">rev</span><span className="text-slate-400">;</span></div>
+              <div><span className="text-slate-400">{'}'}</span></div>
+            </div>
+            <div className="mt-1.5">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[9px]">Run Code</span>
             </div>
           </div>
 
-          {/* Model B */}
-          <div className="bg-slate-900/80 rounded-lg p-2 border border-orange-500/20">
-            <div className="flex items-center gap-1.5 mb-1.5">
+          {/* Groq - Right */}
+          <div className="bg-slate-900/80 rounded p-2 border border-orange-500/30">
+            <div className="flex items-center gap-1 mb-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-              <span className="text-[10px] font-medium text-orange-300">Model B</span>
-              <div className="ml-auto flex gap-0.5">
-                <div className="w-1 h-1 rounded-full bg-orange-400/60 animate-pulse" />
-                <div className="w-1 h-1 rounded-full bg-orange-400/40 animate-pulse [animation-delay:150ms]" />
-                <div className="w-1 h-1 rounded-full bg-orange-400/20 animate-pulse [animation-delay:300ms]" />
-              </div>
+              <span className="text-[10px] font-medium text-slate-200">Llama 3.3 70B</span>
+              <span className="px-1 py-0.5 rounded bg-orange-500/15 text-orange-400 text-[8px] ml-auto">Groq</span>
             </div>
-            <div className="space-y-1">
-              <div className="h-1.5 bg-orange-500/10 rounded w-full" />
-              <div className="h-1.5 bg-orange-500/10 rounded w-[90%]" />
-              <div className="h-1.5 bg-orange-500/10 rounded w-[60%]" />
+            <div className="bg-slate-950 rounded p-1.5 font-mono text-[9px] leading-relaxed">
+              <div><span className="text-violet-400">function</span> <span className="text-blue-300">palindrome</span><span className="text-slate-400">(</span><span className="text-orange-300">s</span><span className="text-slate-400">) {'{'}</span></div>
+              <div className="pl-2"><span className="text-violet-400">for</span> <span className="text-slate-400">(</span><span className="text-violet-400">let</span> <span className="text-blue-300">i</span> <span className="text-slate-400">=</span> <span className="text-emerald-300">0</span><span className="text-slate-400">;</span></div>
+              <div className="pl-2"><span className="text-blue-300">i</span> <span className="text-slate-400">&lt;</span> <span className="text-orange-300">s</span><span className="text-slate-400">.length /</span> <span className="text-emerald-300">2</span><span className="text-slate-400">;</span> <span className="text-blue-300">i</span><span className="text-slate-400">++)</span></div>
+              <div className="pl-2"><span className="text-violet-400">if</span> <span className="text-slate-400">(</span><span className="text-orange-300">s</span><span className="text-slate-400">[</span><span className="text-blue-300">i</span><span className="text-slate-400">] !==</span> <span className="text-orange-300">s</span><span className="text-slate-400">[</span><span className="text-orange-300">s</span><span className="text-slate-400">.length-1-</span><span className="text-blue-300">i</span><span className="text-slate-400">])</span></div>
+              <div className="pl-4"><span className="text-violet-400">return</span> <span className="text-emerald-300">false</span><span className="text-slate-400">;</span></div>
+              <div className="pl-2"><span className="text-violet-400">return</span> <span className="text-emerald-300">true</span><span className="text-slate-400">;</span></div>
+              <div><span className="text-slate-400">{'}'}</span></div>
+            </div>
+            <div className="mt-1.5">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium text-[9px]">Run Code</span>
             </div>
           </div>
         </div>
 
-        {/* Voting buttons */}
+        {/* Vote buttons */}
         <div className="flex gap-1.5">
-          <button className="flex-1 px-2 py-1.5 rounded bg-blue-500/15 text-blue-300 font-medium text-[10px] text-center">A Wins</button>
-          <button className="flex-1 px-2 py-1.5 rounded bg-slate-800 text-slate-400 font-medium text-[10px] text-center">Tie</button>
-          <button className="flex-1 px-2 py-1.5 rounded bg-orange-500/15 text-orange-300 font-medium text-[10px] text-center">B Wins</button>
-        </div>
-
-        {/* Stats bar */}
-        <div className="flex items-center justify-between text-[9px] text-slate-500">
-          <span>9 battle challenges available</span>
-          <span className="text-orange-400/60">Live</span>
+          <button className="flex-1 px-2 py-1.5 rounded bg-blue-500/15 text-blue-300 font-medium text-[10px] text-center">Gemini 2.5 Flash Wins</button>
+          <button className="px-3 py-1.5 rounded bg-slate-800 text-slate-400 font-medium text-[10px] text-center">Tie</button>
+          <button className="flex-1 px-2 py-1.5 rounded bg-orange-500/15 text-orange-300 font-medium text-[10px] text-center">Llama 3.3 70B Wins</button>
         </div>
       </div>
     </div>
