@@ -41,6 +41,9 @@ export async function POST(request: NextRequest) {
       prompt = selected.prompt;
       challengeName = challenge.name;
     } else if (customPrompt) {
+      if (customPrompt.length > 5000) {
+        return NextResponse.json({ error: 'Prompt too long' }, { status: 400 });
+      }
       prompt = customPrompt;
       challengeName = 'Custom Challenge';
     } else {

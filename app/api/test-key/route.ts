@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
+import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
 interface TestKeyRequest {
   provider: LLMProvider;
@@ -35,7 +36,7 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: message };
+    return { valid: false, error: friendlyErrorMessage(message) };
   }
 }
 
@@ -62,7 +63,7 @@ async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('quota') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: message };
+    return { valid: false, error: friendlyErrorMessage(message) };
   }
 }
 
@@ -89,7 +90,7 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: message };
+    return { valid: false, error: friendlyErrorMessage(message) };
   }
 }
 
@@ -123,13 +124,13 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      return { valid: false, error: data.error?.message || response.statusText };
+      return { valid: false, error: friendlyErrorMessage(data.error?.message || response.statusText) };
     }
 
     return { valid: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return { valid: false, error: message };
+    return { valid: false, error: friendlyErrorMessage(message) };
   }
 }
 
@@ -181,9 +182,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     // Never log the API key in error messages
-    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { valid: false, error: message },
+      { valid: false, error: 'Something went wrong. Please try again.' },
       { status: 500 }
     );
   }

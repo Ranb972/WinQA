@@ -245,6 +245,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (code.length > 50000) {
+      return NextResponse.json(
+        { success: false, error: 'Code is too long (max 50,000 characters)' },
+        { status: 400 }
+      );
+    }
+
     // Try Judge0 CE first (free, no API key, most reliable)
     console.log('[CodeExec] Trying Judge0 CE (ce.judge0.com)...');
     try {
@@ -291,7 +298,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to execute code',
+        error: 'Failed to execute code',
       },
       { status: 500 }
     );

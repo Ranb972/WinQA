@@ -69,16 +69,27 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
-    // Prepare documents with user_id and new timestamps
+    // Allowed fields per model (allowlist approach)
+    const allowedFields: Record<string, string[]> = {
+      bugs: ['prompt_context', 'model_response', 'model_used', 'issue_type', 'severity', 'user_notes', 'status'],
+      prompts: ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags', 'is_favorite'],
+      testCases: ['title', 'description', 'initial_prompt', 'expected_outcome', 'category', 'difficulty'],
+      insights: ['title', 'content', 'category', 'tags'],
+    };
+
     const now = new Date().toISOString();
-    const prepareDoc = (doc: Record<string, unknown>) => {
-      // Remove id field (was the original _id), MongoDB will generate new _id
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id: _id, _id: _mongoId, user_id: _userId, __v, ...rest } = doc;
+    const prepareDoc = (doc: Record<string, unknown>, model: string) => {
+      const allowed = allowedFields[model] || [];
+      const sanitized: Record<string, unknown> = {};
+      for (const key of allowed) {
+        if (key in doc) {
+          sanitized[key] = doc[key];
+        }
+      }
       return {
-        ...rest,
+        ...sanitized,
         user_id: userId,
-        created_at: rest.created_at || now,
+        created_at: (typeof doc.created_at === 'string' && doc.created_at) || now,
         updated_at: now,
       };
     };
@@ -92,22 +103,22 @@ export async function POST(request: NextRequest) {
     };
 
     if (data.data.bugs.length > 0) {
-      const result = await BugReport.insertMany(data.data.bugs.map(prepareDoc));
+      const result = await BugReport.insertMany(data.data.bugs.map((d) => prepareDoc(d, 'bugs')));
       results.bugs = result.length;
     }
 
     if (data.data.prompts.length > 0) {
-      const result = await PromptLibrary.insertMany(data.data.prompts.map(prepareDoc));
+      const result = await PromptLibrary.insertMany(data.data.prompts.map((d) => prepareDoc(d, 'prompts')));
       results.prompts = result.length;
     }
 
     if (data.data.testCases.length > 0) {
-      const result = await TestCase.insertMany(data.data.testCases.map(prepareDoc));
+      const result = await TestCase.insertMany(data.data.testCases.map((d) => prepareDoc(d, 'testCases')));
       results.testCases = result.length;
     }
 
     if (data.data.insights.length > 0) {
-      const result = await Insight.insertMany(data.data.insights.map(prepareDoc));
+      const result = await Insight.insertMany(data.data.insights.map((d) => prepareDoc(d, 'insights')));
       results.insights = result.length;
     }
 

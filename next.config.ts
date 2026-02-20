@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
             value: 'camera=(), microphone=(), geolocation=()',
           },
           {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          {
             // Content Security Policy
             // Note: 'unsafe-inline' and 'unsafe-eval' needed for Next.js and Framer Motion
             key: 'Content-Security-Policy',
