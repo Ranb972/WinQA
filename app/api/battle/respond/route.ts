@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, CustomApiKeys } from '@/lib/llm';
+import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
 interface RespondRequestBody {
   provider: LLMProvider;
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       content: response.content,
       responseTime: response.responseTime,
       specificModel: response.specificModel,
-      error: response.error,
+      error: friendlyErrorMessage(response.error),
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

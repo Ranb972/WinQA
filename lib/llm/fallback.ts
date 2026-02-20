@@ -37,7 +37,7 @@ export const defaultModels: Record<LLMProvider, SpecificModel> = {
 // Display names for specific models (for UI)
 export const specificModelDisplayNames: Record<SpecificModel, string> = {
   'command-a-03-2025': 'Command A',
-  'command-r-plus-08-2024': 'Command R+',
+  'command-r-plus-08-2024': 'Command A',
   'command-r-08-2024': 'Command R',
   'command-r7b-12-2024': 'Command R 7B',
   'gemini-2.5-flash': 'Gemini 2.5 Flash',

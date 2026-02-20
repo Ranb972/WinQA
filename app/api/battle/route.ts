@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
 import { getChallengeById } from '@/lib/battle-challenges';
+import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
 interface BattleRequestBody {
   modelA: { provider: LLMProvider; model?: string };
@@ -85,13 +86,13 @@ export async function POST(request: NextRequest) {
           content: result.value.content,
           responseTime: result.value.responseTime,
           specificModel: result.value.specificModel,
-          error: result.value.error,
+          error: friendlyErrorMessage(result.value.error),
         };
       }
       return {
         content: '',
         responseTime: 0,
-        error: result.reason?.message || 'Request failed',
+        error: friendlyErrorMessage(result.reason?.message || 'Request failed'),
       };
     });
 

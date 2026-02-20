@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
+import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
 interface RequestBody {
   messages: ChatMessage[];
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Handle custom provider request
     if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {
       const response = await callCustomProvider(customProvider, messages, temperature, maxTokens);
-      return NextResponse.json(response);
+      return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
     }
 
     // Handle multi-model comparison (built-in providers only)
@@ -67,7 +68,15 @@ export async function POST(request: NextRequest) {
         modelPreferences,
         customApiKeys,
       });
-      return NextResponse.json(response);
+      // Sanitize error messages in multi-model responses
+      const sanitized = {
+        ...response,
+        responses: response.responses.map((r) => ({
+          ...r,
+          error: friendlyErrorMessage(r.error),
+        })),
+      };
+      return NextResponse.json(sanitized);
     }
 
     // Handle single built-in model
@@ -80,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
       : undefined;
     const response = await chat(messages, models as LLMProvider, temperature, maxTokens, true, specificModel, customApiKeys, fallbackOverrides);
-    return NextResponse.json(response);
+    return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
   } catch (error) {
     // Log error message only, never log full error object which could contain API keys
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
