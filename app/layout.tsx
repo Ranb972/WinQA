@@ -52,6 +52,34 @@ export default function RootLayout({
                     </SignedOut>
                     <Toaster />
                     <Analytics />
+                    <script
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{
+                            __html: JSON.stringify({
+                                '@context': 'https://schema.org',
+                                '@type': 'WebApplication',
+                                name: 'WinQA',
+                                url: 'https://winqa.ai',
+                                description:
+                                    'AI Testing Playground - Compare AI models, test prompts, track hallucinations, and build your prompt engineering knowledge base.',
+                                applicationCategory: 'DeveloperApplication',
+                                operatingSystem: 'Web',
+                                offers: {
+                                    '@type': 'Offer',
+                                    price: '0',
+                                    priceCurrency: 'USD',
+                                },
+                                featureList: [
+                                    'Compare AI models side-by-side',
+                                    'AI Battle Arena with 9 challenge types',
+                                    'Code execution lab (JavaScript, Python, TypeScript)',
+                                    'Bug and hallucination tracking',
+                                    'Prompt engineering library',
+                                    'Test case management',
+                                ],
+                            }),
+                        }}
+                    />
                 </body>
             </html>
         </ClerkProvider>

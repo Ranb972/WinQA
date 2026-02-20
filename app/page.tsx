@@ -1106,35 +1106,6 @@ function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebApplication',
-            name: 'WinQA',
-            url: 'https://winqa.ai',
-            description: 'AI Testing Playground - Compare AI models, test prompts, track hallucinations, and build your prompt engineering knowledge base.',
-            applicationCategory: 'DeveloperApplication',
-            operatingSystem: 'Web',
-            offers: {
-              '@type': 'Offer',
-              price: '0',
-              priceCurrency: 'USD',
-            },
-            featureList: [
-              'Compare AI models side-by-side',
-              'AI Battle Arena with 9 challenge types',
-              'Code execution lab (JavaScript, Python, TypeScript)',
-              'Bug and hallucination tracking',
-              'Prompt engineering library',
-              'Test case management',
-            ],
-          }),
-        }}
-      />
-
       {/* Background effects - purple/pink atmosphere preserved */}
       <div className="absolute inset-0 bg-gradient-to-br from-pink-900/10 via-transparent to-purple-900/10 pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-purple-600/20 to-transparent blur-3xl pointer-events-none" />
