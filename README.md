@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178c6?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47a248?style=for-the-badge&logo=mongodb)](https://mongodb.com/)
 
-*An open-source platform for QA professionals to test, compare, and break AI systems.*
+*An open-source platform to test, compare, and break AI systems.*
 
 </div>
 
@@ -161,7 +161,7 @@ This project is open source under the [MIT License](LICENSE).
 
 ## Author
 
-Built by **Ran** — QA professional turned full-stack developer.
+Built by **Ran** — passionate about QA and AI.
 
 - 🌐 [winqa.ai](https://winqa.ai)
 - 💻 [GitHub](https://github.com/Ranb972)
