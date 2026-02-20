@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 const siteConfig = {
   name: 'WinQA',
-  url: 'https://winqa.vercel.app',
+  url: 'https://winqa.ai',
   description: 'Compare AI models, test prompts, track bugs, and master prompt engineering. The ultimate playground for QA professionals.',
   keywords: ['AI testing', 'prompt engineering', 'LLM comparison', 'QA tools', 'AI playground', 'test automation'],
 };
@@ -56,6 +56,9 @@ export const baseMetadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export const pageMetadata = {
@@ -86,5 +89,9 @@ export const pageMetadata = {
   settings: {
     title: 'Settings',
     description: 'Configure your WinQA preferences and API keys for AI model providers.',
+  },
+  battle: {
+    title: 'AI Battle Arena',
+    description: 'Pit AI models against each other in head-to-head challenges. Code duels, blindfold tests, battle royale - 9 unique challenge types with live code execution.',
   },
 };

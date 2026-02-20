@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: '/api/',
     },
-    sitemap: 'https://winqa.vercel.app/sitemap.xml',
+    sitemap: 'https://winqa.ai/sitemap.xml',
   };
 }
