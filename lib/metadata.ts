@@ -37,7 +37,14 @@ export const baseMetadata: Metadata = {
     card: 'summary_large_image',
     title: 'WinQA - AI Testing Playground',
     description: siteConfig.description,
-    images: ['/images/og-image.png'],
+    images: [
+      {
+        url: '/images/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'WinQA - AI Testing Playground',
+      },
+    ],
   },
   robots: {
     index: true,
