@@ -415,21 +415,21 @@ function PromptsPageContent() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Title *
               </label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Specific Instructions"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-rose-400 mb-1 block">
+              <label className="text-sm font-medium text-rose-400 mb-1.5 block">
                 Bad Prompt *
               </label>
               <Textarea
@@ -438,12 +438,12 @@ function PromptsPageContent() {
                   setFormData({ ...formData, bad_prompt_example: e.target.value })
                 }
                 placeholder="The ineffective prompt..."
-                className="bg-rose-950/20 border-rose-900/30 text-rose-300 placeholder:text-rose-400/50 min-h-[80px] sm:min-h-[100px]"
+                className="bg-rose-950/20 border-rose-900/30 text-rose-300 placeholder:text-rose-400/50 min-h-[80px] sm:min-h-[100px] focus:ring-1 focus:ring-rose-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-emerald-400 mb-1 block">
+              <label className="text-sm font-medium text-emerald-400 mb-1.5 block">
                 Good Prompt *
               </label>
               <Textarea
@@ -452,12 +452,12 @@ function PromptsPageContent() {
                   setFormData({ ...formData, good_prompt_example: e.target.value })
                 }
                 placeholder="The improved prompt..."
-                className="bg-emerald-950/20 border-emerald-900/30 text-emerald-300 placeholder:text-emerald-400/50 min-h-[80px] sm:min-h-[100px]"
+                className="bg-emerald-950/20 border-emerald-900/30 text-emerald-300 placeholder:text-emerald-400/50 min-h-[80px] sm:min-h-[100px] focus:ring-1 focus:ring-emerald-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Explanation
               </label>
               <Textarea
@@ -466,12 +466,12 @@ function PromptsPageContent() {
                   setFormData({ ...formData, explanation: e.target.value })
                 }
                 placeholder="Why is the good prompt better?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[60px] focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[60px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
@@ -496,7 +496,7 @@ function PromptsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50"
+                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
                 />
                 <Button
                   type="button"

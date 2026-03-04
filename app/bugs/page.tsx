@@ -582,14 +582,14 @@ function BugsPageContent() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">Prompt Context *</label>
               <Textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
                 placeholder="What prompt or context triggered this issue?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px]"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px] focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
@@ -599,7 +599,7 @@ function BugsPageContent() {
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
                 placeholder="What was the problematic response?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[100px]"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[100px] focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
@@ -670,7 +670,7 @@ function BugsPageContent() {
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
                 placeholder="Any additional context or observations..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
           </div>

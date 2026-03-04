@@ -435,33 +435,33 @@ function InsightsPageContent() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Title *
               </label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Cohere struggles with Hebrew"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Content *
               </label>
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Describe your insight in detail..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[150px] focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[150px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
@@ -486,7 +486,7 @@ function InsightsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50"
+                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
                 />
                 <Button
                   type="button"

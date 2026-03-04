@@ -307,9 +307,9 @@ export default function TestCasesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Title *
               </label>
               <Input
@@ -318,12 +318,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, title: e.target.value })
                 }
                 placeholder="e.g., Code Generation Test"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Description
               </label>
               <Input
@@ -332,12 +332,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="Brief description of the test"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Initial Prompt *
               </label>
               <Textarea
@@ -346,12 +346,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, initial_prompt: e.target.value })
                 }
                 placeholder="The prompt to send to the AI model..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[120px] focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[120px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
                 Expected Outcome
               </label>
               <Textarea
@@ -360,7 +360,7 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, expected_outcome: e.target.value })
                 }
                 placeholder="What you expect the AI to respond with..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px] focus:border-violet-500/50"
+                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
               />
             </div>
           </div>
