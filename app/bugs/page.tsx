@@ -284,7 +284,7 @@ function BugsPageContent() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                <span className="gradient-text-primary">Bug Log</span>
+                <span className="text-white">Bug Log</span>
               </h1>
               <p className="text-slate-400 text-sm sm:text-base mt-1">
                 Track and manage AI response issues

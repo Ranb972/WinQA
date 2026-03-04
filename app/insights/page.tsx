@@ -237,7 +237,7 @@ function InsightsPageContent() {
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">
-                <span className="gradient-text-primary">Insights</span>
+                <span className="text-white">Insights</span>
               </h1>
               <p className="text-slate-400 mt-1">
                 Document your learnings about AI models and prompt engineering

@@ -267,7 +267,7 @@ function PromptsPageContent() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                <span className="gradient-text-primary">Prompt Library</span>
+                <span className="text-white">Prompt Library</span>
               </h1>
               <p className="text-sm sm:text-base text-slate-400 mt-1">
                 Compare bad vs good prompts and learn best practices

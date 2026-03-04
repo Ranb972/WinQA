@@ -196,7 +196,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold gradient-text-primary">
+              <span className="text-2xl font-bold text-white tracking-tight">
                 WinQA
               </span>
             </Link>
@@ -253,7 +253,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold gradient-text-primary">
+              <span className="text-xl font-bold text-white tracking-tight">
                 WinQA
               </span>
             </Link>

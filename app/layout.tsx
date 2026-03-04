@@ -32,13 +32,12 @@ export default function RootLayout({
         <ClerkProvider>
             <html lang="en" className="dark">
                 <body
-                    className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 text-slate-100 min-h-screen`}
+                    className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-100 min-h-screen`}
                 >
                     {/* Ambient background glow */}
                     <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl" />
-                        <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl" />
-                        <div className="absolute top-3/4 left-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+                        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-slate-500/[0.08] rounded-full blur-3xl" />
+                        <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl" />
                     </div>
 
                     <SignedIn>

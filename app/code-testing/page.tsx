@@ -424,7 +424,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                <span className="gradient-text-primary">Code Testing Lab</span>
+                <span className="text-white">Code Testing Lab</span>
               </h1>
               <p className="text-sm sm:text-base text-slate-400 mt-1">
                 Test and debug code with AI assistance

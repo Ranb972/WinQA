@@ -193,7 +193,7 @@ export default function TestCasesPage() {
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">
-                <span className="gradient-text-primary">Test Cases</span>
+                <span className="text-white">Test Cases</span>
               </h1>
               <p className="text-slate-400 mt-1">
                 Manage and run your AI testing scenarios

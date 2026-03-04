@@ -570,7 +570,7 @@ function ComingSoonSection() {
             <Rocket className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-bold gradient-text-primary tracking-wide">
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
               COMING SOON
             </h2>
             <p className="text-slate-400 text-sm">Exciting features in development</p>
@@ -644,7 +644,7 @@ function Dashboard() {
       <MotionWrapper>
         <header className="mb-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="gradient-text-primary">Welcome back!</span>
+            <span className="text-white">Welcome back!</span>
           </h1>
           <p className="text-slate-400 text-lg">
             Ready to break some AI today? Explore our testing toolkit below.
@@ -1105,18 +1105,17 @@ function LandingPage() {
       }));
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
+    <div className="relative min-h-screen overflow-x-hidden bg-slate-950">
       {/* Background effects - purple/pink atmosphere preserved */}
-      <div className="absolute inset-0 bg-gradient-to-br from-pink-900/10 via-transparent to-purple-900/10 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-purple-600/20 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-2/3 left-1/3 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/5 via-transparent to-slate-800/5 pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-purple-600/8 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-purple-500/6 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-pink-500/6 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
       <header className="relative flex justify-between items-center p-6 max-w-7xl mx-auto">
         <motion.span
-          className="text-2xl font-bold gradient-text-primary"
+          className="text-2xl font-bold text-white tracking-tight"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
@@ -1166,7 +1165,7 @@ function LandingPage() {
           {/* Main Headline with glow effect */}
           <MotionWrapper delay={0.1}>
             <div className="relative mb-6">
-              <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-blue-500/20 scale-150" />
+              <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-pink-500/8 via-purple-500/8 to-blue-500/8 scale-150" />
               <h1 className="relative text-5xl md:text-7xl lg:text-8xl font-bold">
                 <span className="gradient-text-primary">Master AI Testing</span>
               </h1>
@@ -1344,7 +1343,7 @@ function LandingPage() {
         {/* Footer */}
         <footer className="border-t border-slate-800 pt-6 pb-8 max-w-5xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
-            <span className="font-semibold gradient-text-primary">WinQA</span>
+            <span className="font-semibold text-white">WinQA</span>
             <div className="flex items-center gap-4">
               <a
                 href="https://github.com/Ranb972/WinQA"
