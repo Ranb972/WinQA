@@ -340,7 +340,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)]">
+    <div className="flex flex-col h-[calc(100vh-2rem)] rounded-2xl border border-slate-700/50 bg-slate-900/20 backdrop-blur-sm overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-slate-800">
         <div className="overflow-x-auto">
