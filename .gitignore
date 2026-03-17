@@ -47,3 +47,6 @@ next-env.d.ts
 
 # claude local settings (contains secrets)
 .claude/settings.local.json
+
+# gemini local settings (contains secrets)
+.gemini/settings.json
