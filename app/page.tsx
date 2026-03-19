@@ -441,25 +441,25 @@ const landingFeatures = [
   {
     title: 'Chat Lab',
     description: 'Chat with any AI model one-on-one, or compare multiple models side-by-side on the same prompt. See how Gemini, Cohere, Groq, and OpenRouter models differ in real time.',
-    image: '/images/dashboard/chat-lab.png',
+    image: '/images/screenshots/chat-lab.jpg',
     accent: 'border-emerald-500/30',
   },
   {
     title: 'AI Battle Arena',
     description: '9 unique challenge types from code duels to creative writing. Blindfold mode lets you vote before revealing which model wrote what. Track wins on the live leaderboard.',
-    image: '/images/dashboard/battle.png',
+    image: '/images/screenshots/battle.jpg',
     accent: 'border-amber-500/30',
   },
   {
     title: 'Code Testing Lab',
     description: 'Write and run JavaScript, Python, or TypeScript instantly. Get AI-powered debugging analysis that explains what went wrong and suggests fixes.',
-    image: '/images/dashboard/code-testing.png',
+    image: '/images/screenshots/code-testing.jpg',
     accent: 'border-cyan-500/30',
   },
   {
     title: 'Bug Log',
     description: 'Document every AI failure with structured tags: hallucination, logic error, formatting issue, or refusal. Track severity, status, and link bugs to the prompts that caused them.',
-    image: '/images/dashboard/bug-log.png',
+    image: '/images/screenshots/bug-log.jpg',
     accent: 'border-rose-500/30',
   },
 ];
