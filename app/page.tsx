@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { SignInButton, SignUpButton, SignedIn, SignedOut } from '@clerk/nextjs';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 import {
   TestTube2,
@@ -394,8 +394,72 @@ function Dashboard() {
 }
 
 // ============================================================
-// LANDING PAGE (signed-out) — complete redesign
+// LANDING PAGE (signed-out) — cinematic redesign
 // ============================================================
+
+// CSS keyframes for background effects (injected once)
+const landingStyles = `
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -10%); }
+    30% { transform: translate(3%, -15%); }
+    50% { transform: translate(-8%, 5%); }
+    70% { transform: translate(8%, -5%); }
+    90% { transform: translate(-3%, 10%); }
+  }
+  @keyframes orb-drift-1 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.06; }
+    25% { transform: translate(40px, -30px) scale(1.05); opacity: 0.07; }
+    50% { transform: translate(-20px, 20px) scale(0.95); opacity: 0.05; }
+    75% { transform: translate(30px, 40px) scale(1.02); opacity: 0.06; }
+  }
+  @keyframes orb-drift-2 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.04; }
+    33% { transform: translate(-30px, 20px) scale(1.08); opacity: 0.05; }
+    66% { transform: translate(20px, -40px) scale(0.96); opacity: 0.03; }
+  }
+  @keyframes orb-drift-3 {
+    0%, 100% { transform: translate(0, 0); opacity: 0.03; }
+    50% { transform: translate(0, -50px); opacity: 0.04; }
+  }
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { text-shadow: 0 0 40px rgba(16,185,129,0.3), 0 0 80px rgba(16,185,129,0.1); }
+    50% { text-shadow: 0 0 60px rgba(16,185,129,0.5), 0 0 120px rgba(16,185,129,0.2); }
+  }
+  .landing-grain::after {
+    content: '';
+    position: fixed;
+    inset: -50%;
+    width: 200%;
+    height: 200%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: 40;
+    animation: grain 8s steps(10) infinite;
+  }
+  .animate-gradient-text {
+    background-size: 200% auto;
+    animation: gradient-shift 4s ease infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(148,163,184,0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+`;
 
 // Animated counter hook
 function useCountUp(target: number, duration: number = 2000) {
@@ -412,7 +476,6 @@ function useCountUp(target: number, duration: number = 2000) {
     function tick(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setCount(Math.round(eased * target));
       if (progress < 1) requestAnimationFrame(tick);
@@ -427,40 +490,124 @@ function useCountUp(target: number, duration: number = 2000) {
 function AnimatedStat({ value, suffix, label }: { value: number; suffix?: string; label: string }) {
   const { count, ref } = useCountUp(value);
   return (
-    <div className="text-center px-4 md:px-8">
-      <span ref={ref} className="text-4xl md:text-5xl font-bold text-white tabular-nums">
+    <div className="text-center">
+      <span
+        ref={ref}
+        className="text-5xl md:text-7xl font-black text-white tabular-nums block"
+        style={{ textShadow: '0 0 20px rgba(16,185,129,0.15)' }}
+      >
         {count}{suffix}
       </span>
-      <p className="text-sm text-slate-400 mt-1">{label}</p>
+      <p className="text-sm text-slate-500 mt-2 uppercase tracking-widest">{label}</p>
     </div>
   );
 }
 
-// Feature card for landing page
+// Typewriter component for intro
+function Typewriter({ text, onComplete }: { text: string; onComplete?: () => void }) {
+  const [displayed, setDisplayed] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const indexRef = useRef(0);
+
+  useEffect(() => {
+    const chars = text.split('');
+    function typeNext() {
+      if (indexRef.current >= chars.length) {
+        onComplete?.();
+        return;
+      }
+      const char = chars[indexRef.current];
+      indexRef.current++;
+      setDisplayed(text.slice(0, indexRef.current));
+      // Pause after periods
+      const delay = char === '.' ? 300 : 50;
+      setTimeout(typeNext, delay);
+    }
+    const startDelay = setTimeout(typeNext, 200);
+    return () => clearTimeout(startDelay);
+  }, [text, onComplete]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setShowCursor(v => !v), 530);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="text-xl md:text-2xl text-slate-300 font-light">
+      {displayed}
+      <span className="text-emerald-400" style={{ opacity: showCursor ? 1 : 0 }}>|</span>
+    </span>
+  );
+}
+
+// Feature card with parallax
+function FeatureRow({ feature, index }: { feature: typeof landingFeatures[0]; index: number }) {
+  const isReversed = index % 2 === 1;
+  const rowRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: rowRef,
+    offset: ['start end', 'end start'],
+  });
+  const imageY = useTransform(scrollYProgress, [0, 1], [30, -30]);
+
+  return (
+    <motion.div
+      ref={rowRef}
+      className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-12 items-center`}
+      initial={{ opacity: 0, x: isReversed ? 60 : -60 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: '-80px' }}
+      transition={{ duration: 0.7, delay: index * 0.1, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      {/* Screenshot with parallax + hover glow */}
+      <motion.div
+        className="md:w-[55%] flex-shrink-0 rounded-xl overflow-hidden border border-slate-800/50 bg-slate-900/30 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+        style={{ y: imageY }}
+      >
+        <Image
+          src={feature.image}
+          alt={`${feature.title} screenshot`}
+          width={720}
+          height={450}
+          className="w-full h-auto"
+          priority={index === 0}
+        />
+      </motion.div>
+
+      {/* Text */}
+      <div className="flex-1">
+        <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          {feature.title}
+        </h3>
+        <p className="text-slate-400 leading-relaxed">
+          {feature.description}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// Feature card data
 const landingFeatures = [
   {
     title: 'Chat Lab',
     description: 'Chat with any AI model one-on-one, or compare multiple models side-by-side on the same prompt. See how Gemini, Cohere, Groq, and OpenRouter models differ in real time.',
     image: '/images/screenshots/chat-lab.jpg',
-    accent: 'border-emerald-500/30',
   },
   {
     title: 'AI Battle Arena',
     description: '9 unique challenge types from code duels to creative writing. Blindfold mode lets you vote before revealing which model wrote what. Track wins on the live leaderboard.',
     image: '/images/screenshots/battle.jpg',
-    accent: 'border-amber-500/30',
   },
   {
     title: 'Code Testing Lab',
     description: 'Write and run JavaScript, Python, or TypeScript instantly. Get AI-powered debugging analysis that explains what went wrong and suggests fixes.',
     image: '/images/screenshots/code-testing.jpg',
-    accent: 'border-cyan-500/30',
   },
   {
     title: 'Bug Log',
     description: 'Document every AI failure with structured tags: hallucination, logic error, formatting issue, or refusal. Track severity, status, and link bugs to the prompts that caused them.',
     image: '/images/screenshots/bug-log.jpg',
-    accent: 'border-rose-500/30',
   },
 ];
 
@@ -489,84 +636,133 @@ const steps = [
 function LandingPage() {
   const [introComplete, setIntroComplete] = useState(false);
   const [phase, setPhase] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // Intro sequence phases
+  // Intro sequence: 4-phase state machine
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 100);   // logo appears
-    const t2 = setTimeout(() => setPhase(2), 1200);   // tagline appears
-    const t3 = setTimeout(() => setPhase(3), 3200);   // fade out intro
-    const t4 = setTimeout(() => setIntroComplete(true), 3800); // reveal main
+    const t1 = setTimeout(() => setPhase(1), 800);    // line drawn → logo
+    const t2 = setTimeout(() => setPhase(2), 1800);   // typewriter starts
+    const t3 = setTimeout(() => setPhase(3), 3400);   // fade out
+    const t4 = setTimeout(() => setIntroComplete(true), 4000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, []);
 
   const skipIntro = useCallback(() => {
     setPhase(3);
-    setTimeout(() => setIntroComplete(true), 100);
+    setTimeout(() => setIntroComplete(true), 200);
   }, []);
 
-  // Split tagline into words for word-by-word reveal
-  const taglineWords = ['Compare', 'AI', 'models.', 'Find', 'failures.', 'Master', 'prompts.'];
+  // Mouse spotlight (desktop only)
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    requestAnimationFrame(() => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    });
+  }, []);
+
+  const ctaBtnClass = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-lg text-lg px-8 py-4 inline-flex items-center gap-2 transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:shadow-[0_0_50px_rgba(16,185,129,0.5)] hover:scale-105";
 
   return (
-    <div className="relative min-h-screen bg-slate-950 text-white overflow-x-hidden">
-      {/* ── Intro Sequence ── */}
+    <div
+      className="relative min-h-screen bg-slate-950 text-white overflow-x-hidden landing-grain"
+      onMouseMove={handleMouseMove}
+    >
+      {/* Inject CSS keyframes */}
+      <style dangerouslySetInnerHTML={{ __html: landingStyles }} />
+
+      {/* ── Cinematic Intro Sequence ── */}
       <AnimatePresence>
         {!introComplete && (
           <motion.div
             className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center cursor-pointer"
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: 'easeInOut' }}
+            transition={{ duration: 0.2 }}
             onClick={skipIntro}
+            onWheel={skipIntro}
           >
-            {/* Logo */}
+            {/* Phase 0: Horizontal line */}
+            <motion.div
+              className="h-px bg-white mb-8"
+              initial={{ width: 0, opacity: 0 }}
+              animate={phase >= 0 ? { width: 200, opacity: 1 } : {}}
+              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+              style={phase >= 1 ? { opacity: 0, transition: 'opacity 0.3s' } : {}}
+            />
+
+            {/* Phase 1: Logo with glow */}
             <motion.h1
-              className="text-6xl md:text-8xl font-bold tracking-tight"
-              initial={{ opacity: 0, scale: 0.8 }}
+              className="text-6xl md:text-8xl font-black tracking-tight"
+              initial={{ opacity: 0, scale: 0.6 }}
               animate={phase >= 1 ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+              style={phase >= 1 ? { animation: 'glow-pulse 2s ease-in-out' } : {}}
             >
               WinQA
             </motion.h1>
 
-            {/* Tagline — word by word */}
-            <div className="mt-6 flex flex-wrap justify-center gap-x-2 gap-y-1 px-4">
-              {taglineWords.map((word, i) => (
-                <motion.span
-                  key={i}
-                  className="text-xl md:text-2xl text-slate-300 font-light"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={phase >= 2 ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.4, delay: i * 0.15, ease: 'easeOut' }}
-                >
-                  {word}
-                </motion.span>
-              ))}
+            {/* Phase 2: Typewriter */}
+            <div className="mt-6 h-10 flex items-center">
+              {phase >= 2 && phase < 3 && (
+                <Typewriter text="Compare. Break. Learn." />
+              )}
             </div>
 
             {/* Skip hint */}
             <motion.p
               className="absolute bottom-8 text-sm text-slate-600"
               initial={{ opacity: 0 }}
-              animate={phase >= 1 ? { opacity: 1 } : {}}
-              transition={{ delay: 1.5 }}
+              animate={{ opacity: phase >= 1 ? 0.6 : 0 }}
+              transition={{ delay: 0.5 }}
             >
-              Click anywhere to skip
+              Click or scroll to skip
             </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Subtle ambient background ── */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-radial from-emerald-500/[0.04] to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute top-[60%] -right-40 w-96 h-96 bg-teal-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+      {/* ── Background Layers ── */}
+      {/* Ambient orbs (CSS animations, not Framer Motion) */}
+      <div
+        className="fixed top-[-10%] right-[-5%] w-[700px] h-[700px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)',
+          animation: 'orb-drift-1 20s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="fixed bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 70%)',
+          animation: 'orb-drift-2 15s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="fixed top-[40%] left-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(20,184,166,0.03) 0%, transparent 70%)',
+          animation: 'orb-drift-3 25s ease-in-out infinite',
+        }}
+      />
+
+      {/* Dot grid */}
+      <div className="fixed inset-0 dot-grid pointer-events-none z-0" />
+
+      {/* Mouse spotlight (desktop only) */}
+      <div
+        className="hidden md:block fixed w-[600px] h-[600px] rounded-full pointer-events-none z-10"
+        style={{
+          background: 'radial-gradient(circle, rgba(16,185,129,0.03) 0%, transparent 70%)',
+          transform: `translate(${mousePos.x - 300}px, ${mousePos.y - 300}px)`,
+          transition: 'transform 0.15s ease-out',
+        }}
+      />
 
       {/* ── Header ── */}
-      <header className="relative flex justify-between items-center p-6 max-w-7xl mx-auto">
+      <header className="relative z-20 flex justify-between items-center p-6 max-w-7xl mx-auto">
         <motion.span
           className="text-2xl font-bold text-white tracking-tight"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: introComplete ? 0 : 3.8 }}
+          transition={{ duration: 0.5, delay: introComplete ? 0 : 4.0 }}
         >
           WinQA
         </motion.span>
@@ -574,7 +770,7 @@ function LandingPage() {
           className="flex items-center gap-2 sm:gap-4"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: introComplete ? 0 : 3.8 }}
+          transition={{ duration: 0.5, delay: introComplete ? 0 : 4.0 }}
         >
           <SignInButton mode="modal">
             <motion.button
@@ -587,7 +783,7 @@ function LandingPage() {
           </SignInButton>
           <SignUpButton mode="modal">
             <motion.button
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-lg text-sm sm:text-base px-4 py-2 sm:px-5 sm:py-2.5 transition-colors"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-lg text-sm sm:text-base px-4 py-2 sm:px-5 sm:py-2.5 transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -598,18 +794,22 @@ function LandingPage() {
       </header>
 
       {/* ── Main Content ── */}
-      <main className="relative">
+      <main className="relative z-20">
 
         {/* ── Hero Section ── */}
         <section className="max-w-5xl mx-auto px-4 pt-16 md:pt-24 pb-20 text-center">
           <motion.h2
-            className="text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] mb-6"
+            className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: introComplete ? 0 : 4.0 }}
           >
             The AI Testing{' '}
-            <span className="text-emerald-400">Platform</span>
+            <span
+              className="animate-gradient-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400"
+            >
+              Platform
+            </span>
           </motion.h2>
 
           <motion.p
@@ -630,8 +830,7 @@ function LandingPage() {
           >
             <SignUpButton mode="modal">
               <motion.button
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-lg text-lg px-8 py-4 inline-flex items-center gap-2 transition-colors"
-                whileHover={{ scale: 1.03 }}
+                className={ctaBtnClass}
                 whileTap={{ scale: 0.97 }}
               >
                 Start Testing For Free <ArrowRight className="h-5 w-5" />
@@ -644,24 +843,27 @@ function LandingPage() {
           <motion.div
             className="mt-16"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: introComplete ? 0.5 : 5.0 }}
+            animate={{ opacity: [0, 0.6, 0] }}
+            transition={{ delay: introComplete ? 0.5 : 5.0, duration: 3, repeat: Infinity }}
           >
             <motion.div
-              animate={{ y: [0, 8, 0] }}
+              animate={{ y: [0, 10, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <ChevronDown className="h-6 w-6 text-slate-600 mx-auto" />
+              <ChevronDown className="h-6 w-6 text-slate-500 mx-auto" />
             </motion.div>
           </motion.div>
         </section>
 
         {/* ── Stats Bar ── */}
-        <section className="border-y border-slate-800/50 py-12 mb-20">
-          <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-y-8 divide-x divide-slate-800/50">
+        <section className="border-y border-slate-800/50 py-14 mb-20">
+          <div className="max-w-5xl mx-auto flex flex-wrap justify-center items-center gap-y-8">
             <AnimatedStat value={4} label="AI Providers" />
+            <div className="hidden md:block w-px h-16 bg-slate-800 mx-8" />
             <AnimatedStat value={9} label="Battle Challenges" />
+            <div className="hidden md:block w-px h-16 bg-slate-800 mx-8" />
             <AnimatedStat value={22} suffix="+" label="Documented Bugs" />
+            <div className="hidden md:block w-px h-16 bg-slate-800 mx-8" />
             <AnimatedStat value={20} label="Test Cases" />
           </div>
         </section>
@@ -675,50 +877,19 @@ function LandingPage() {
             viewport={{ once: true, margin: '-50px' }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Everything you need to test AI
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-3">
+              Everything you need to{' '}
+              <span className="text-emerald-400">test AI</span>
             </h2>
             <p className="text-slate-400 text-lg max-w-xl mx-auto">
               Four tools designed to help you understand how AI models really behave.
             </p>
           </motion.div>
 
-          <div className="space-y-16">
-            {landingFeatures.map((feature, index) => {
-              const isReversed = index % 2 === 1;
-              return (
-                <motion.div
-                  key={feature.title}
-                  className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-12 items-center`}
-                  initial={{ opacity: 0, x: isReversed ? 40 : -40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-                >
-                  {/* Screenshot */}
-                  <div className={`md:w-[55%] flex-shrink-0 rounded-xl overflow-hidden border ${feature.accent} bg-slate-900/30`}>
-                    <Image
-                      src={feature.image}
-                      alt={`${feature.title} screenshot`}
-                      width={720}
-                      height={450}
-                      className="w-full h-auto"
-                      priority={index === 0}
-                    />
-                  </div>
-
-                  {/* Text */}
-                  <div className="flex-1">
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                      {feature.title}
-                    </h3>
-                    <p className="text-slate-400 leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+          <div className="space-y-20">
+            {landingFeatures.map((feature, index) => (
+              <FeatureRow key={feature.title} feature={feature} index={index} />
+            ))}
           </div>
         </section>
 
@@ -738,8 +909,8 @@ function LandingPage() {
           </motion.div>
 
           <div className="relative grid md:grid-cols-3 gap-8 md:gap-12">
-            {/* Connector line (desktop) */}
-            <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+            {/* Gradient connector line (desktop) */}
+            <div className="hidden md:block absolute top-10 left-[20%] right-[20%] h-px bg-gradient-to-r from-emerald-500/50 via-emerald-500/20 to-transparent" />
 
             {steps.map((step, index) => {
               const Icon = step.icon;
@@ -752,10 +923,16 @@ function LandingPage() {
                   viewport={{ once: true, margin: '-50px' }}
                   transition={{ duration: 0.5, delay: index * 0.15 }}
                 >
-                  <div className="w-16 h-16 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center mx-auto mb-4 relative z-10">
-                    <Icon className="h-7 w-7 text-emerald-400" />
-                  </div>
-                  <span className="text-xs font-mono text-emerald-500/60 tracking-widest">{step.number}</span>
+                  <motion.div
+                    className="w-20 h-20 rounded-full border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-center mx-auto mb-4 relative z-10"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: index * 0.15 }}
+                  >
+                    <Icon className="h-8 w-8 text-emerald-400" />
+                  </motion.div>
+                  <span className="text-xs font-mono text-emerald-400 tracking-widest">{step.number}</span>
                   <h3 className="text-xl font-bold text-white mt-1 mb-2">{step.title}</h3>
                   <p className="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
                     {step.description}
@@ -767,15 +944,17 @@ function LandingPage() {
         </section>
 
         {/* ── Final CTA ── */}
-        <section className="max-w-3xl mx-auto px-4 mb-20">
+        <section className="max-w-3xl mx-auto px-4 mb-20 relative">
+          {/* Glow behind card */}
+          <div className="absolute -inset-10 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
           <motion.div
-            className="rounded-2xl border border-emerald-500/15 bg-slate-900/40 p-8 md:p-12 text-center"
+            className="relative rounded-2xl border border-emerald-500/20 bg-slate-900/40 backdrop-blur-sm p-8 md:p-12 text-center"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-50px' }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Ready to test some AI?
             </h2>
             <p className="text-slate-400 mb-8 max-w-lg mx-auto">
@@ -783,8 +962,7 @@ function LandingPage() {
             </p>
             <SignUpButton mode="modal">
               <motion.button
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-lg text-lg px-8 py-4 inline-flex items-center gap-2 transition-colors"
-                whileHover={{ scale: 1.03 }}
+                className={ctaBtnClass}
                 whileTap={{ scale: 0.97 }}
               >
                 Get Started For Free <ArrowRight className="h-5 w-5" />
