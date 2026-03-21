@@ -6,8 +6,24 @@
  * Requires MONGODB_URI in .env.local
  */
 
-import 'dotenv/config';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import mongoose from 'mongoose';
+
+// Load .env.local manually (no dotenv dependency needed)
+try {
+  const envPath = resolve(process.cwd(), '.env.local');
+  const envContent = readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = trimmed.slice(eqIndex + 1).trim();
+    if (!process.env[key]) process.env[key] = value;
+  }
+} catch { /* .env.local not found, rely on env vars */ }
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
