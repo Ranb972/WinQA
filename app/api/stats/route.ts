@@ -17,15 +17,15 @@ export async function GET() {
 
     await dbConnect();
 
-    const userFilter = { user_id: userId };
+    const visibleFilter = { $or: [{ user_id: userId }, { is_public: true }] };
 
     const [testCases, bugs, prompts, insights, resolvedBugs, battles] = await Promise.all([
-      TestCase.countDocuments(userFilter),
-      BugReport.countDocuments(userFilter),
-      PromptLibrary.countDocuments(userFilter),
-      Insight.countDocuments(userFilter),
-      BugReport.countDocuments({ ...userFilter, status: 'Resolved' }),
-      Battle.countDocuments(userFilter),
+      TestCase.countDocuments(visibleFilter),
+      BugReport.countDocuments(visibleFilter),
+      PromptLibrary.countDocuments(visibleFilter),
+      Insight.countDocuments(visibleFilter),
+      BugReport.countDocuments({ ...visibleFilter, status: 'Resolved' }),
+      Battle.countDocuments({ user_id: userId }),
     ]);
 
     return NextResponse.json({

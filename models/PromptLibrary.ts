@@ -9,6 +9,7 @@ export interface IPromptLibrary extends Document {
   explanation?: string;
   tags: string[];
   is_favorite: boolean;
+  is_public: boolean;
   created_at: Date;
 }
 
@@ -38,6 +39,10 @@ const PromptLibrarySchema = new Schema<IPromptLibrary>({
     default: [],
   },
   is_favorite: {
+    type: Boolean,
+    default: false,
+  },
+  is_public: {
     type: Boolean,
     default: false,
   },

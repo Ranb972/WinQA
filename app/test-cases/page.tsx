@@ -27,6 +27,7 @@ interface TestCase {
   initial_prompt: string;
   expected_outcome?: string;
   created_at: string;
+  is_public?: boolean;
 }
 
 export default function TestCasesPage() {
@@ -279,6 +280,7 @@ export default function TestCasesPage() {
                   description={testCase.description}
                   initialPrompt={testCase.initial_prompt}
                   expectedOutcome={testCase.expected_outcome}
+                  isPublic={testCase.is_public}
                   onRun={() => handleRun(testCase)}
                   onEdit={() => handleEdit(testCase)}
                   onDelete={() => handleDelete(testCase._id)}

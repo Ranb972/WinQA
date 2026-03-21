@@ -28,6 +28,7 @@ interface Insight {
   tags: string[];
   created_at: string;
   updated_at: string;
+  is_public?: boolean;
 }
 
 const suggestedTags = ['Cohere', 'Gemini', 'Groq', 'Hebrew', 'Code', 'Formatting', 'Edge Cases'];
@@ -367,6 +368,11 @@ function InsightsPageContent() {
                     <CardTitle className="text-slate-100 text-lg line-clamp-2">
                       {insight.title}
                     </CardTitle>
+                    {insight.is_public && (
+                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                        Example
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
@@ -380,17 +386,19 @@ function InsightsPageContent() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(insight._id);
-                      }}
-                      className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!insight.is_public && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(insight._id);
+                        }}
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

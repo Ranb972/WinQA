@@ -16,6 +16,7 @@ interface PromptCardProps {
   explanation?: string;
   tags: string[];
   isFavorite: boolean;
+  isPublic?: boolean;
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -29,6 +30,7 @@ export default function PromptCard({
   explanation,
   tags,
   isFavorite,
+  isPublic,
   onToggleFavorite,
   onEdit,
   onDelete,
@@ -90,31 +92,36 @@ export default function PromptCard({
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {!isPublic && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {tags.map((tag) => (
-              <Badge
-                key={tag}
-                className="bg-slate-800 text-slate-400 border-slate-700 text-xs"
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1 mt-2">
+          {isPublic && (
+            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+              Example
+            </span>
+          )}
+          {tags.map((tag) => (
+            <Badge
+              key={tag}
+              className="bg-slate-800 text-slate-400 border-slate-700 text-xs"
+            >
+              {tag}
+            </Badge>
+          ))}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 flex-1 overflow-hidden">
         {/* Bad Prompt */}

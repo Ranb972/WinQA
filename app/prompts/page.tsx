@@ -30,6 +30,7 @@ interface Prompt {
   explanation?: string;
   tags: string[];
   is_favorite: boolean;
+  is_public?: boolean;
   created_at: string;
 }
 
@@ -390,6 +391,7 @@ function PromptsPageContent() {
                 explanation={prompt.explanation}
                 tags={prompt.tags}
                 isFavorite={prompt.is_favorite}
+                isPublic={prompt.is_public}
                 onToggleFavorite={() => handleToggleFavorite(prompt._id)}
                 onEdit={() => handleEdit(prompt)}
                 onDelete={() => handleDelete(prompt._id)}

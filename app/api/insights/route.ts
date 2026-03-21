@@ -18,19 +18,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tag = searchParams.get('tag');
 
-    const filter: Record<string, unknown> = { user_id: userId };
+    const filter: Record<string, unknown> = {
+      $or: [{ user_id: userId }, { is_public: true }],
+    };
     if (tag) filter.tags = sanitizeQueryParam(tag);
 
-    let insights = await Insight.find(filter).sort({ updated_at: -1 });
-
-    // Legacy migration: claim unowned docs on first empty result
-    if (insights.length === 0) {
-      const legacyCount = await Insight.countDocuments({ user_id: { $exists: false } });
-      if (legacyCount > 0) {
-        await Insight.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
-        insights = await Insight.find(filter).sort({ updated_at: -1 });
-      }
-    }
+    const insights = await Insight.find(filter).sort({ updated_at: -1 });
 
     return NextResponse.json(insights);
   } catch (error) {
@@ -93,7 +86,7 @@ export async function PUT(request: NextRequest) {
     const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
 
     const insight = await Insight.findOneAndUpdate(
-      { _id: id, user_id: userId },
+      { _id: id, user_id: userId, is_public: { $ne: true } },
       { ...updateData, updated_at: new Date() },
       { new: true, runValidators: true }
     );
@@ -131,7 +124,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const insight = await Insight.findOneAndDelete({ _id: id, user_id: userId });
+    const insight = await Insight.findOneAndDelete({ _id: id, user_id: userId, is_public: { $ne: true } });
 
     if (!insight) {
       return NextResponse.json({ error: 'Insight not found' }, { status: 404 });
