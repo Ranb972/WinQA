@@ -19,20 +19,13 @@ export async function GET(request: NextRequest) {
     const tag = searchParams.get('tag');
     const favorite = searchParams.get('favorite');
 
-    const filter: Record<string, unknown> = { user_id: userId };
+    const filter: Record<string, unknown> = {
+      $or: [{ user_id: userId }, { is_public: true }],
+    };
     if (tag) filter.tags = sanitizeQueryParam(tag);
     if (favorite === 'true') filter.is_favorite = true;
 
-    let prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
-
-    // Legacy migration: claim unowned docs on first empty result
-    if (prompts.length === 0) {
-      const legacyCount = await PromptLibrary.countDocuments({ user_id: { $exists: false } });
-      if (legacyCount > 0) {
-        await PromptLibrary.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
-        prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
-      }
-    }
+    const prompts = await PromptLibrary.find(filter).sort({ created_at: -1 });
 
     return NextResponse.json(prompts);
   } catch (error) {
@@ -97,7 +90,7 @@ export async function PUT(request: NextRequest) {
     const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
 
     const prompt = await PromptLibrary.findOneAndUpdate(
-      { _id: id, user_id: userId },
+      { _id: id, user_id: userId, is_public: { $ne: true } },
       updateData,
       { new: true, runValidators: true }
     );
@@ -135,7 +128,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const prompt = await PromptLibrary.findOne({ _id: id, user_id: userId });
+    const prompt = await PromptLibrary.findOne({ _id: id, user_id: userId, is_public: { $ne: true } });
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
@@ -173,7 +166,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const prompt = await PromptLibrary.findOneAndDelete({ _id: id, user_id: userId });
+    const prompt = await PromptLibrary.findOneAndDelete({ _id: id, user_id: userId, is_public: { $ne: true } });
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });

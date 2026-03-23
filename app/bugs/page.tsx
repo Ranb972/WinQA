@@ -38,6 +38,7 @@ interface BugReport {
   severity: 'Low' | 'Medium' | 'High';
   user_notes?: string;
   status: 'Open' | 'Investigating' | 'Resolved';
+  is_public?: boolean;
   created_at: string;
 }
 
@@ -458,6 +459,11 @@ function BugsPageContent() {
                   <Badge className={cn('border text-xs', severityColors[bug.severity])}>
                     {bug.severity}
                   </Badge>
+                  {bug.is_public && (
+                    <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]">
+                      Example
+                    </Badge>
+                  )}
                   <span className="text-xs sm:text-sm text-slate-300 truncate max-w-[120px] sm:max-w-none">
                     {modelDisplayNames[bug.model_used as LLMProvider] || bug.model_used}
                   </span>
@@ -467,17 +473,19 @@ function BugsPageContent() {
                   <span className="text-xs text-slate-500">
                     {formatDate(bug.created_at)}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(bug._id);
-                    }}
-                    className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!bug.is_public && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(bug._id);
+                      }}
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                   {expandedId === bug._id ? (
                     <ChevronUp className="h-4 w-4 text-slate-400" />
                   ) : (

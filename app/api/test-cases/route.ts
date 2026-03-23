@@ -16,16 +16,9 @@ export async function GET() {
 
     await dbConnect();
 
-    let testCases = await TestCase.find({ user_id: userId }).sort({ created_at: -1 });
-
-    // Legacy migration: claim unowned docs on first empty result
-    if (testCases.length === 0) {
-      const legacyCount = await TestCase.countDocuments({ user_id: { $exists: false } });
-      if (legacyCount > 0) {
-        await TestCase.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
-        testCases = await TestCase.find({ user_id: userId }).sort({ created_at: -1 });
-      }
-    }
+    const testCases = await TestCase.find({
+      $or: [{ user_id: userId }, { is_public: true }],
+    }).sort({ created_at: -1 });
 
     return NextResponse.json(testCases);
   } catch (error) {
@@ -90,7 +83,7 @@ export async function PUT(request: NextRequest) {
     const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
 
     const testCase = await TestCase.findOneAndUpdate(
-      { _id: id, user_id: userId },
+      { _id: id, user_id: userId, is_public: { $ne: true } },
       updateData,
       { new: true, runValidators: true }
     );
@@ -131,7 +124,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const testCase = await TestCase.findOneAndDelete({ _id: id, user_id: userId });
+    const testCase = await TestCase.findOneAndDelete({ _id: id, user_id: userId, is_public: { $ne: true } });
 
     if (!testCase) {
       return NextResponse.json(

@@ -7,6 +7,7 @@ export interface IInsight extends Document {
   content: string;
   category?: string;
   tags: string[];
+  is_public: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -31,6 +32,10 @@ const InsightSchema = new Schema<IInsight>({
   tags: {
     type: [String],
     default: [],
+  },
+  is_public: {
+    type: Boolean,
+    default: false,
   },
   created_at: {
     type: Date,

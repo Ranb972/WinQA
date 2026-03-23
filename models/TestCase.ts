@@ -9,6 +9,7 @@ export interface ITestCase extends Document {
   expected_outcome?: string;
   category?: string;
   difficulty?: string;
+  is_public: boolean;
   created_at: Date;
 }
 
@@ -38,6 +39,10 @@ const TestCaseSchema = new Schema<ITestCase>({
   },
   difficulty: {
     type: String,
+  },
+  is_public: {
+    type: Boolean,
+    default: false,
   },
   created_at: {
     type: Date,

@@ -14,6 +14,7 @@ export interface IBugReport extends Document {
   severity: Severity;
   user_notes?: string;
   status: BugStatus;
+  is_public: boolean;
   created_at: Date;
 }
 
@@ -51,6 +52,10 @@ const BugReportSchema = new Schema<IBugReport>({
     type: String,
     enum: ['Open', 'Investigating', 'Resolved'],
     default: 'Open',
+  },
+  is_public: {
+    type: Boolean,
+    default: false,
   },
   created_at: {
     type: Date,

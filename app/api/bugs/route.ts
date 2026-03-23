@@ -20,21 +20,14 @@ export async function GET(request: NextRequest) {
     const model = searchParams.get('model');
     const issueType = searchParams.get('issue_type');
 
-    const filter: Record<string, string> = { user_id: userId };
+    // Show user's own content + all public content
+    const ownershipFilter = { $or: [{ user_id: userId }, { is_public: true }] };
+    const filter: Record<string, unknown> = { ...ownershipFilter };
     if (status) filter.status = sanitizeQueryParam(status);
     if (model) filter.model_used = sanitizeQueryParam(model);
     if (issueType) filter.issue_type = sanitizeQueryParam(issueType);
 
-    let bugs = await BugReport.find(filter).sort({ created_at: -1 });
-
-    // Legacy migration: claim unowned docs on first empty result
-    if (bugs.length === 0) {
-      const legacyCount = await BugReport.countDocuments({ user_id: { $exists: false } });
-      if (legacyCount > 0) {
-        await BugReport.updateMany({ user_id: { $exists: false } }, { $set: { user_id: userId } });
-        bugs = await BugReport.find(filter).sort({ created_at: -1 });
-      }
-    }
+    const bugs = await BugReport.find(filter).sort({ created_at: -1 });
 
     return NextResponse.json(bugs);
   } catch (error) {
@@ -100,14 +93,14 @@ export async function PUT(request: NextRequest) {
     const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
 
     const bugReport = await BugReport.findOneAndUpdate(
-      { _id: id, user_id: userId },
+      { _id: id, user_id: userId, is_public: { $ne: true } },
       updateData,
       { new: true, runValidators: true }
     );
 
     if (!bugReport) {
       return NextResponse.json(
-        { error: 'Bug report not found' },
+        { error: 'Bug report not found or is read-only example content' },
         { status: 404 }
       );
     }
@@ -141,7 +134,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const bugReport = await BugReport.findOneAndDelete({ _id: id, user_id: userId });
+    const bugReport = await BugReport.findOneAndDelete({ _id: id, user_id: userId, is_public: { $ne: true } });
 
     if (!bugReport) {
       return NextResponse.json(
