@@ -55,6 +55,14 @@
   background: rgb(71 85 105);
 }
 
+/* Hide scrollbar completely */
+html {
+  scrollbar-width: none; /* Firefox */
+}
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
 /* ========================================
    GLASSMORPHISM EFFECTS
    ======================================== */
