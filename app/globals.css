@@ -482,3 +482,38 @@ pre code {
       0 0 50px rgba(52, 211, 153, 0.3);
   }
 }
+
+/* ========================================
+   LANDING PAGE — GLITCH THEME
+   ======================================== */
+
+/* Film grain animation */
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -10%); }
+  20% { transform: translate(-15%, 5%); }
+  30% { transform: translate(7%, -25%); }
+  40% { transform: translate(-5%, 25%); }
+  50% { transform: translate(-15%, 10%); }
+  60% { transform: translate(15%, 0%); }
+  70% { transform: translate(0%, 15%); }
+  80% { transform: translate(3%, 35%); }
+  90% { transform: translate(-10%, 10%); }
+}
+
+.animate-grain {
+  animation: grain 8s steps(10) infinite;
+}
+
+/* Font aliases for landing page components */
+.font-heading {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+::selection {
+  background: rgba(249, 115, 22, 0.3);
+  color: white;
+}
