@@ -110,8 +110,8 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
         className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
           isActive
-            ? 'bg-gradient-to-r from-violet-600/20 to-purple-600/20 text-violet-300 border border-violet-500/30'
-            : 'text-slate-300 hover:text-white hover:bg-white/5'
+            ? 'bg-orange-500/10 text-orange-500 border border-orange-500/30'
+            : 'text-zinc-400 hover:text-white hover:bg-white/5'
         )}
       >
         {item.icon}
@@ -138,7 +138,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
                   {dropItem.icon}
                   <span>{dropItem.label}</span>
                   {dropItem.badge && (
-                    <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                    <span className="ml-auto text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
                       {dropItem.badge}
                     </span>
                   )}
@@ -192,12 +192,12 @@ export default function Navbar() {
     <>
       {/* Desktop Navbar */}
       <nav className="fixed top-4 left-4 right-4 z-50 hidden md:block">
-        <div className="glass-nav rounded-2xl px-6 py-3 max-w-7xl mx-auto">
+        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-2xl px-6 py-3 max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-white tracking-tight">
-                WinQA
+              <span className="text-2xl font-bold text-white tracking-tight font-heading">
+                Win<span className="text-orange-500">QA</span>
               </span>
             </Link>
 
@@ -221,8 +221,8 @@ export default function Navbar() {
                       className={cn(
                         'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                         isActive
-                          ? 'bg-gradient-to-r from-violet-600/20 to-purple-600/20 text-violet-300 border border-violet-500/30'
-                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                          ? 'bg-orange-500/10 text-orange-500 border border-orange-500/30'
+                          : 'text-zinc-400 hover:text-white hover:bg-white/5'
                       )}
                     >
                       {item.icon}
@@ -238,7 +238,7 @@ export default function Navbar() {
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: 'h-8 w-8 ring-2 ring-violet-500/30',
+                    avatarBox: 'h-8 w-8 ring-2 ring-orange-500/30',
                   },
                 }}
               />
@@ -249,19 +249,19 @@ export default function Navbar() {
 
       {/* Mobile Navbar */}
       <nav className="fixed top-4 left-4 right-4 z-50 md:hidden">
-        <div className="glass-nav rounded-2xl px-4 py-3">
+        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-2xl px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold text-white tracking-tight">
-                WinQA
+              <span className="text-xl font-bold text-white tracking-tight font-heading">
+                Win<span className="text-orange-500">QA</span>
               </span>
             </Link>
 
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -277,7 +277,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className="glass-nav rounded-2xl mt-2 p-4"
+              className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-2xl mt-2 p-4"
             >
             <div className="space-y-2">
               {navItems.map((item) => {
@@ -292,8 +292,8 @@ export default function Navbar() {
                         className={cn(
                           'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                           isActive
-                            ? 'bg-violet-600/20 text-violet-300'
-                            : 'text-slate-300 hover:bg-white/5'
+                            ? 'bg-orange-500/10 text-orange-500'
+                            : 'text-zinc-400 hover:bg-white/5'
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -322,12 +322,12 @@ export default function Navbar() {
                                 dropItem.disabled ? (
                                   <div
                                     key={dropItem.href}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 opacity-50 cursor-not-allowed"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-500 opacity-50 cursor-not-allowed"
                                   >
                                     {dropItem.icon}
                                     <span>{dropItem.label}</span>
                                     {dropItem.badge && (
-                                      <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                                      <span className="ml-auto text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
                                         {dropItem.badge}
                                       </span>
                                     )}
@@ -340,8 +340,8 @@ export default function Navbar() {
                                     className={cn(
                                       'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
                                       pathname === dropItem.href.split('?')[0]
-                                        ? 'bg-violet-600/20 text-violet-300'
-                                        : 'text-slate-300 hover:bg-white/5'
+                                        ? 'bg-orange-500/10 text-orange-500'
+                                        : 'text-zinc-400 hover:bg-white/5'
                                     )}
                                   >
                                     {dropItem.icon}
@@ -365,8 +365,8 @@ export default function Navbar() {
                     className={cn(
                       'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-violet-600/20 text-violet-300'
-                        : 'text-slate-300 hover:bg-white/5'
+                        ? 'bg-orange-500/10 text-orange-500'
+                        : 'text-zinc-400 hover:bg-white/5'
                     )}
                   >
                     {item.icon}
@@ -377,21 +377,21 @@ export default function Navbar() {
             </div>
 
             {/* User Section in Mobile */}
-            <div className="mt-4 pt-4 border-t border-slate-700/50">
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <div className="flex items-center gap-3 px-3 py-2">
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: 'h-10 w-10 ring-2 ring-violet-500/30',
+                      avatarBox: 'h-10 w-10 ring-2 ring-orange-500/30',
                     },
                   }}
                   afterSignOutUrl="/"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-200 truncate">
+                  <p className="text-sm font-medium text-zinc-200 truncate">
                     Account
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-zinc-500">
                     Tap avatar to sign out
                   </p>
                 </div>

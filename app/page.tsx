@@ -14,10 +14,37 @@ import {
   FlaskConical,
   Code,
   Rocket,
-  Github,
   Swords,
-  ChevronDown,
   Search,
+  Zap,
+  Trophy,
+  Repeat,
+  Timer,
+  KeyRound,
+  Play,
+  Wrench,
+  BrainCircuit,
+  Terminal,
+  Gamepad2,
+  Target,
+  EyeOff,
+  Shield,
+  RefreshCw,
+  Tag,
+  BarChart3,
+  Link2,
+  BookOpen,
+  ScrollText,
+  Star,
+  Filter,
+  ClipboardCopy,
+  Compass,
+  Map,
+  SearchCode,
+  Share2,
+  TrendingUp,
+  Users,
+  Lock,
 } from 'lucide-react';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 
@@ -31,7 +58,7 @@ import { Footer } from '@/components/glitch/footer';
 import { FilmGrain } from '@/components/glitch/film-grain';
 
 // ============================================================
-// DASHBOARD (signed-in) — data + components (unchanged)
+// DASHBOARD (signed-in) — investigation theme
 // ============================================================
 
 const featureSections = [
@@ -40,18 +67,13 @@ const featureSections = [
     title: 'CHAT LAB · COMPARE MODE',
     icon: FlaskConical,
     href: '/chat-lab',
-    borderColor: 'border-purple-500/30',
-    hoverGlow: 'hover:shadow-purple-500/20',
-    gradient: 'from-purple-500 to-violet-600',
-    iconBg: 'bg-purple-500/20',
-    dotColor: 'bg-purple-500',
     images: ['/images/dashboard/chat-lab.png', '/images/dashboard/chat-lab-2.png'],
     bullets: [
-      { emoji: '🔥', text: 'Pit AI giants against each other - who wins?' },
-      { emoji: '👑', text: 'Crown the champion for any task' },
-      { emoji: '⚔️', text: 'Switch warriors mid-battle with one click' },
-      { emoji: '⏱️', text: "See who's fastest to the answer" },
-      { emoji: '🔓', text: 'Unleash premium models with your own keys' },
+      { icon: Swords, text: 'Pit AI giants against each other - who wins?' },
+      { icon: Trophy, text: 'Crown the champion for any task' },
+      { icon: Repeat, text: 'Switch models mid-conversation with one click' },
+      { icon: Timer, text: "See who's fastest to the answer" },
+      { icon: KeyRound, text: 'Unleash premium models with your own keys' },
     ],
     statsTemplate: () => 'Compare AI models side-by-side',
   },
@@ -60,18 +82,13 @@ const featureSections = [
     title: 'CODE TESTING LAB',
     icon: Code,
     href: '/code-testing',
-    borderColor: 'border-emerald-500/30',
-    hoverGlow: 'hover:shadow-emerald-500/20',
-    gradient: 'from-emerald-500 to-teal-500',
-    iconBg: 'bg-emerald-500/20',
-    dotColor: 'bg-emerald-500',
     images: ['/images/dashboard/code-testing.png', '/images/dashboard/code-testing-2.png'],
     bullets: [
-      { emoji: '⚡', text: 'Run code instantly in your browser' },
-      { emoji: '🔧', text: 'Let AI find and fix your bugs' },
-      { emoji: '💡', text: 'Discover why your code works or fails' },
-      { emoji: '🐍', text: 'Command JavaScript, Python & TypeScript' },
-      { emoji: '🎮', text: 'Watch your creations come alive' },
+      { icon: Zap, text: 'Run code instantly in your browser' },
+      { icon: Wrench, text: 'Let AI find and fix your bugs' },
+      { icon: BrainCircuit, text: 'Discover why your code works or fails' },
+      { icon: Terminal, text: 'Command JavaScript, Python & TypeScript' },
+      { icon: Gamepad2, text: 'Watch your creations come alive' },
     ],
     statsTemplate: () => 'Run code instantly in your browser',
   },
@@ -80,18 +97,13 @@ const featureSections = [
     title: 'AI BATTLE',
     icon: Swords,
     href: '/battle',
-    borderColor: 'border-orange-500/30',
-    hoverGlow: 'hover:shadow-orange-500/20',
-    gradient: 'from-orange-500 to-amber-600',
-    iconBg: 'bg-orange-500/20',
-    dotColor: 'bg-orange-500',
     images: ['/images/dashboard/battle.png', '/images/dashboard/battle-2.png'],
     bullets: [
-      { emoji: '⚔️', text: 'Two AIs, one challenge - only one survives' },
-      { emoji: '🎯', text: '9 unique battle types from code duels to emoji wars' },
-      { emoji: '🎭', text: 'Blindfold mode - guess who wrote what before the reveal' },
-      { emoji: '👑', text: 'Battle Royale - 4 models enter, 1 champion remains' },
-      { emoji: '📊', text: 'Live leaderboard tracks every victory' },
+      { icon: Swords, text: 'Two AIs, one challenge - only one survives' },
+      { icon: Target, text: '9 unique battle types from code duels to emoji wars' },
+      { icon: EyeOff, text: 'Blindfold mode - guess who wrote what before the reveal' },
+      { icon: Trophy, text: 'Battle Royale - 4 models enter, 1 champion remains' },
+      { icon: BarChart3, text: 'Live leaderboard tracks every victory' },
     ],
     statsTemplate: (stats: { battles: number }) =>
       stats.battles > 0
@@ -103,18 +115,13 @@ const featureSections = [
     title: 'TEST CASES',
     icon: TestTube2,
     href: '/test-cases',
-    borderColor: 'border-cyan-500/30',
-    hoverGlow: 'hover:shadow-cyan-500/20',
-    gradient: 'from-cyan-500 to-blue-500',
-    iconBg: 'bg-cyan-500/20',
-    dotColor: 'bg-cyan-500',
     images: ['/images/dashboard/test-cases.png', '/images/dashboard/test-cases-2.png'],
     bullets: [
-      { emoji: '🎭', text: 'Interrogate AI - will it crack under pressure?' },
-      { emoji: '🕵️', text: 'Catch lies and hallucinations red-handed' },
-      { emoji: '🛡️', text: 'Test defenses against prompt injection attacks' },
-      { emoji: '⚔️', text: 'Craft your own trial scenarios' },
-      { emoji: '🔄', text: 'Put every model through the same trial' },
+      { icon: Search, text: 'Interrogate AI - will it crack under pressure?' },
+      { icon: Target, text: 'Catch lies and hallucinations red-handed' },
+      { icon: Shield, text: 'Test defenses against prompt injection attacks' },
+      { icon: Swords, text: 'Craft your own trial scenarios' },
+      { icon: RefreshCw, text: 'Put every model through the same trial' },
     ],
     statsTemplate: (stats: { testCases: number }) => `${stats.testCases} test cases available`,
   },
@@ -123,18 +130,13 @@ const featureSections = [
     title: 'BUG LOG',
     icon: Bug,
     href: '/bugs',
-    borderColor: 'border-rose-500/30',
-    hoverGlow: 'hover:shadow-rose-500/20',
-    gradient: 'from-rose-500 to-pink-600',
-    iconBg: 'bg-rose-500/20',
-    dotColor: 'bg-rose-500',
     images: ['/images/dashboard/bug-log.png', '/images/dashboard/bug-log-2.png'],
     bullets: [
-      { emoji: '🎯', text: 'Capture AI failures with a single click' },
-      { emoji: '🏷️', text: 'Tag the crime: Hallucination, Logic, Formatting, Refusal' },
-      { emoji: '📊', text: 'Track threat level and case status' },
-      { emoji: '🔗', text: 'Link every bug to the prompt that spawned it' },
-      { emoji: '📚', text: 'Build your knowledge base of AI failures' },
+      { icon: Target, text: 'Capture AI failures with a single click' },
+      { icon: Tag, text: 'Tag the crime: Hallucination, Logic, Formatting, Refusal' },
+      { icon: BarChart3, text: 'Track threat level and case status' },
+      { icon: Link2, text: 'Link every bug to the prompt that spawned it' },
+      { icon: BookOpen, text: 'Build your knowledge base of AI failures' },
     ],
     statsTemplate: (stats: { bugs: number; resolvedBugs: number }) =>
       `${stats.bugs} bugs documented | ${stats.resolvedBugs} resolved`,
@@ -144,18 +146,13 @@ const featureSections = [
     title: 'PROMPT LIBRARY',
     icon: Library,
     href: '/prompts',
-    borderColor: 'border-amber-500/30',
-    hoverGlow: 'hover:shadow-amber-500/20',
-    gradient: 'from-amber-500 to-orange-500',
-    iconBg: 'bg-amber-500/20',
-    dotColor: 'bg-amber-500',
     images: ['/images/dashboard/prompt-library.png', '/images/dashboard/prompt-library-2.png'],
     bullets: [
-      { emoji: '⚗️', text: 'Transform weak prompts into effective ones' },
-      { emoji: '📜', text: 'Master techniques like Chain of Thought' },
-      { emoji: '⭐', text: 'Collect high-quality prompt examples' },
-      { emoji: '🏷️', text: 'Filter your collection by category' },
-      { emoji: '📋', text: 'Copy-paste ready prompts' },
+      { icon: ScrollText, text: 'Transform weak prompts into effective ones' },
+      { icon: BrainCircuit, text: 'Master techniques like Chain of Thought' },
+      { icon: Star, text: 'Collect high-quality prompt examples' },
+      { icon: Filter, text: 'Filter your collection by category' },
+      { icon: ClipboardCopy, text: 'Copy-paste ready prompts' },
     ],
     statsTemplate: (stats: { prompts: number }) => `${stats.prompts} prompt examples`,
   },
@@ -164,27 +161,16 @@ const featureSections = [
     title: 'INSIGHTS',
     icon: Lightbulb,
     href: '/insights',
-    borderColor: 'border-yellow-500/30',
-    hoverGlow: 'hover:shadow-yellow-500/20',
-    gradient: 'from-yellow-500 to-amber-500',
-    iconBg: 'bg-yellow-500/20',
-    dotColor: 'bg-yellow-500',
     images: ['/images/dashboard/insights.png', '/images/dashboard/insights-2.png'],
     bullets: [
-      { emoji: '🔭', text: 'Chart undiscovered patterns in AI behavior' },
-      { emoji: '🗺️', text: 'Map which models excel in which domains' },
-      { emoji: '🧠', text: 'Build your knowledge base' },
-      { emoji: '🔍', text: 'Search the archives for insights' },
-      { emoji: '📤', text: 'Share discoveries (coming soon)' },
+      { icon: Compass, text: 'Chart undiscovered patterns in AI behavior' },
+      { icon: Map, text: 'Map which models excel in which domains' },
+      { icon: BrainCircuit, text: 'Build your knowledge base' },
+      { icon: SearchCode, text: 'Search the archives for insights' },
+      { icon: Share2, text: 'Share discoveries (coming soon)' },
     ],
     statsTemplate: (stats: { insights: number }) => `${stats.insights} insights documented`,
   },
-];
-
-const comingSoonFeatures = [
-  { emoji: '📈', text: 'Analytics Dashboard - Visualize your testing patterns' },
-  { emoji: '🤝', text: 'Team Features - Collaborate on prompt engineering' },
-  { emoji: '🌐', text: 'Public Prompt Sharing - Learn from the community' },
 ];
 
 // Rotating Image Preview Component (Dashboard)
@@ -200,7 +186,7 @@ function RotatingImagePreview({ images, priority = false }: { images: string[]; 
   }, [images.length]);
 
   return (
-    <div className="relative h-[200px] md:h-[220px] rounded-xl overflow-hidden group border border-slate-700/50">
+    <div className="relative h-[200px] md:h-[220px] rounded-lg overflow-hidden group border border-white/[0.06]">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -220,7 +206,7 @@ function RotatingImagePreview({ images, priority = false }: { images: string[]; 
           />
         </motion.div>
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/30 to-transparent pointer-events-none rounded-xl" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
     </div>
   );
 }
@@ -243,97 +229,127 @@ function FeatureShowcaseSection({
 
   return (
     <MotionWrapper delay={index * 0.1}>
-      <section
-        className={`glass-card-premium rounded-2xl p-6 md:p-8 border-l-4 ${feature.borderColor} ${feature.hoverGlow} hover:shadow-lg transition-all duration-300`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <section className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden hover:border-orange-500/30 transition-all duration-300 group">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-orange-500/40 rounded-tl-lg" />
+        <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-orange-500/40 rounded-tr-lg" />
+        <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-orange-500/40 rounded-bl-lg" />
+        <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-orange-500/40 rounded-br-lg" />
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 md:p-6 border-b border-white/[0.06]">
           <div className="flex items-center gap-4">
-            <div
-              className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center`}
-            >
-              <Icon className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <Icon className="h-5 w-5 text-orange-500" />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-white font-heading">
               {feature.title}
             </h2>
           </div>
           <Link href={feature.href}>
             <motion.button
-              className="btn-primary inline-flex items-center gap-2 text-sm"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="bg-orange-500 hover:bg-orange-400 text-black font-medium px-4 py-2 rounded text-sm transition-colors inline-flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               Try Now <ArrowRight className="h-4 w-4" />
             </motion.button>
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        {/* Content */}
+        <div className="grid md:grid-cols-2 gap-6 p-4 md:p-6">
           <RotatingImagePreview images={feature.images} priority={isFirst} />
           <ul className="space-y-3">
-            {feature.bullets.map((bullet, idx) => (
-              <motion.li
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.05 }}
-                className="flex items-start gap-3"
-              >
-                <span className="text-lg flex-shrink-0">{bullet.emoji}</span>
-                <span className="text-slate-300 text-sm md:text-base">{bullet.text}</span>
-              </motion.li>
-            ))}
+            {feature.bullets.map((bullet, idx) => {
+              const BulletIcon = bullet.icon;
+              return (
+                <motion.li
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="flex items-start gap-3 text-sm text-zinc-400"
+                >
+                  <BulletIcon className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                  <span>{bullet.text}</span>
+                </motion.li>
+              );
+            })}
           </ul>
         </div>
 
-        <div className="pt-4 border-t border-slate-700/50">
-          {isLoading ? (
-            <div className="h-5 w-48 bg-slate-800/50 rounded animate-pulse"></div>
-          ) : (
-            <p className="text-sm text-slate-400">
-              <span className="font-medium text-slate-300">{feature.statsTemplate(stats)}</span>
-            </p>
-          )}
+        {/* Footer */}
+        <div className="px-4 md:px-6 pb-4 md:pb-6">
+          <div className="pt-3 border-t border-white/[0.04]">
+            {isLoading ? (
+              <div className="h-4 w-48 bg-white/[0.04] rounded animate-pulse"></div>
+            ) : (
+              <p className="text-xs text-zinc-600 font-mono">
+                {feature.statsTemplate(stats)}
+              </p>
+            )}
+          </div>
         </div>
       </section>
     </MotionWrapper>
   );
 }
 
-// Coming Soon Section Component (Dashboard)
-function ComingSoonSection() {
+// Under Development Section (Dashboard)
+function UnderDevelopmentSection() {
+  const upcoming = [
+    {
+      icon: TrendingUp,
+      title: 'Analytics Dashboard',
+      description: 'Deep analysis of model performance, win rates, hallucination patterns, and testing trends. Your data, visualized.',
+    },
+    {
+      icon: Users,
+      title: 'Team Collaboration',
+      description: 'Shared workspaces, team investigations, collaborative bug tracking, and shared prompt libraries. Test AI together.',
+    },
+  ];
+
   return (
     <MotionWrapper delay={0.7}>
-      <section className="glass-card-premium rounded-2xl p-6 md:p-8 border-l-4 border-transparent bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 relative overflow-hidden">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500 via-pink-500 to-blue-500" />
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 flex items-center justify-center animate-pulse">
-            <Rocket className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
-              COMING SOON
-            </h2>
-            <p className="text-slate-400 text-sm">Exciting features in development</p>
-          </div>
-        </div>
-        <ul className="space-y-3">
-          {comingSoonFeatures.map((item, idx) => (
-            <motion.li
-              key={idx}
-              initial={{ opacity: 0, x: -10 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex items-center gap-3"
+      {/* Section label */}
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <span className="w-12 h-px bg-orange-500/50" />
+        <span className="text-orange-500 font-mono text-xs tracking-[0.2em] uppercase">
+          Under Development
+        </span>
+        <span className="w-12 h-px bg-orange-500/50" />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        {upcoming.map((item) => {
+          const ItemIcon = item.icon;
+          return (
+            <div
+              key={item.title}
+              className="relative p-6 rounded-lg border border-dashed border-white/[0.08] bg-white/[0.01] opacity-80"
             >
-              <span className="text-lg">{item.emoji}</span>
-              <span className="text-slate-400">{item.text}</span>
-            </motion.li>
-          ))}
-        </ul>
-      </section>
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center justify-center shrink-0">
+                  <ItemIcon className="w-5 h-5 text-orange-500/60" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-medium text-white font-heading">{item.title}</h3>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono border border-orange-500/20 bg-orange-500/5 text-orange-500/70">
+                      <Lock className="w-2.5 h-2.5" />
+                      Coming Soon
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </MotionWrapper>
   );
 }
@@ -369,19 +385,23 @@ function Dashboard() {
     <div className="space-y-8">
       <MotionWrapper>
         <header className="mb-4">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-white">Welcome back!</span>
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-orange-500 text-xs font-mono uppercase tracking-wider mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+            AI Investigation Unit
+          </span>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-white font-heading">
+            Welcome back!
           </h1>
-          <p className="text-slate-400 text-lg">
-            Ready to break some AI today? Explore our testing toolkit below.
+          <p className="text-zinc-500 text-base mt-2">
+            Ready to break some AI today? Explore your testing toolkit below.
           </p>
         </header>
       </MotionWrapper>
 
       {error && (
         <MotionWrapper>
-          <div className="bg-rose-950/20 border border-rose-900/30 rounded-lg p-4">
-            <p className="text-rose-400 text-sm">Unable to load stats: {error}</p>
+          <div className="bg-orange-950/20 border border-orange-900/30 rounded-lg p-4">
+            <p className="text-orange-400 text-sm">Unable to load stats: {error}</p>
           </div>
         </MotionWrapper>
       )}
@@ -397,7 +417,7 @@ function Dashboard() {
         />
       ))}
 
-      <ComingSoonSection />
+      <UnderDevelopmentSection />
     </div>
   );
 }

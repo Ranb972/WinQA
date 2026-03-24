@@ -44,12 +44,13 @@ export default function RootLayout({
         <ClerkProvider>
             <html lang="en" className="dark">
                 <body
-                    className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-slate-950 text-slate-100 min-h-screen`}
+                    className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-black text-slate-100 min-h-screen`}
                 >
-                    {/* Ambient background glow */}
-                    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-slate-500/[0.08] rounded-full blur-3xl" />
-                        <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl" />
+                    {/* Ambient background — investigation theme */}
+                    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+                        <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-orange-500/[0.03] rounded-full blur-3xl" />
+                        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-orange-500/[0.02] rounded-full blur-3xl" />
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:64px_64px]" />
                     </div>
 
                     <SignedIn>
