@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Trash2 } from 'lucide-react';
+import { Send, Loader2, Trash2, Bot, User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -340,9 +340,9 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-2rem)] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-white/[0.06]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.04] bg-white/[0.015] backdrop-blur-sm">
         <div className="overflow-x-auto">
           <ModelSelector
             mode={mode}
@@ -363,31 +363,71 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
           variant="ghost"
           size="sm"
           onClick={clearChat}
-          className="text-zinc-400 hover:text-rose-400 shrink-0 self-end sm:self-auto"
+          className="text-white/50 hover:text-white shrink-0 self-end sm:self-auto gap-2"
           disabled={messages.length === 0}
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Clear
+          <Trash2 className="h-4 w-4" />
+          Purge Record
         </Button>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 wq-scroll" ref={scrollRef}>
         {messages.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-            className="flex flex-col items-center justify-center h-full text-center"
+            className="flex items-center justify-center h-full"
           >
-            <div className="text-6xl mb-4">🧪</div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              Welcome to Chat Lab
-            </h3>
-            <p className="text-zinc-400 max-w-md">
-              Test prompts across different AI models. Select a model or enable
-              comparison mode to see how different LLMs respond.
-            </p>
+            <div className="text-center max-w-md px-6">
+              {mode === 'single' ? (
+                <>
+                  <div className="relative inline-block mb-6">
+                    <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/30 flex items-center justify-center">
+                      <Bot className="w-10 h-10 text-orange-500" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full animate-pulse" />
+                  </div>
+                  <h2 className="font-heading text-2xl font-bold text-white mb-3">
+                    Interrogation Ready
+                  </h2>
+                  <p className="text-white/50 text-sm leading-relaxed mb-6">
+                    The suspect is awaiting your questions. Select your target model and begin the interrogation. All responses will be logged for analysis.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-white/40">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    <span>Session active</span>
+                    <span className="mx-2">|</span>
+                    <span className="font-mono">{modelPreferences[selectedModel] || selectedModel}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    {[0, 1, 2].map(i => (
+                      <div
+                        key={i}
+                        className="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/30 flex items-center justify-center"
+                        style={{ transform: `translateY(${i === 1 ? -8 : 0}px)` }}
+                      >
+                        <Bot className="w-6 h-6 text-orange-500" />
+                      </div>
+                    ))}
+                  </div>
+                  <h2 className="font-heading text-2xl font-bold text-white mb-3">
+                    Comparative Interrogation
+                  </h2>
+                  <p className="text-white/50 text-sm leading-relaxed mb-6">
+                    Select up to 4 AI suspects and question them simultaneously. Compare their responses side-by-side to identify inconsistencies and evaluate performance.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-white/40">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    <span>{selectedModels.length} suspects selected</span>
+                  </div>
+                </>
+              )}
+            </div>
           </motion.div>
         ) : mode === 'single' ? (
           // Single mode: vertical stack
@@ -420,22 +460,20 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+                className="flex gap-4 py-4 border-t border-white/[0.04]"
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-sm font-medium text-orange-500">Assistant</span>
-                  <span className="text-xs px-2 py-0.5 rounded border bg-orange-500/10 text-orange-500 border-orange-500/30">
+                <div className="shrink-0 w-8 h-8 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-orange-500" />
+                </div>
+                <div className="flex-1">
+                  <span className="font-mono text-xs font-medium text-orange-500 mb-2 block uppercase tracking-wider">
                     {modelPreferences[selectedModel] || selectedModel}
                   </span>
-                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
-                </div>
-                <div className="flex items-center gap-3 text-zinc-400">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.1s]" />
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="flex gap-1.5">
+                    <span className="w-2 h-2 bg-orange-500/60 rounded-full animate-pulse" />
+                    <span className="w-2 h-2 bg-orange-500/60 rounded-full animate-pulse" style={{ animationDelay: '0.15s' }} />
+                    <span className="w-2 h-2 bg-orange-500/60 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
                   </div>
-                  <span className="text-sm">Thinking...</span>
                 </div>
               </motion.div>
             )}
@@ -515,28 +553,37 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t border-white/[0.06]">
-        <div className="max-w-4xl mx-auto flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your prompt here... (Shift+Enter for new line)"
-            className="flex-1 min-h-[60px] max-h-[200px] bg-white/[0.02] border-white/[0.06] text-white placeholder:text-zinc-500 resize-none focus:border-orange-500/50 focus:ring-orange-500/30"
-            disabled={isLoading}
-          />
+      <div className="border-t border-white/[0.04] bg-white/[0.015] backdrop-blur-sm px-6 py-4">
+        <div className="max-w-4xl mx-auto flex gap-3 items-end">
+          <div className="flex-1">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={mode === 'single'
+                ? "Begin interrogation... (Enter to send, Shift+Enter for new line)"
+                : "Begin comparative interrogation... (Enter to send, Shift+Enter for new line)"
+              }
+              className="w-full min-h-[48px] max-h-[200px] bg-white/[0.03] border-white/[0.06] hover:border-white/[0.1] text-sm text-white placeholder:text-white/40 resize-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/30 rounded-lg px-4 py-3 font-mono"
+              disabled={isLoading}
+            />
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6"
+            className="bg-orange-500 hover:bg-orange-400 text-black h-12 w-12 rounded-lg shrink-0"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             )}
           </Button>
+        </div>
+        <div className="max-w-4xl mx-auto mt-2 flex items-center justify-between text-[10px] text-white/40 font-mono tracking-wider uppercase">
+          <span>Session #{Date.now().toString(36).toUpperCase().slice(-6)}</span>
+          <span>{messages.filter(m => m.role === 'user').length} exchanges logged</span>
         </div>
       </div>
 

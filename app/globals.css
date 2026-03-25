@@ -24,6 +24,12 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 160 84% 39%;
     --radius: 0.5rem;
+
+    /* Investigation theme tokens */
+    --primary-hex: #f97316;
+    --primary-hover-hex: #fb923c;
+    --text-50: rgba(255, 255, 255, 0.50);
+    --text-40: rgba(255, 255, 255, 0.40);
   }
 
   * {
@@ -504,7 +510,7 @@ pre code {
   color: white;
 }
 
-/* Investigation card */
+/* Investigation card with corner accents */
 .wq-card {
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -515,6 +521,28 @@ pre code {
 .wq-card:hover {
   border-color: rgba(249, 115, 22, 0.30);
   box-shadow: 0 0 30px rgba(249, 115, 22, 0.05);
+}
+.wq-card::before,
+.wq-card::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: rgba(249, 115, 22, 0.45);
+  border-style: solid;
+  pointer-events: none;
+}
+.wq-card::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+  border-radius: 2px 0 0 0;
+}
+.wq-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+  border-radius: 0 0 2px 0;
 }
 
 /* Orange-tinted scrollbar for scrollable areas */
