@@ -342,7 +342,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.04] bg-white/[0.015] backdrop-blur-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-orange-500/30">
         <div className="overflow-x-auto">
           <ModelSelector
             mode={mode}
@@ -367,7 +367,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
           disabled={messages.length === 0}
         >
           <Trash2 className="h-4 w-4" />
-          Purge Record
+          Clear
         </Button>
       </div>
 
@@ -553,26 +553,23 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-white/[0.04] bg-white/[0.015] backdrop-blur-sm px-6 py-4">
-        <div className="max-w-4xl mx-auto flex gap-3 items-end">
-          <div className="flex-1">
+      <div className="border-t border-white/[0.04] px-6 py-4">
+        <div className="flex gap-3 items-end">
+          <div className="flex-1 wq-card !rounded-lg overflow-hidden">
             <Textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={mode === 'single'
-                ? "Begin interrogation... (Enter to send, Shift+Enter for new line)"
-                : "Begin comparative interrogation... (Enter to send, Shift+Enter for new line)"
-              }
-              className="w-full min-h-[48px] max-h-[200px] bg-white/[0.03] border-white/[0.06] hover:border-white/[0.1] text-sm text-white placeholder:text-white/40 resize-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/30 rounded-lg px-4 py-3 font-mono"
+              placeholder="Begin interrogation... (Enter to send, Shift+Enter for new line)"
+              className="w-full min-h-[48px] max-h-[200px] bg-transparent border-0 text-sm text-white placeholder:text-white/40 resize-none focus:ring-0 focus:outline-none px-4 py-3"
               disabled={isLoading}
             />
           </div>
           <Button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
-            className="bg-orange-500 hover:bg-orange-400 text-black h-12 w-12 rounded-lg shrink-0"
+            className="bg-orange-500/80 hover:bg-orange-500 text-black h-12 w-12 rounded-lg shrink-0"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -581,8 +578,8 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             )}
           </Button>
         </div>
-        <div className="max-w-4xl mx-auto mt-2 flex items-center justify-between text-[10px] text-white/40 font-mono tracking-wider uppercase">
-          <span>Session #{Date.now().toString(36).toUpperCase().slice(-6)}</span>
+        <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 font-mono tracking-wider uppercase">
+          <span>Session #...</span>
           <span>{messages.filter(m => m.role === 'user').length} exchanges logged</span>
         </div>
       </div>
