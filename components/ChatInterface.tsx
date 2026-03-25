@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ModelSelector from '@/components/ModelSelector';
 import ChatMessage from '@/components/ChatMessage';
 import BugReportModal from '@/components/BugReportModal';
-import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels } from '@/lib/llm';
+import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames } from '@/lib/llm';
 import { cn } from '@/lib/utils';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import { getModelPreferences, setModelPreference } from '@/lib/model-preferences';
@@ -342,7 +342,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-orange-500/30">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.06]">
         <div className="overflow-x-auto">
           <ModelSelector
             mode={mode}
@@ -378,47 +378,43 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-            className="flex items-center justify-center h-full"
+            className="flex items-center justify-center h-full py-24"
           >
             <div className="text-center max-w-md px-6">
               {mode === 'single' ? (
                 <>
-                  <div className="relative inline-block mb-6">
-                    <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/30 flex items-center justify-center">
+                  <div className="relative inline-block mb-8">
+                    <div className="bg-orange-500/10 rounded-2xl p-5">
                       <Bot className="w-10 h-10 text-orange-500" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full animate-pulse" />
+                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full animate-pulse" />
                   </div>
                   <h2 className="font-heading text-2xl font-bold text-white mb-3">
                     Interrogation Ready
                   </h2>
-                  <p className="text-white/50 text-sm leading-relaxed mb-6">
+                  <p className="text-white/50 text-sm leading-relaxed mb-8">
                     The suspect is awaiting your questions. Select your target model and begin the interrogation. All responses will be logged for analysis.
                   </p>
                   <div className="flex items-center justify-center gap-2 text-xs text-white/40">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                     <span>Session active</span>
-                    <span className="mx-2">|</span>
-                    <span className="font-mono">{modelPreferences[selectedModel] || selectedModel}</span>
+                    <span className="mx-2 text-white/20">|</span>
+                    <span className="font-mono">{modelDisplayNames[selectedModel] || selectedModel}</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    {[0, 1, 2].map(i => (
-                      <div
-                        key={i}
-                        className="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/30 flex items-center justify-center"
-                        style={{ transform: `translateY(${i === 1 ? -8 : 0}px)` }}
-                      >
-                        <Bot className="w-6 h-6 text-orange-500" />
-                      </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+                    {selectedModels.map((m) => (
+                      <span key={m} className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 font-mono">
+                        {modelDisplayNames[m] || m}
+                      </span>
                     ))}
                   </div>
                   <h2 className="font-heading text-2xl font-bold text-white mb-3">
                     Comparative Interrogation
                   </h2>
-                  <p className="text-white/50 text-sm leading-relaxed mb-6">
+                  <p className="text-white/40 text-sm leading-relaxed mb-8">
                     Select up to 4 AI suspects and question them simultaneously. Compare their responses side-by-side to identify inconsistencies and evaluate performance.
                   </p>
                   <div className="flex items-center justify-center gap-2 text-xs text-white/40">
@@ -553,30 +549,28 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-white/[0.04] px-6 py-4">
+      <div className="mt-2 border-t border-white/[0.04] px-6 py-4">
         <div className="flex gap-3 items-end">
-          <div className="flex-1 wq-card !rounded-lg overflow-hidden">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Begin interrogation... (Enter to send, Shift+Enter for new line)"
-              className="w-full min-h-[48px] max-h-[200px] bg-transparent border-0 text-sm text-white placeholder:text-white/40 resize-none focus:ring-0 focus:outline-none px-4 py-3"
-              disabled={isLoading}
-            />
-          </div>
-          <Button
+          <Textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Begin interrogation... (Enter to send, Shift+Enter for new line)"
+            className="flex-1 min-h-[48px] max-h-[200px] bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-white/40 resize-none focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20 px-4 py-3"
+            disabled={isLoading}
+          />
+          <button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
-            className="bg-orange-500/80 hover:bg-orange-500 text-black h-12 w-12 rounded-lg shrink-0"
+            className="w-10 h-10 rounded-lg bg-orange-500/80 hover:bg-orange-500 text-black flex items-center justify-center shrink-0 disabled:opacity-40 transition-colors"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
-          </Button>
+          </button>
         </div>
         <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 font-mono tracking-wider uppercase">
           <span>Session #...</span>
