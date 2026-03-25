@@ -233,14 +233,14 @@ function InsightsPageContent() {
       <MotionWrapper>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
               <Lightbulb className="h-6 w-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">
                 <span className="text-white">Insights</span>
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-zinc-400 mt-1">
                 Document your learnings about AI models and prompt engineering
               </p>
             </div>
@@ -259,24 +259,24 @@ function InsightsPageContent() {
         <div className="space-y-4 mb-6">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title or content..."
-              className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+              className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
             />
           </div>
 
           {/* Tag Filter */}
           {allTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-slate-500">Tags:</span>
+              <span className="text-sm text-zinc-500">Tags:</span>
               <Badge
                 className={`cursor-pointer transition-all ${
                   !selectedTag
-                    ? 'bg-violet-600/30 text-violet-300 border-violet-500/50'
-                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
+                    ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
+                    : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
                 }`}
                 onClick={() => setSelectedTag(null)}
               >
@@ -287,8 +287,8 @@ function InsightsPageContent() {
                   key={tag}
                   className={`cursor-pointer transition-all ${
                     selectedTag === tag
-                      ? 'bg-violet-600/30 text-violet-300 border-violet-500/50'
-                      : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
+                      ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
+                      : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
                   }`}
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                 >
@@ -330,10 +330,10 @@ function InsightsPageContent() {
         <MotionWrapper>
           <div className="text-center py-16">
             <div className="text-6xl mb-4">💡</div>
-            <h3 className="text-lg font-medium text-slate-200 mb-2">
+            <h3 className="text-lg font-medium text-white mb-2">
               {hasActiveFilters ? 'No matching insights' : 'No insights yet'}
             </h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-zinc-400 mb-6">
               {hasActiveFilters
                 ? 'Try adjusting your search or tag filter'
                 : 'Start documenting your learnings about AI behavior'}
@@ -365,7 +365,7 @@ function InsightsPageContent() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5 text-amber-400" />
-                    <CardTitle className="text-slate-100 text-lg line-clamp-2">
+                    <CardTitle className="text-white text-lg line-clamp-2">
                       {insight.title}
                     </CardTitle>
                     {insight.is_public && (
@@ -382,7 +382,7 @@ function InsightsPageContent() {
                         e.stopPropagation();
                         handleEdit(insight);
                       }}
-                      className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100"
+                      className="h-8 w-8 p-0 text-zinc-400 hover:text-white"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -394,7 +394,7 @@ function InsightsPageContent() {
                           e.stopPropagation();
                           handleDelete(insight._id);
                         }}
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+                        className="h-8 w-8 p-0 text-zinc-400 hover:text-rose-400"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -403,7 +403,7 @@ function InsightsPageContent() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 flex-1 overflow-hidden">
-                <p className="text-sm text-slate-300 line-clamp-4">
+                <p className="text-sm text-zinc-400 line-clamp-4">
                   {insight.content}
                 </p>
 
@@ -412,7 +412,7 @@ function InsightsPageContent() {
                     {insight.tags.map((tag) => (
                       <Badge
                         key={tag}
-                        className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs"
+                        className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
                       >
                         {tag}
                       </Badge>
@@ -420,7 +420,7 @@ function InsightsPageContent() {
                   </div>
                 )}
 
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-500">
                   Updated {formatDate(insight.updated_at)}
                 </p>
               </CardContent>
@@ -433,43 +433,43 @@ function InsightsPageContent() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+        <DialogContent className="glass border-white/[0.06] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {editingInsight ? 'Edit Insight' : 'New Insight'}
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-zinc-400">
               Document a learning or observation about AI models
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Title *
               </label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Cohere struggles with Hebrew"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Content *
               </label>
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Describe your insight in detail..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[150px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[150px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
@@ -494,13 +494,13 @@ function InsightsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                  className="bg-white/[0.02] border-white/[0.06] text-white flex-1 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => addTag(tagInput)}
-                  className="border-slate-700 hover:border-violet-500/50"
+                  className="border-white/[0.06] hover:border-orange-500/50"
                 >
                   Add
                 </Button>
@@ -511,7 +511,7 @@ function InsightsPageContent() {
                   .map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-slate-800/50 text-slate-500 border-slate-700 cursor-pointer hover:border-violet-500/50 text-xs"
+                      className="bg-white/[0.02] text-zinc-500 border-white/[0.06] cursor-pointer hover:border-orange-500/50 text-xs"
                       onClick={() => addTag(tag)}
                     >
                       + {tag}
@@ -525,7 +525,7 @@ function InsightsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-400 hover:text-white"
             >
               Cancel
             </Button>
@@ -542,33 +542,33 @@ function InsightsPageContent() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+        <DialogContent className="glass border-white/[0.06] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {viewingInsight?.title}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1 block">
                 Content
               </label>
-              <p className="text-sm text-slate-300 whitespace-pre-wrap bg-slate-950/50 border border-slate-700 rounded-lg p-3">
+              <p className="text-sm text-zinc-400 whitespace-pre-wrap bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
                 {viewingInsight?.content}
               </p>
             </div>
 
             {viewingInsight?.tags && viewingInsight.tags.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-1 block">
+                <label className="text-sm font-medium text-zinc-400 mb-1 block">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-1">
                   {viewingInsight.tags.map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs"
+                      className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
                     >
                       {tag}
                     </Badge>
@@ -577,7 +577,7 @@ function InsightsPageContent() {
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-4 text-xs text-zinc-500">
               <span>Created {formatDate(viewingInsight?.created_at || '')}</span>
               <span>Updated {formatDate(viewingInsight?.updated_at || '')}</span>
             </div>
@@ -587,7 +587,7 @@ function InsightsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setViewDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-400 hover:text-white"
             >
               Close
             </Button>

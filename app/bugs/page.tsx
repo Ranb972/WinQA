@@ -55,10 +55,10 @@ const severityColors = {
 };
 
 const issueTypeColors = {
-  Hallucination: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
-  Formatting: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
-  Refusal: 'bg-orange-600/20 text-orange-400 border-orange-600/30',
-  Logic: 'bg-cyan-600/20 text-cyan-400 border-cyan-600/30',
+  Hallucination: 'bg-orange-600/20 text-orange-400 border-orange-600/30',
+  Formatting: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
+  Refusal: 'bg-red-600/20 text-red-400 border-red-600/30',
+  Logic: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
 };
 
 function BugsPageContent() {
@@ -280,14 +280,14 @@ function BugsPageContent() {
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center">
               <Bug className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="text-white">Bug Log</span>
               </h1>
-              <p className="text-slate-400 text-sm sm:text-base mt-1">
+              <p className="text-zinc-400 text-sm sm:text-base mt-1">
                 Track and manage AI response issues
               </p>
             </div>
@@ -306,78 +306,78 @@ function BugsPageContent() {
         <div className="space-y-4 mb-6">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by prompt, response, or notes..."
-              className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+              className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
             />
           </div>
 
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-3">
-            <Filter className="h-4 w-4 text-slate-500" />
+            <Filter className="h-4 w-4 text-zinc-500" />
             {mounted && (
               <>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 glass border-slate-700/50 text-sm">
+                  <SelectTrigger className="w-28 sm:w-36 glass border-white/[0.06] text-sm">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-slate-700/50">
-                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                  <SelectContent className="glass border-white/[0.06]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
                       All Status
                     </SelectItem>
-                    <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Open" className="text-zinc-400 focus:bg-orange-500/10">
                       Open
                     </SelectItem>
-                    <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Investigating" className="text-zinc-400 focus:bg-orange-500/10">
                       Investigating
                     </SelectItem>
-                    <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Resolved" className="text-zinc-400 focus:bg-orange-500/10">
                       Resolved
                     </SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-24 sm:w-32 glass border-slate-700/50 text-sm">
+                  <SelectTrigger className="w-24 sm:w-32 glass border-white/[0.06] text-sm">
                     <SelectValue placeholder="Severity" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-slate-700/50">
-                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                  <SelectContent className="glass border-white/[0.06]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
                       All Severity
                     </SelectItem>
-                    <SelectItem value="Low" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Low" className="text-zinc-400 focus:bg-orange-500/10">
                       Low
                     </SelectItem>
-                    <SelectItem value="Medium" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Medium" className="text-zinc-400 focus:bg-orange-500/10">
                       Medium
                     </SelectItem>
-                    <SelectItem value="High" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="High" className="text-zinc-400 focus:bg-orange-500/10">
                       High
                     </SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 glass border-slate-700/50 text-sm">
+                  <SelectTrigger className="w-28 sm:w-36 glass border-white/[0.06] text-sm">
                     <SelectValue placeholder="Issue Type" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-slate-700/50">
-                    <SelectItem value="all" className="text-slate-300 focus:bg-violet-600/20">
+                  <SelectContent className="glass border-white/[0.06]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
                       All Types
                     </SelectItem>
-                    <SelectItem value="Hallucination" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-orange-500/10">
                       Hallucination
                     </SelectItem>
-                    <SelectItem value="Formatting" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Formatting" className="text-zinc-400 focus:bg-orange-500/10">
                       Formatting
                     </SelectItem>
-                    <SelectItem value="Refusal" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Refusal" className="text-zinc-400 focus:bg-orange-500/10">
                       Refusal
                     </SelectItem>
-                    <SelectItem value="Logic" className="text-slate-300 focus:bg-violet-600/20">
+                    <SelectItem value="Logic" className="text-zinc-400 focus:bg-orange-500/10">
                       Logic
                     </SelectItem>
                   </SelectContent>
@@ -413,10 +413,10 @@ function BugsPageContent() {
         <MotionWrapper>
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🐛</div>
-            <h3 className="text-lg font-medium text-slate-200 mb-2">
+            <h3 className="text-lg font-medium text-white mb-2">
               {hasActiveFilters ? 'No matching bugs' : 'No bugs reported'}
             </h3>
-            <p className="text-slate-400">
+            <p className="text-zinc-400">
               {hasActiveFilters
                 ? 'Try adjusting your search or filters'
                 : 'Bug reports will appear here when you flag issues in Chat Lab'}
@@ -427,7 +427,7 @@ function BugsPageContent() {
         <StaggerContainer key={`${statusFilter}-${severityFilter}-${issueTypeFilter}`} className="space-y-3">
           {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
-              <div className="glass-card rounded-xl overflow-hidden hover:border-slate-600 transition-colors">
+              <div className="glass-card rounded-xl overflow-hidden hover:border-white/[0.1] transition-colors">
               {/* Header Row */}
               <div
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-white/5 transition-colors"
@@ -464,13 +464,13 @@ function BugsPageContent() {
                       Example
                     </Badge>
                   )}
-                  <span className="text-xs sm:text-sm text-slate-300 truncate max-w-[120px] sm:max-w-none">
+                  <span className="text-xs sm:text-sm text-zinc-400 truncate max-w-[120px] sm:max-w-none">
                     {modelDisplayNames[bug.model_used as LLMProvider] || bug.model_used}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-zinc-500">
                     {formatDate(bug.created_at)}
                   </span>
                   {!bug.is_public && (
@@ -481,46 +481,46 @@ function BugsPageContent() {
                         e.stopPropagation();
                         handleDelete(bug._id);
                       }}
-                      className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+                      className="h-8 w-8 p-0 text-zinc-400 hover:text-rose-400"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                   {expandedId === bug._id ? (
-                    <ChevronUp className="h-4 w-4 text-slate-400" />
+                    <ChevronUp className="h-4 w-4 text-zinc-400" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className="h-4 w-4 text-zinc-400" />
                   )}
                 </div>
               </div>
 
               {/* Expanded Content */}
               {expandedId === bug._id && (
-                <div className="border-t border-slate-700/50 p-4 space-y-4 animate-slide-down">
+                <div className="border-t border-white/[0.06] p-4 space-y-4 animate-slide-down">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">
+                    <p className="text-xs font-medium text-zinc-500 mb-1">
                       Prompt
                     </p>
-                    <p className="text-sm text-slate-300 bg-slate-950/50 rounded-lg p-3 whitespace-pre-wrap">
+                    <p className="text-sm text-zinc-400 bg-white/[0.02] rounded-lg p-3 whitespace-pre-wrap">
                       {bug.prompt_context}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">
+                    <p className="text-xs font-medium text-zinc-500 mb-1">
                       Model Response
                     </p>
-                    <p className="text-sm text-slate-300 bg-slate-950/50 rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    <p className="text-sm text-zinc-400 bg-white/[0.02] rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {bug.model_response}
                     </p>
                   </div>
 
                   {bug.user_notes && (
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">
+                      <p className="text-xs font-medium text-zinc-500 mb-1">
                         Notes
                       </p>
-                      <p className="text-sm text-slate-400">{bug.user_notes}</p>
+                      <p className="text-sm text-zinc-400">{bug.user_notes}</p>
                     </div>
                   )}
                 </div>
@@ -533,10 +533,10 @@ function BugsPageContent() {
 
       {/* Status Update Dialog */}
       <Dialog open={!!editingBug} onOpenChange={() => setEditingBug(null)}>
-        <DialogContent className="glass border-slate-700/50">
+        <DialogContent className="glass border-white/[0.06]">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Update Status</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-white">Update Status</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               Change the status of this bug report
             </DialogDescription>
           </DialogHeader>
@@ -544,17 +544,17 @@ function BugsPageContent() {
           <div className="py-4">
             {mounted && (
               <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger className="bg-slate-950/50 border-slate-700">
+                <SelectTrigger className="bg-white/[0.02] border-white/[0.06]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="glass border-slate-700/50">
-                  <SelectItem value="Open" className="text-slate-300 focus:bg-violet-600/20">
+                <SelectContent className="glass border-white/[0.06]">
+                  <SelectItem value="Open" className="text-zinc-400 focus:bg-orange-500/10">
                     Open
                   </SelectItem>
-                  <SelectItem value="Investigating" className="text-slate-300 focus:bg-violet-600/20">
+                  <SelectItem value="Investigating" className="text-zinc-400 focus:bg-orange-500/10">
                     Investigating
                   </SelectItem>
-                  <SelectItem value="Resolved" className="text-slate-300 focus:bg-violet-600/20">
+                  <SelectItem value="Resolved" className="text-zinc-400 focus:bg-orange-500/10">
                     Resolved
                   </SelectItem>
                 </SelectContent>
@@ -566,7 +566,7 @@ function BugsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setEditingBug(null)}
-              className="text-slate-400"
+              className="text-zinc-400"
             >
               Cancel
             </Button>
@@ -582,90 +582,90 @@ function BugsPageContent() {
 
       {/* Add New Bug Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Add Bug Report</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-white">Add Bug Report</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               Document an AI response issue you&apos;ve encountered
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Prompt Context *</label>
+              <label className="text-sm font-medium text-zinc-400">Prompt Context *</label>
               <Textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
                 placeholder="What prompt or context triggered this issue?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px] focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[80px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Model Response *</label>
+              <label className="text-sm font-medium text-zinc-400">Model Response *</label>
               <Textarea
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
                 placeholder="What was the problematic response?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[100px] focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[100px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Model Used</label>
+                <label className="text-sm font-medium text-zinc-400">Model Used</label>
                 {mounted && (
                   <Select
                     value={formData.model_used}
                     onValueChange={(value) => setFormData({ ...formData, model_used: value })}
                   >
-                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-slate-700/50">
-                      <SelectItem value="cohere" className="text-slate-300 focus:bg-violet-600/20">Cohere</SelectItem>
-                      <SelectItem value="gemini" className="text-slate-300 focus:bg-violet-600/20">Gemini</SelectItem>
-                      <SelectItem value="groq" className="text-slate-300 focus:bg-violet-600/20">Groq</SelectItem>
-                      <SelectItem value="openrouter" className="text-slate-300 focus:bg-violet-600/20">OpenRouter</SelectItem>
+                    <SelectContent className="glass border-white/[0.06]">
+                      <SelectItem value="cohere" className="text-zinc-400 focus:bg-orange-500/10">Cohere</SelectItem>
+                      <SelectItem value="gemini" className="text-zinc-400 focus:bg-orange-500/10">Gemini</SelectItem>
+                      <SelectItem value="groq" className="text-zinc-400 focus:bg-orange-500/10">Groq</SelectItem>
+                      <SelectItem value="openrouter" className="text-zinc-400 focus:bg-orange-500/10">OpenRouter</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Issue Type</label>
+                <label className="text-sm font-medium text-zinc-400">Issue Type</label>
                 {mounted && (
                   <Select
                     value={formData.issue_type}
                     onValueChange={(value) => setFormData({ ...formData, issue_type: value as typeof formData.issue_type })}
                   >
-                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-slate-700/50">
-                      <SelectItem value="Hallucination" className="text-slate-300 focus:bg-violet-600/20">Hallucination</SelectItem>
-                      <SelectItem value="Formatting" className="text-slate-300 focus:bg-violet-600/20">Formatting</SelectItem>
-                      <SelectItem value="Refusal" className="text-slate-300 focus:bg-violet-600/20">Refusal</SelectItem>
-                      <SelectItem value="Logic" className="text-slate-300 focus:bg-violet-600/20">Logic</SelectItem>
+                    <SelectContent className="glass border-white/[0.06]">
+                      <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-orange-500/10">Hallucination</SelectItem>
+                      <SelectItem value="Formatting" className="text-zinc-400 focus:bg-orange-500/10">Formatting</SelectItem>
+                      <SelectItem value="Refusal" className="text-zinc-400 focus:bg-orange-500/10">Refusal</SelectItem>
+                      <SelectItem value="Logic" className="text-zinc-400 focus:bg-orange-500/10">Logic</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Severity</label>
+                <label className="text-sm font-medium text-zinc-400">Severity</label>
                 {mounted && (
                   <Select
                     value={formData.severity}
                     onValueChange={(value) => setFormData({ ...formData, severity: value as typeof formData.severity })}
                   >
-                    <SelectTrigger className="w-full bg-slate-950/50 border-slate-700">
+                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-slate-700/50">
-                      <SelectItem value="Low" className="text-slate-300 focus:bg-violet-600/20">Low</SelectItem>
-                      <SelectItem value="Medium" className="text-slate-300 focus:bg-violet-600/20">Medium</SelectItem>
-                      <SelectItem value="High" className="text-slate-300 focus:bg-violet-600/20">High</SelectItem>
+                    <SelectContent className="glass border-white/[0.06]">
+                      <SelectItem value="Low" className="text-zinc-400 focus:bg-orange-500/10">Low</SelectItem>
+                      <SelectItem value="Medium" className="text-zinc-400 focus:bg-orange-500/10">Medium</SelectItem>
+                      <SelectItem value="High" className="text-zinc-400 focus:bg-orange-500/10">High</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -673,12 +673,12 @@ function BugsPageContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Notes (optional)</label>
+              <label className="text-sm font-medium text-zinc-400">Notes (optional)</label>
               <Textarea
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
                 placeholder="Any additional context or observations..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-slate-600 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
           </div>
@@ -687,7 +687,7 @@ function BugsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400 w-full sm:w-auto"
+              className="text-zinc-400 w-full sm:w-auto"
             >
               Cancel
             </Button>

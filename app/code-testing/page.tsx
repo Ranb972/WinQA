@@ -419,14 +419,14 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center">
               <Code className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="text-white">Code Testing Lab</span>
               </h1>
-              <p className="text-sm sm:text-base text-slate-400 mt-1">
+              <p className="text-sm sm:text-base text-zinc-400 mt-1">
                 Test and debug code with AI assistance
               </p>
             </div>
@@ -434,15 +434,15 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
           {/* Language Selector */}
           <Select value={language} onValueChange={(v) => setLanguage(v as SupportedLanguage)}>
-            <SelectTrigger className="w-full sm:w-[150px] bg-slate-900/50 border-slate-700">
+            <SelectTrigger className="w-full sm:w-[150px] bg-white/[0.02] border-white/[0.06]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="bg-slate-900 border-white/[0.06]">
               {LANGUAGE_OPTIONS.map((opt) => (
                 <SelectItem
                   key={opt.value}
                   value={opt.value}
-                  className="text-slate-300 focus:bg-slate-800"
+                  className="text-zinc-400 focus:bg-white/[0.02]"
                 >
                   {opt.label}
                 </SelectItem>
@@ -457,17 +457,17 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
         <div className="glass-card rounded-xl p-6">
           {/* Mode Tabs */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as 'write' | 'ask')}>
-            <TabsList className="bg-slate-900/50 border border-slate-700 mb-6">
+            <TabsList className="bg-white/[0.02] border border-white/[0.06] mb-6">
               <TabsTrigger
                 value="write"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
               >
                 <Terminal className="h-4 w-4 mr-2" />
                 Write Code
               </TabsTrigger>
               <TabsTrigger
                 value="ask"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white"
+                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 Ask AI
@@ -480,7 +480,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={getPlaceholder()}
-                className="font-mono bg-slate-900/50 border-slate-700 text-slate-100 min-h-[300px] resize-y"
+                className="font-mono bg-white/[0.02] border-white/[0.06] text-white min-h-[300px] resize-y"
               />
 
               <div className="flex justify-end gap-2">
@@ -493,7 +493,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                     setSuccessAnalysisResult(null);
                   }}
                   disabled={!code.trim()}
-                  className="text-slate-400 hover:text-slate-200"
+                  className="text-zinc-400 hover:text-white"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Clear
@@ -502,7 +502,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <Button
                     onClick={handleRunClick}
                     disabled={!code.trim() || isRunning}
-                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                    className="bg-orange-500 hover:bg-orange-400"
                   >
                     {isRunning ? (
                       <>
@@ -527,41 +527,41 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={`Describe what ${LANGUAGE_DISPLAY_NAMES[language]} code you want...\n\nExample: "Write a function that reverses a string"`}
-                  className="bg-slate-900/50 border-slate-700 text-slate-100 min-h-[100px] resize-y"
+                  className="bg-white/[0.02] border-white/[0.06] text-white min-h-[100px] resize-y"
                 />
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-full sm:w-[250px] bg-slate-900/50 border-slate-700">
+                    <SelectTrigger className="w-full sm:w-[250px] bg-white/[0.02] border-white/[0.06]">
                       <SelectValue placeholder="Select model" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectContent className="bg-slate-900 border-white/[0.06]">
                       {MODEL_OPTIONS.map((opt) => (
                         <SelectItem
                           key={opt.value}
                           value={opt.value}
-                          className="text-slate-300 focus:bg-slate-800"
+                          className="text-zinc-400 focus:bg-white/[0.02]"
                         >
                           <div className="flex flex-col">
                             <span>{opt.label}</span>
-                            <span className="text-xs text-slate-500">{opt.description}</span>
+                            <span className="text-xs text-zinc-500">{opt.description}</span>
                           </div>
                         </SelectItem>
                       ))}
                       {enabledCustomProviders.length > 0 && (
                         <>
-                          <div className="px-2 py-1.5 text-xs text-slate-500 border-t border-slate-700 mt-1">
+                          <div className="px-2 py-1.5 text-xs text-zinc-500 border-t border-white/[0.06] mt-1">
                             Custom Providers
                           </div>
                           {enabledCustomProviders.map((provider) => (
                             <SelectItem
                               key={provider.id}
                               value={`custom:${provider.id}`}
-                              className="text-slate-300 focus:bg-slate-800"
+                              className="text-zinc-400 focus:bg-white/[0.02]"
                             >
                               <div className="flex flex-col">
                                 <span>{provider.name}</span>
-                                <span className="text-xs text-slate-500">{provider.modelId}</span>
+                                <span className="text-xs text-zinc-500">{provider.modelId}</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -575,7 +575,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       <Button
                         onClick={generateCode}
                         disabled={!prompt.trim() || isGenerating}
-                        className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
+                        className="w-full sm:w-auto bg-orange-500 hover:bg-orange-400"
                       >
                         {isGenerating ? (
                           <>
@@ -599,20 +599,20 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 p-4 rounded-lg bg-purple-900/10 border border-purple-500/30"
+                  className="mt-4 p-4 rounded-lg bg-orange-500/10 border border-orange-500/30"
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-4 w-4 text-purple-400" />
-                    <span className="text-sm font-medium text-purple-400">Generated Code Preview</span>
+                    <Sparkles className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-medium text-orange-500">Generated Code Preview</span>
                   </div>
-                  <pre className="font-mono text-sm bg-slate-900/50 border border-slate-700 rounded-lg p-4 overflow-x-auto text-slate-100 mb-4 max-h-[300px] overflow-y-auto">
+                  <pre className="font-mono text-sm bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 overflow-x-auto text-white mb-4 max-h-[300px] overflow-y-auto">
                     {pendingCode}
                   </pre>
                   <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
                     <Button
                       size="sm"
                       onClick={handleUseCode}
-                      className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                      className="w-full sm:w-auto bg-orange-500 hover:bg-orange-400"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Use This Code
@@ -621,7 +621,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       size="sm"
                       variant="outline"
                       onClick={handleAddToCurrent}
-                      className="w-full sm:w-auto border-slate-600 text-slate-300 hover:bg-slate-800"
+                      className="w-full sm:w-auto border-white/[0.06] text-zinc-400 hover:bg-white/[0.02]"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add to Current
@@ -630,7 +630,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       size="sm"
                       variant="ghost"
                       onClick={handleDiscard}
-                      className="w-full sm:w-auto text-slate-400 hover:text-slate-200"
+                      className="w-full sm:w-auto text-zinc-400 hover:text-white"
                     >
                       <X className="h-4 w-4 mr-2" />
                       Discard
@@ -647,12 +647,12 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   className="space-y-4 mt-4"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-emerald-400">Code Editor:</span>
+                    <span className="text-sm font-medium text-orange-500">Code Editor:</span>
                   </div>
                   <Textarea
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="font-mono bg-slate-900/50 border-slate-700 text-slate-100 min-h-[200px] resize-y"
+                    className="font-mono bg-white/[0.02] border-white/[0.06] text-white min-h-[200px] resize-y"
                   />
                   <div className="flex justify-end gap-2">
                     <Button
@@ -663,7 +663,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                         setDebugResult(null);
                         setSuccessAnalysisResult(null);
                       }}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-zinc-400 hover:text-white"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Clear
@@ -672,7 +672,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       <Button
                         onClick={handleRunClick}
                         disabled={!code.trim() || isRunning}
-                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                        className="bg-orange-500 hover:bg-orange-400"
                       >
                         {isRunning ? (
                           <>
@@ -700,7 +700,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                 >
                   <button
                     onClick={() => setHistoryExpanded(!historyExpanded)}
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors w-full"
+                    className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors w-full"
                   >
                     <History className="h-4 w-4" />
                     <span>Recent Generations ({codeHistory.length})</span>
@@ -720,17 +720,17 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       {codeHistory.map((item, index) => (
                         <div
                           key={item.timestamp}
-                          className="flex items-center justify-between p-2 rounded-lg bg-slate-900/30 border border-slate-800 text-sm"
+                          className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] text-sm"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-slate-300 truncate">&quot;{item.prompt}&quot;</p>
-                            <p className="text-xs text-slate-500">{getRelativeTime(item.timestamp)}</p>
+                            <p className="text-zinc-400 truncate">&quot;{item.prompt}&quot;</p>
+                            <p className="text-xs text-zinc-500">{getRelativeTime(item.timestamp)}</p>
                           </div>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleUseFromHistory(item)}
-                            className="text-slate-400 hover:text-emerald-400 ml-2 shrink-0"
+                            className="text-zinc-400 hover:text-orange-500 ml-2 shrink-0"
                           >
                             Use
                           </Button>
@@ -749,14 +749,14 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       {(result || isRunning) && (
         <MotionWrapper delay={0.2}>
           <div className="glass-card rounded-xl p-6 mt-6">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Terminal className="h-5 w-5 text-orange-500" />
               Output
             </h3>
 
             {isRunning ? (
-              <div className="flex items-center gap-3 text-slate-400 py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+              <div className="flex items-center gap-3 text-zinc-400 py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
                 <span>Executing code...</span>
               </div>
             ) : result && (
@@ -783,9 +783,9 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="mt-4 p-4 rounded-lg bg-purple-900/20 border border-purple-500/30"
+                    className="mt-4 p-4 rounded-lg bg-orange-500/10 border border-orange-500/30"
                   >
-                    <div className="flex items-center gap-3 text-purple-400">
+                    <div className="flex items-center gap-3 text-orange-500">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span>AI is analyzing the error...</span>
                     </div>
@@ -797,13 +797,13 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-4 rounded-lg bg-purple-900/20 border border-purple-500/30"
+                    className="mt-4 p-4 rounded-lg bg-orange-500/10 border border-orange-500/30"
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <Bot className="h-5 w-5 text-purple-400" />
-                      <span className="text-sm font-medium text-purple-400">AI Debug Analysis</span>
+                      <Bot className="h-5 w-5 text-orange-500" />
+                      <span className="text-sm font-medium text-orange-500">AI Debug Analysis</span>
                     </div>
-                    <div className="text-sm text-slate-300 whitespace-pre-wrap font-mono">
+                    <div className="text-sm text-zinc-400 whitespace-pre-wrap font-mono">
                       {debugResult}
                     </div>
                   </motion.div>
@@ -824,9 +824,9 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="mt-4 p-4 rounded-lg bg-emerald-900/20 border border-emerald-500/30"
+                    className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30"
                   >
-                    <div className="flex items-center gap-3 text-emerald-400">
+                    <div className="flex items-center gap-3 text-green-400">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span>AI is analyzing what worked...</span>
                     </div>
@@ -838,13 +838,13 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-4 rounded-lg bg-emerald-900/20 border border-emerald-500/30"
+                    className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30"
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <Target className="h-5 w-5 text-emerald-400" />
-                      <span className="text-sm font-medium text-emerald-400">What Worked? Analysis</span>
+                      <Target className="h-5 w-5 text-green-400" />
+                      <span className="text-sm font-medium text-green-400">What Worked? Analysis</span>
                     </div>
-                    <div className="text-sm text-slate-300 whitespace-pre-wrap font-mono">
+                    <div className="text-sm text-zinc-400 whitespace-pre-wrap font-mono">
                       {successAnalysisResult}
                     </div>
                   </motion.div>
@@ -862,10 +862,10 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
             <div className="text-6xl mb-4">
               {mode === 'write' ? '💻' : '✨'}
             </div>
-            <h3 className="text-lg font-medium text-slate-200 mb-2">
+            <h3 className="text-lg font-medium text-white mb-2">
               {mode === 'write' ? 'Write some code to get started' : 'Ask AI to generate code'}
             </h3>
-            <p className="text-slate-400">
+            <p className="text-zinc-400">
               {mode === 'write'
                 ? `Paste or write ${LANGUAGE_DISPLAY_NAMES[language]} code above and click Run`
                 : `Describe what code you need and let AI generate it for you`}

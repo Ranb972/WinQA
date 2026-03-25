@@ -340,9 +340,9 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] rounded-2xl border border-slate-700/50 bg-slate-900/20 backdrop-blur-sm overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-2rem)] rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-white/[0.06]">
         <div className="overflow-x-auto">
           <ModelSelector
             mode={mode}
@@ -363,7 +363,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
           variant="ghost"
           size="sm"
           onClick={clearChat}
-          className="text-slate-400 hover:text-rose-400 shrink-0 self-end sm:self-auto"
+          className="text-zinc-400 hover:text-rose-400 shrink-0 self-end sm:self-auto"
           disabled={messages.length === 0}
         >
           <Trash2 className="h-4 w-4 mr-2" />
@@ -381,10 +381,10 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             className="flex flex-col items-center justify-center h-full text-center"
           >
             <div className="text-6xl mb-4">🧪</div>
-            <h3 className="text-xl font-semibold text-slate-200 mb-2">
+            <h3 className="text-xl font-semibold text-white mb-2">
               Welcome to Chat Lab
             </h3>
-            <p className="text-slate-400 max-w-md">
+            <p className="text-zinc-400 max-w-md">
               Test prompts across different AI models. Select a model or enable
               comparison mode to see how different LLMs respond.
             </p>
@@ -420,20 +420,20 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="p-4 rounded-lg bg-slate-900/50 border border-slate-800"
+                className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]"
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-sm font-medium text-emerald-400">Assistant</span>
-                  <span className="text-xs px-2 py-0.5 rounded border bg-purple-600/20 text-purple-400 border-purple-600/30">
+                  <span className="text-sm font-medium text-orange-500">Assistant</span>
+                  <span className="text-xs px-2 py-0.5 rounded border bg-orange-500/10 text-orange-500 border-orange-500/30">
                     {modelPreferences[selectedModel] || selectedModel}
                   </span>
-                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
                 </div>
-                <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-3 text-zinc-400">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.1s]" />
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.2s]" />
                   </div>
                   <span className="text-sm">Thinking...</span>
                 </div>
@@ -515,7 +515,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-white/[0.06]">
         <div className="max-w-4xl mx-auto flex gap-2">
           <Textarea
             ref={textareaRef}
@@ -523,13 +523,13 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your prompt here... (Shift+Enter for new line)"
-            className="flex-1 min-h-[60px] max-h-[200px] bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-none"
+            className="flex-1 min-h-[60px] max-h-[200px] bg-white/[0.02] border-white/[0.06] text-white placeholder:text-zinc-500 resize-none focus:border-orange-500/50 focus:ring-orange-500/30"
             disabled={isLoading}
           />
           <Button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />

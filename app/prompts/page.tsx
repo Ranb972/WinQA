@@ -263,14 +263,14 @@ function PromptsPageContent() {
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center">
               <Library className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 <span className="text-white">Prompt Library</span>
               </h1>
-              <p className="text-sm sm:text-base text-slate-400 mt-1">
+              <p className="text-sm sm:text-base text-zinc-400 mt-1">
                 Compare bad vs good prompts and learn best practices
               </p>
             </div>
@@ -288,12 +288,12 @@ function PromptsPageContent() {
       <MotionWrapper delay={0.1}>
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search prompts..."
-            className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+            className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
           />
         </div>
 
@@ -304,8 +304,8 @@ function PromptsPageContent() {
           className={cn(
             'transition-all shrink-0',
             showFavoritesOnly
-              ? 'bg-gradient-to-r from-rose-500 to-pink-500 border-none text-white'
-              : 'border-slate-700 text-slate-400 hover:text-slate-100 hover:border-violet-500/50'
+              ? 'bg-orange-500 border-none text-white'
+              : 'border-white/[0.06] text-zinc-400 hover:text-white hover:border-orange-500/50'
           )}
         >
           <Heart className={cn('h-4 w-4 mr-2', showFavoritesOnly && 'fill-current')} />
@@ -321,8 +321,8 @@ function PromptsPageContent() {
                 className={cn(
                   'cursor-pointer transition-all text-xs',
                   selectedTag === tag
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent'
-                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-violet-500/50'
+                    ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
+                    : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
                 )}
               >
                 {tag}
@@ -337,7 +337,7 @@ function PromptsPageContent() {
       {isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-lg p-6">
+            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-6">
               <div className="flex items-start justify-between mb-3">
                 <Skeleton className="h-6 w-48" />
                 <div className="flex gap-1">
@@ -362,12 +362,12 @@ function PromptsPageContent() {
       ) : filteredPrompts.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-lg font-medium text-slate-200 mb-2">
+          <h3 className="text-lg font-medium text-white mb-2">
             {searchQuery || showFavoritesOnly || selectedTag
               ? 'No matching prompts'
               : 'No prompts yet'}
           </h3>
-          <p className="text-slate-400 mb-6">
+          <p className="text-zinc-400 mb-6">
             {searchQuery || showFavoritesOnly || selectedTag
               ? 'Try adjusting your filters'
               : 'Start building your prompt library'}
@@ -407,26 +407,26 @@ function PromptsPageContent() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {editingPrompt ? 'Edit Prompt' : 'Add Prompt'}
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-zinc-400">
               Document a bad prompt example and its improved version
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Title *
               </label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Specific Instructions"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
@@ -459,7 +459,7 @@ function PromptsPageContent() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Explanation
               </label>
               <Textarea
@@ -468,19 +468,19 @@ function PromptsPageContent() {
                   setFormData({ ...formData, explanation: e.target.value })
                 }
                 placeholder="Why is the good prompt better?"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[60px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[60px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {formData.tags.map((tag) => (
                   <Badge
                     key={tag}
-                    className="bg-violet-600/20 text-violet-400 border-violet-600/30 cursor-pointer text-xs"
+                    className="bg-orange-500/10 text-orange-500 border-orange-500/30 cursor-pointer text-xs"
                     onClick={() => removeTag(tag)}
                   >
                     {tag} ×
@@ -498,13 +498,13 @@ function PromptsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-slate-950/50 border-slate-700 text-slate-100 flex-1 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                  className="bg-white/[0.02] border-white/[0.06] text-white flex-1 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => addTag(tagInput)}
-                  className="border-slate-700 hover:border-violet-500/50"
+                  className="border-white/[0.06] hover:border-orange-500/50"
                 >
                   Add
                 </Button>
@@ -515,7 +515,7 @@ function PromptsPageContent() {
                   .map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-slate-800/50 text-slate-500 border-slate-700 cursor-pointer hover:border-violet-500/50 text-xs"
+                      className="bg-white/[0.02] text-zinc-500 border-white/[0.06] cursor-pointer hover:border-orange-500/50 text-xs"
                       onClick={() => addTag(tag)}
                     >
                       + {tag}
@@ -529,7 +529,7 @@ function PromptsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100 w-full sm:w-auto"
+              className="text-zinc-400 hover:text-white w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -546,9 +546,9 @@ function PromptsPageContent() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {viewingPrompt?.title}
             </DialogTitle>
           </DialogHeader>
@@ -581,10 +581,10 @@ function PromptsPageContent() {
             {/* Explanation */}
             {viewingPrompt?.explanation && (
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                <label className="text-sm font-medium text-zinc-400 mb-2 block">
                   Why it matters
                 </label>
-                <p className="text-sm text-slate-400 bg-slate-950/50 border border-slate-700 rounded-lg p-3">
+                <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
                   {viewingPrompt.explanation}
                 </p>
               </div>
@@ -593,14 +593,14 @@ function PromptsPageContent() {
             {/* Tags */}
             {viewingPrompt?.tags && viewingPrompt.tags.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                <label className="text-sm font-medium text-zinc-400 mb-2 block">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-1">
                   {viewingPrompt.tags.map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs"
+                      className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
                     >
                       {tag}
                     </Badge>
@@ -622,7 +622,7 @@ function PromptsPageContent() {
             <Button
               variant="ghost"
               onClick={() => setViewDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-400 hover:text-white"
             >
               Close
             </Button>

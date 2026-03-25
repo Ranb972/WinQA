@@ -189,14 +189,14 @@ export default function TestCasesPage() {
       <MotionWrapper>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
               <TestTube2 className="h-6 w-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">
                 <span className="text-white">Test Cases</span>
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-zinc-400 mt-1">
                 Manage and run your AI testing scenarios
               </p>
             </div>
@@ -213,12 +213,12 @@ export default function TestCasesPage() {
       {/* Search */}
       <MotionWrapper delay={0.1}>
         <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search test cases..."
-            className="pl-10 glass border-slate-700/50 text-slate-100 focus:border-violet-500/50"
+            className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
           />
         </div>
       </MotionWrapper>
@@ -227,7 +227,7 @@ export default function TestCasesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-lg p-6">
+            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-6">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <Skeleton className="h-6 w-40 mb-2" />
@@ -250,10 +250,10 @@ export default function TestCasesPage() {
         <MotionWrapper>
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🧪</div>
-            <h3 className="text-lg font-medium text-slate-200 mb-2">
+            <h3 className="text-lg font-medium text-white mb-2">
               {searchQuery ? 'No matching test cases' : 'No test cases yet'}
             </h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-zinc-400 mb-6">
               {searchQuery
                 ? 'Try adjusting your search query'
                 : 'Create your first test case to get started'}
@@ -297,12 +297,12 @@ export default function TestCasesPage() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+        <DialogContent className="glass border-white/[0.06] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {editingCase ? 'Edit Test Case' : 'New Test Case'}
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-zinc-400">
               {editingCase
                 ? 'Update your test case details'
                 : 'Create a new test case for AI testing'}
@@ -311,7 +311,7 @@ export default function TestCasesPage() {
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Title *
               </label>
               <Input
@@ -320,12 +320,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, title: e.target.value })
                 }
                 placeholder="e.g., Code Generation Test"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Description
               </label>
               <Input
@@ -334,12 +334,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="Brief description of the test"
-                className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Initial Prompt *
               </label>
               <Textarea
@@ -348,12 +348,12 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, initial_prompt: e.target.value })
                 }
                 placeholder="The prompt to send to the AI model..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[120px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[120px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
                 Expected Outcome
               </label>
               <Textarea
@@ -362,7 +362,7 @@ export default function TestCasesPage() {
                   setFormData({ ...formData, expected_outcome: e.target.value })
                 }
                 placeholder="What you expect the AI to respond with..."
-                className="bg-slate-950/50 border-slate-700 text-slate-100 min-h-[80px] focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[80px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
               />
             </div>
           </div>
@@ -371,7 +371,7 @@ export default function TestCasesPage() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-400 hover:text-white"
             >
               Cancel
             </Button>
@@ -388,13 +388,13 @@ export default function TestCasesPage() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-slate-700/50 max-w-2xl">
+        <DialogContent className="glass border-white/[0.06] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">
+            <DialogTitle className="text-white">
               {viewingTestCase?.title}
             </DialogTitle>
             {viewingTestCase?.description && (
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-zinc-400">
                 {viewingTestCase.description}
               </DialogDescription>
             )}
@@ -403,11 +403,11 @@ export default function TestCasesPage() {
           <div className="space-y-4 py-4">
             {/* Initial Prompt */}
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-2 block">
+              <label className="text-sm font-medium text-zinc-400 mb-2 block">
                 Prompt
               </label>
-              <div className="bg-slate-950/50 border border-slate-700 rounded-lg p-4">
-                <p className="text-sm text-slate-300 whitespace-pre-wrap">
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+                <p className="text-sm text-zinc-400 whitespace-pre-wrap">
                   {viewingTestCase?.initial_prompt}
                 </p>
               </div>
@@ -416,11 +416,11 @@ export default function TestCasesPage() {
             {/* Expected Outcome */}
             {viewingTestCase?.expected_outcome && (
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                <label className="text-sm font-medium text-zinc-400 mb-2 block">
                   Expected Outcome
                 </label>
-                <div className="bg-slate-950/50 border border-slate-700 rounded-lg p-4">
-                  <p className="text-sm text-slate-400 whitespace-pre-wrap">
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
+                  <p className="text-sm text-zinc-400 whitespace-pre-wrap">
                     {viewingTestCase.expected_outcome}
                   </p>
                 </div>
@@ -429,7 +429,7 @@ export default function TestCasesPage() {
 
             {/* Created Date */}
             {viewingTestCase?.created_at && (
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-zinc-500">
                 Created {new Date(viewingTestCase.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
@@ -443,7 +443,7 @@ export default function TestCasesPage() {
             <Button
               variant="ghost"
               onClick={() => setViewDialogOpen(false)}
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-400 hover:text-white"
             >
               Close
             </Button>

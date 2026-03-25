@@ -103,14 +103,14 @@ export default function ModelSelector({
       <Popover>
         <PopoverTrigger asChild>
           <button
-            className="p-1 rounded hover:bg-slate-700/50 transition-colors"
+            className="p-1 rounded hover:bg-white/[0.06] transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <Settings className="h-3 w-3 text-slate-500 hover:text-slate-300" />
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-72 p-3 bg-slate-900 border-slate-700"
+          className="w-72 p-3 bg-white/[0.02] border-white/[0.06]"
           align="start"
           onClick={(e) => e.stopPropagation()}
         >
@@ -132,8 +132,8 @@ export default function ModelSelector({
                     className={cn(
                       'w-full text-left px-3 py-2 rounded-lg transition-colors',
                       isSelected
-                        ? 'bg-emerald-600/20 border border-emerald-600/30'
-                        : 'hover:bg-slate-800'
+                        ? 'bg-orange-500/20 border border-orange-500/30'
+                        : 'hover:bg-white/[0.06]'
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function ModelSelector({
                         className={cn(
                           'w-3 h-3 rounded-full border-2',
                           isSelected
-                            ? 'border-emerald-400 bg-emerald-400'
+                            ? 'border-orange-500 bg-orange-500'
                             : 'border-slate-500'
                         )}
                       />
@@ -176,8 +176,8 @@ export default function ModelSelector({
           className={cn(
             'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'single'
-              ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30'
-              : 'text-slate-400 hover:text-slate-300'
+              ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30'
+              : 'text-zinc-400 hover:text-slate-300'
           )}
         >
           Single
@@ -187,8 +187,8 @@ export default function ModelSelector({
           className={cn(
             'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'multi'
-              ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30'
-              : 'text-slate-400 hover:text-slate-300'
+              ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30'
+              : 'text-zinc-400 hover:text-slate-300'
           )}
         >
           Compare
@@ -199,15 +199,15 @@ export default function ModelSelector({
       {mode === 'single' && mounted && (
         <div className="flex items-center gap-2">
           <Select value={selectedModel} onValueChange={(v) => onModelChange?.(v as LLMProvider)}>
-            <SelectTrigger className="w-full sm:w-48 bg-slate-900 border-slate-700">
+            <SelectTrigger className="w-full sm:w-48 bg-white/[0.02] border-white/[0.06]">
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="bg-white/[0.02] border-white/[0.06]">
               {providers.map((provider) => (
                 <SelectItem
                   key={provider}
                   value={provider}
-                  className="text-slate-300 focus:bg-slate-800 focus:text-slate-100"
+                  className="text-zinc-400 focus:bg-white/[0.06] focus:text-slate-100"
                 >
                   <span className={cn('px-2 py-0.5 rounded text-xs border', modelBadgeColors[provider])}>
                     {modelDisplayNames[provider]}
@@ -232,7 +232,7 @@ export default function ModelSelector({
                   onCheckedChange={(checked) =>
                     handleMultiSelect(provider, checked as boolean)
                   }
-                  className="border-slate-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                  className="border-white/[0.06] data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                 />
                 <span
                   className={cn(
@@ -250,7 +250,7 @@ export default function ModelSelector({
           {/* Custom providers */}
           {customProviders.length > 0 && (
             <>
-              <div className="w-px h-5 bg-slate-700 mx-1" />
+              <div className="w-px h-5 bg-white/[0.06] mx-1" />
               {customProviders.map((provider) => (
                 <div key={provider.id} className="flex items-center gap-1">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -259,9 +259,9 @@ export default function ModelSelector({
                       onCheckedChange={(checked) =>
                         handleCustomProviderSelect(provider.id, checked as boolean)
                       }
-                      className="border-slate-600 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                      className="border-white/[0.06] data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                     />
-                    <span className="px-1.5 sm:px-2 py-0.5 rounded text-xs border bg-violet-600/20 text-violet-400 border-violet-600/30 whitespace-nowrap truncate max-w-[100px] sm:max-w-none">
+                    <span className="px-1.5 sm:px-2 py-0.5 rounded text-xs border bg-orange-500/20 text-orange-500 border-orange-500/30 whitespace-nowrap truncate max-w-[100px] sm:max-w-none">
                       {provider.name}
                     </span>
                   </label>

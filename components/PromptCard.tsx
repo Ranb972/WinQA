@@ -58,7 +58,7 @@ export default function PromptCard({
   return (
     <Card
       className={cn(
-        "bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors h-[420px] flex flex-col",
+        "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] transition-colors h-[420px] flex flex-col",
         onView && "cursor-pointer"
       )}
       onClick={onView}
@@ -76,7 +76,7 @@ export default function PromptCard({
               }}
               className={cn(
                 'h-8 w-8 p-0',
-                isFavorite ? 'text-rose-400' : 'text-slate-400 hover:text-rose-400'
+                isFavorite ? 'text-rose-400' : 'text-zinc-400 hover:text-rose-400'
               )}
             >
               <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
@@ -88,7 +88,7 @@ export default function PromptCard({
                 e.stopPropagation();
                 onEdit();
               }}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100"
+              className="h-8 w-8 p-0 text-zinc-400 hover:text-slate-100"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -100,7 +100,7 @@ export default function PromptCard({
                   e.stopPropagation();
                   onDelete();
                 }}
-                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400"
+                className="h-8 w-8 p-0 text-zinc-400 hover:text-rose-400"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -116,7 +116,7 @@ export default function PromptCard({
           {tags.map((tag) => (
             <Badge
               key={tag}
-              className="bg-slate-800 text-slate-400 border-slate-700 text-xs"
+              className="bg-white/[0.02] text-zinc-400 border-white/[0.06] text-xs"
             >
               {tag}
             </Badge>
@@ -184,7 +184,7 @@ export default function PromptCard({
             <p className="text-xs font-medium text-slate-500 mb-1">
               Why it matters
             </p>
-            <p className="text-sm text-slate-400 line-clamp-2">{explanation}</p>
+            <p className="text-sm text-zinc-400 line-clamp-2">{explanation}</p>
           </div>
         )}
       </CardContent>

@@ -444,7 +444,7 @@ export default function SettingsPage() {
   if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-zinc-400">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading settings...</span>
         </div>
@@ -458,25 +458,25 @@ export default function SettingsPage() {
         <MotionWrapper>
           {/* Header */}
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-violet-600/20 to-purple-600/20 border border-violet-500/30">
-              <Settings className="h-6 w-6 text-violet-400" />
+            <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/30">
+              <Settings className="h-6 w-6 text-orange-500" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-100">Settings</h1>
+            <h1 className="text-3xl font-bold text-white">Settings</h1>
           </div>
-          <p className="text-slate-400 mb-8 ml-1">
+          <p className="text-zinc-400 mb-8 ml-1">
             Manage your personal API keys and preferences
           </p>
         </MotionWrapper>
 
         {/* Info Banner */}
         <MotionWrapper delay={0.1}>
-          <div className="glass-card rounded-xl p-4 mb-8 border border-blue-500/20 bg-blue-500/5">
+          <div className="glass-card rounded-xl p-4 mb-8 border border-orange-500/20 bg-orange-500/5">
             <div className="flex gap-3">
-              <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-slate-300">
-                  <span className="font-medium text-blue-400">Add your own API keys</span> for higher rate limits and better reliability.
-                  Your keys are <span className="text-emerald-400 font-medium">encrypted</span> before being stored locally in your browser.
+                <p className="text-sm text-zinc-400">
+                  <span className="font-medium text-orange-500">Add your own API keys</span> for higher rate limits and better reliability.
+                  Your keys are <span className="text-green-400 font-medium">encrypted</span> before being stored locally in your browser.
                 </p>
               </div>
             </div>
@@ -485,8 +485,8 @@ export default function SettingsPage() {
 
         {/* API Keys Section */}
         <MotionWrapper delay={0.2}>
-          <div className="glass-card rounded-2xl p-6 border border-slate-700/50">
-            <h2 className="text-xl font-semibold text-slate-100 mb-6 flex items-center gap-2">
+          <div className="glass-card rounded-2xl p-6 border border-white/[0.06]">
+            <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
               <span className="text-2xl">🔑</span> API Keys
             </h2>
 
@@ -509,17 +509,17 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-slate-200">
+                        <label className="text-sm font-medium text-white">
                           {provider.name}
                         </label>
                         {isSaved && status === 'idle' && (
-                          <span className="flex items-center gap-1 text-xs text-emerald-400">
+                          <span className="flex items-center gap-1 text-xs text-green-400">
                             <Check className="h-3 w-3" />
                             Configured
                           </span>
                         )}
                         {status === 'valid' && (
-                          <span className="flex items-center gap-1 text-xs text-emerald-400">
+                          <span className="flex items-center gap-1 text-xs text-green-400">
                             <Check className="h-3 w-3" />
                             Valid
                           </span>
@@ -535,12 +535,12 @@ export default function SettingsPage() {
                         href={provider.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                        className="text-xs text-orange-500 hover:text-orange-400 transition-colors"
                       >
                         Get API Key →
                       </a>
                     </div>
-                    <p className="text-xs text-slate-500 mb-2">{provider.description}</p>
+                    <p className="text-xs text-zinc-500 mb-2">{provider.description}</p>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Input
@@ -550,12 +550,12 @@ export default function SettingsPage() {
                           onFocus={() => handleFocus(provider.key)}
                           onBlur={() => handleBlur(provider.key)}
                           placeholder={provider.placeholder}
-                          className="pr-10 bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-violet-500/50 focus:ring-violet-500/20"
+                          className="pr-10 bg-white/[0.02] border-white/[0.06] text-white placeholder:text-zinc-500 focus:border-orange-500/50 focus:ring-orange-500/30"
                         />
                         <button
                           type="button"
                           onClick={() => toggleVisibility(provider.key)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 transition-colors"
                         >
                           {isVisible ? (
                             <EyeOff className="h-4 w-4" />
@@ -574,10 +574,10 @@ export default function SettingsPage() {
                           disabled={status === 'testing'}
                           className={`transition-colors ${
                             status === 'valid'
-                              ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                              ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
                               : status === 'invalid'
                               ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
-                              : 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10'
+                              : 'text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10'
                           }`}
                           title="Test API key"
                         >
@@ -595,7 +595,7 @@ export default function SettingsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleClearKey(provider.key)}
-                          className="text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
+                          className="text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10"
                           title="Clear API key"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -620,26 +620,26 @@ export default function SettingsPage() {
                     {/* Model Selection Dropdown */}
                     {PROVIDER_MODELS[provider.key] && (
                       <div className="mt-3">
-                        <label className="text-xs text-slate-500 mb-1 block">
+                        <label className="text-xs text-zinc-500 mb-1 block">
                           Model
                         </label>
                         <Select
                           value={modelPreferences[provider.key] || getDefaultModel(provider.key) || ''}
                           onValueChange={(v) => handleModelChange(provider.key, v)}
                         >
-                          <SelectTrigger className="bg-slate-900/50 border-slate-700 h-8 text-sm">
+                          <SelectTrigger className="bg-white/[0.02] border-white/[0.06] h-8 text-sm">
                             <SelectValue placeholder="Select model" />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-900 border-slate-700">
+                          <SelectContent className="bg-slate-900 border-white/[0.06]">
                             {PROVIDER_MODELS[provider.key].map((model) => (
                               <SelectItem
                                 key={model.id}
                                 value={model.id}
-                                className="text-slate-300 focus:bg-slate-800 text-sm"
+                                className="text-zinc-400 focus:bg-white/[0.02] text-sm"
                               >
                                 {model.name}
                                 {model.default && (
-                                  <span className="text-slate-500 ml-1">(Default)</span>
+                                  <span className="text-zinc-500 ml-1">(Default)</span>
                                 )}
                               </SelectItem>
                             ))}
@@ -656,7 +656,7 @@ export default function SettingsPage() {
             <div className="mt-8 flex items-center justify-between">
               <div className="text-sm">
                 {hasAnyKey && (
-                  <span className="text-slate-500">
+                  <span className="text-zinc-500">
                     {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} keys configured
                   </span>
                 )}
@@ -664,7 +664,7 @@ export default function SettingsPage() {
               <Button
                 onClick={handleSaveAll}
                 disabled={!hasChanges || isSaving}
-                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-orange-500 hover:bg-orange-400 text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
@@ -684,11 +684,11 @@ export default function SettingsPage() {
 
         {/* Custom Providers Section */}
         <MotionWrapper delay={0.25}>
-          <div className="glass-card rounded-2xl p-6 border border-slate-700/50 mt-6">
-            <h2 className="text-xl font-semibold text-slate-100 mb-2 flex items-center gap-2">
+          <div className="glass-card rounded-2xl p-6 border border-white/[0.06] mt-6">
+            <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
               <span className="text-2xl">🔌</span> Custom Providers
             </h2>
-            <p className="text-sm text-slate-400 mb-6">
+            <p className="text-sm text-zinc-400 mb-6">
               Add OpenAI-compatible API providers (max {MAX_CUSTOM_PROVIDERS})
             </p>
 
@@ -712,7 +712,7 @@ export default function SettingsPage() {
 
             {/* Empty state */}
             {customProviders.length === 0 && (
-              <p className="text-xs text-slate-500 text-center py-4 mb-4">
+              <p className="text-xs text-zinc-500 text-center py-4 mb-4">
                 No custom providers configured. Add providers like OpenAI, Anthropic, or any OpenAI-compatible API.
               </p>
             )}
@@ -722,7 +722,7 @@ export default function SettingsPage() {
               <Button
                 onClick={() => setShowAddModal(true)}
                 variant="outline"
-                className="w-full border-dashed border-slate-600 text-slate-400 hover:text-slate-200 hover:border-slate-500"
+                className="w-full border-dashed border-white/[0.06] text-zinc-400 hover:text-white hover:border-white/[0.12]"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Custom Provider
@@ -730,7 +730,7 @@ export default function SettingsPage() {
             )}
 
             {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
-              <p className="text-xs text-slate-500 text-center">
+              <p className="text-xs text-zinc-500 text-center">
                 Maximum {MAX_CUSTOM_PROVIDERS} custom providers reached
               </p>
             )}
@@ -752,11 +752,11 @@ export default function SettingsPage() {
 
         {/* Export/Import Section */}
         <MotionWrapper delay={0.27}>
-          <div className="glass-card rounded-2xl p-6 border border-slate-700/50 mt-6">
-            <h2 className="text-xl font-semibold text-slate-100 mb-2 flex items-center gap-2">
+          <div className="glass-card rounded-2xl p-6 border border-white/[0.06] mt-6">
+            <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
               <span className="text-2xl">💾</span> Export / Import Data
             </h2>
-            <p className="text-sm text-slate-400 mb-6">
+            <p className="text-sm text-zinc-400 mb-6">
               Backup your data or restore from a previous export
             </p>
 
@@ -766,14 +766,14 @@ export default function SettingsPage() {
                 onClick={handleExport}
                 disabled={isExporting}
                 variant="outline"
-                className="h-20 flex-col gap-2 border-slate-600 hover:border-emerald-500/50 hover:bg-emerald-500/10"
+                className="h-20 flex-col gap-2 border-white/[0.06] hover:border-green-500/50 hover:bg-green-500/10"
               >
                 {isExporting ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-green-400" />
                 ) : (
-                  <Download className="h-6 w-6 text-emerald-400" />
+                  <Download className="h-6 w-6 text-green-400" />
                 )}
-                <span className="text-slate-300">Export Data</span>
+                <span className="text-zinc-400">Export Data</span>
               </Button>
 
               {/* Import Button */}
@@ -785,27 +785,27 @@ export default function SettingsPage() {
                   className="hidden"
                   disabled={isImporting}
                 />
-                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-slate-600 rounded-md hover:border-blue-500/50 hover:bg-blue-500/10 transition-colors">
+                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/[0.06] rounded-md hover:border-orange-500/50 hover:bg-orange-500/10 transition-colors">
                   {isImporting ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                    <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
                   ) : (
-                    <Upload className="h-6 w-6 text-blue-400" />
+                    <Upload className="h-6 w-6 text-orange-500" />
                   )}
-                  <span className="text-slate-300">Import Data</span>
+                  <span className="text-zinc-400">Import Data</span>
                 </div>
               </label>
             </div>
 
             {/* Import Mode Selection */}
             {pendingImportData && (
-              <div className="mt-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700">
-                <p className="text-sm text-slate-300 mb-3">How would you like to import?</p>
+              <div className="mt-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                <p className="text-sm text-zinc-400 mb-3">How would you like to import?</p>
                 <div className="flex gap-3">
                   <Button
                     onClick={() => handleImport('merge')}
                     disabled={isImporting}
                     variant="outline"
-                    className="flex-1 border-slate-600 hover:border-emerald-500/50"
+                    className="flex-1 border-white/[0.06] hover:border-green-500/50"
                   >
                     Merge (Add to existing)
                   </Button>
@@ -813,7 +813,7 @@ export default function SettingsPage() {
                     onClick={() => handleImport('replace')}
                     disabled={isImporting}
                     variant="outline"
-                    className="flex-1 border-slate-600 hover:border-rose-500/50 text-rose-400"
+                    className="flex-1 border-white/[0.06] hover:border-rose-500/50 text-rose-400"
                   >
                     Replace (Delete existing)
                   </Button>
@@ -821,14 +821,14 @@ export default function SettingsPage() {
                 <Button
                   onClick={() => setPendingImportData(null)}
                   variant="ghost"
-                  className="w-full mt-2 text-slate-500"
+                  className="w-full mt-2 text-zinc-500"
                 >
                   Cancel
                 </Button>
               </div>
             )}
 
-            <p className="text-xs text-slate-500 mt-4">
+            <p className="text-xs text-zinc-500 mt-4">
               Export includes: bugs, prompts, test cases, and insights
             </p>
           </div>
@@ -836,18 +836,18 @@ export default function SettingsPage() {
 
         {/* Replace Warning Dialog */}
         <AlertDialog open={showReplaceWarning} onOpenChange={setShowReplaceWarning}>
-          <AlertDialogContent className="glass border-slate-700/50 bg-slate-900">
+          <AlertDialogContent className="glass border-white/[0.06] bg-black">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-rose-400">
                 <AlertTriangle className="h-5 w-5" />
                 Replace all data?
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-slate-400">
+              <AlertDialogDescription className="text-zinc-400">
                 This will permanently delete all your existing bugs, prompts, test cases, and insights before importing the new data. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-slate-700 text-slate-300 hover:bg-slate-800">
+              <AlertDialogCancel className="border-white/[0.06] text-zinc-400 hover:bg-white/[0.02]">
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
@@ -865,14 +865,14 @@ export default function SettingsPage() {
           <div className="mt-6">
             <button
               onClick={() => setSecurityExpanded(!securityExpanded)}
-              className="w-full p-4 rounded-xl bg-slate-900/30 border border-slate-800/50 hover:border-slate-700/50 transition-colors flex items-center justify-between"
+              className="w-full p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-colors flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-emerald-400" />
-                <span className="text-sm font-medium text-slate-300">Security Information</span>
+                <Shield className="h-5 w-5 text-green-400" />
+                <span className="text-sm font-medium text-zinc-400">Security Information</span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${
+                className={`h-4 w-4 text-zinc-400 transition-transform ${
                   securityExpanded ? 'rotate-180' : ''
                 }`}
               />
@@ -887,34 +887,34 @@ export default function SettingsPage() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 mt-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                    <ul className="text-xs text-slate-400 space-y-2">
+                  <div className="p-4 mt-2 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <ul className="text-xs text-zinc-400 space-y-2">
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are encrypted with <span className="text-emerald-400">AES-256-GCM</span> before storage</span>
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Keys are encrypted with <span className="text-green-400">AES-256-GCM</span> before storage</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <span>Encryption key is derived from your unique user ID using <span className="text-emerald-400">PBKDF2</span></span>
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Encryption key is derived from your unique user ID using <span className="text-green-400">PBKDF2</span></span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
                         <span>Keys are stored only in your browser&apos;s localStorage</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are <span className="text-emerald-400">never saved</span> to our database</span>
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Keys are <span className="text-green-400">never saved</span> to our database</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are transmitted over <span className="text-emerald-400">HTTPS</span> only</span>
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Keys are transmitted over <span className="text-green-400">HTTPS</span> only</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
                         <span>You can delete your keys anytime</span>
                       </li>
                     </ul>
-                    <p className="text-xs text-slate-500 mt-4 pt-3 border-t border-slate-800/50">
+                    <p className="text-xs text-zinc-500 mt-4 pt-3 border-t border-white/[0.06]">
                       Your keys are as secure as your browser and device. Clear your browser data to remove all stored keys.
                     </p>
                   </div>
@@ -926,9 +926,9 @@ export default function SettingsPage() {
 
         {/* Usage Info */}
         <MotionWrapper delay={0.4}>
-          <div className="mt-6 p-4 rounded-xl bg-slate-900/30 border border-slate-800/50">
-            <h3 className="text-sm font-medium text-slate-300 mb-2">How it works</h3>
-            <ul className="text-xs text-slate-500 space-y-1">
+          <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <h3 className="text-sm font-medium text-zinc-400 mb-2">How it works</h3>
+            <ul className="text-xs text-zinc-500 space-y-1">
               <li>• Click the <FlaskConical className="h-3 w-3 inline" /> button to test if your API key is valid</li>
               <li>• Keys are sent with each request to use your own rate limits</li>
               <li>• If no custom key is set, the app uses default shared keys (with lower limits)</li>

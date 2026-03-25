@@ -18,7 +18,7 @@ function ChatLabSkeleton() {
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)]">
       {/* Header skeleton */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
+      <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-48 rounded-md" />
           <Skeleton className="h-6 w-24 rounded-full" />
@@ -34,7 +34,7 @@ function ChatLabSkeleton() {
       </div>
 
       {/* Input skeleton */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-white/[0.06]">
         <div className="max-w-4xl mx-auto flex gap-2">
           <Skeleton className="flex-1 h-[60px] rounded-md" />
           <Skeleton className="h-[60px] w-[60px] rounded-md" />

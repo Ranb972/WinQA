@@ -52,9 +52,9 @@ export default function ChatMessage({
   // Loading state for this message
   if (isLoading) {
     return (
-      <div className="animate-fade-in p-4 rounded-lg bg-slate-900/50 border border-slate-800">
+      <div className="animate-fade-in p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-sm font-medium text-emerald-400">Assistant</span>
+          <span className="text-sm font-medium text-orange-500">Assistant</span>
           {model && (
             <span
               className={cn(
@@ -68,13 +68,13 @@ export default function ChatMessage({
               {providerDisplayNames[model]}
             </span>
           )}
-          <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+          <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
         </div>
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-zinc-400">
           <div className="flex gap-1">
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.1s]" />
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.2s]" />
           </div>
           <span className="text-sm">Thinking...</span>
         </div>
@@ -87,7 +87,7 @@ export default function ChatMessage({
       className={cn(
         'animate-fade-in rounded-lg h-full',
         compact ? 'p-3' : 'p-4',
-        isAssistant ? 'bg-slate-900/50 border border-slate-800' : 'bg-slate-800/30'
+        isAssistant ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white/[0.02]'
       )}
     >
       {/* Header */}
@@ -96,7 +96,7 @@ export default function ChatMessage({
           <span
             className={cn(
               'text-sm font-medium',
-              isAssistant ? 'text-emerald-400' : 'text-slate-300'
+              isAssistant ? 'text-orange-500' : 'text-zinc-400'
             )}
           >
             {isAssistant ? 'Assistant' : 'You'}
@@ -134,7 +134,7 @@ export default function ChatMessage({
             variant="ghost"
             size="sm"
             onClick={handleCopy}
-            className="h-7 px-2 text-slate-400 hover:text-slate-100"
+            className="h-7 px-2 text-zinc-400 hover:text-slate-100"
           >
             {copied ? (
               <Check className="h-3.5 w-3.5" />
@@ -148,7 +148,7 @@ export default function ChatMessage({
                 variant="ghost"
                 size="sm"
                 onClick={onFlagBug}
-                className="h-7 px-2 text-slate-400 hover:text-rose-400"
+                className="h-7 px-2 text-zinc-400 hover:text-rose-400"
                 title="Flag as bug"
               >
                 <Bug className="h-3.5 w-3.5" />
@@ -157,7 +157,7 @@ export default function ChatMessage({
                 variant="ghost"
                 size="sm"
                 onClick={onSaveToLibrary}
-                className="h-7 px-2 text-slate-400 hover:text-emerald-400"
+                className="h-7 px-2 text-zinc-400 hover:text-emerald-400"
                 title="Save to library"
               >
                 <Library className="h-3.5 w-3.5" />
@@ -178,28 +178,28 @@ export default function ChatMessage({
 
               if (isInline) {
                 return (
-                  <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400" {...props}>
+                  <code className="bg-white/[0.02] px-1.5 py-0.5 rounded text-orange-500" {...props}>
                     {children}
                   </code>
                 );
               }
 
               return (
-                <pre className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
-                  <code className="text-slate-300 text-sm" {...props}>
+                <pre className="bg-white/[0.02] rounded-lg p-4 overflow-x-auto">
+                  <code className="text-zinc-400 text-sm" {...props}>
                     {children}
                   </code>
                 </pre>
               );
             },
             p({ children }) {
-              return <p className="text-slate-300 mb-2 last:mb-0">{children}</p>;
+              return <p className="text-zinc-400 mb-2 last:mb-0">{children}</p>;
             },
             ul({ children }) {
-              return <ul className="text-slate-300 list-disc pl-4 mb-2">{children}</ul>;
+              return <ul className="text-zinc-400 list-disc pl-4 mb-2">{children}</ul>;
             },
             ol({ children }) {
-              return <ol className="text-slate-300 list-decimal pl-4 mb-2">{children}</ol>;
+              return <ol className="text-zinc-400 list-decimal pl-4 mb-2">{children}</ol>;
             },
             li({ children }) {
               return <li className="mb-1">{children}</li>;
@@ -215,7 +215,7 @@ export default function ChatMessage({
             },
             blockquote({ children }) {
               return (
-                <blockquote className="border-l-2 border-emerald-500 pl-4 italic text-slate-400">
+                <blockquote className="border-l-2 border-orange-500 pl-4 italic text-zinc-400">
                   {children}
                 </blockquote>
               );
