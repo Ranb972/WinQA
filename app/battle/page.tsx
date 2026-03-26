@@ -732,7 +732,7 @@ export default function BattlePage() {
       <div className="relative pt-24 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1 justify-center">
+        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1 justify-center mb-10">
           {[
             { id: 'battle' as ActiveTab, label: 'Battle', icon: <Swords className="h-4 w-4" /> },
             { id: 'leaderboard' as ActiveTab, label: 'Leaderboard', icon: <Trophy className="h-4 w-4" /> },
@@ -768,7 +768,7 @@ export default function BattlePage() {
                 <div>
                   {/* Header */}
                   <div className="text-center mb-12 pb-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-white/[0.08] bg-white/[0.02] mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-white/[0.08] bg-white/[0.02] mb-6">
                       <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
                       <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50">Classified · Combat Division</span>
                     </div>
@@ -778,7 +778,7 @@ export default function BattlePage() {
                     >
                       AI BATTLE ARENA
                     </h1>
-                    <p className="text-white/50">Pit AI models against each other in epic challenges</p>
+                    <p className="text-white/50 mb-12">Pit AI models against each other in epic challenges</p>
                   </div>
 
                   {/* Fighter Cards (hidden for Royale — auto-selects all 4 providers) */}
