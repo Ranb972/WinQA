@@ -21,6 +21,7 @@ import {
   Zap,
   Shield,
   ScrollText,
+  User,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -190,69 +191,69 @@ function FighterCard({
   label: string;
   onProviderChange: (fighter: 'A' | 'B', provider: LLMProvider) => void;
 }) {
+  const isA = label.includes('A') || label.includes('1');
+  const selectedProviderName = fighter.provider ? providerDisplayNames[fighter.provider as LLMProvider] : 'Unknown Provider';
+  const selectedModelName = fighter.model
+    ? (PROVIDER_MODELS[fighter.provider as LLMProvider]?.find(m => m.id === fighter.model)?.name || fighter.model)
+    : 'No model selected';
+
   return (
     <div className="flex-1 min-w-0">
-      <div className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden hover:border-orange-500/30 transition-colors">
-        <div className="px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
-          <h3 className="text-white/40 text-[10px] font-mono uppercase tracking-wider">{label}</h3>
-        </div>
-        <div className="p-6">
+      {/* Label above card */}
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-orange-500">Suspect {isA ? 'A' : 'B'}</span>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">ID-{isA ? '001' : '002'}</span>
+      </div>
 
-        {/* Provider Select */}
-        <div className="mb-3">
-          <label className="text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1 block">Provider</label>
-          <select
-            value={fighter.provider}
-            onChange={(e) =>
-              onProviderChange(
-                label.includes('A') || label.includes('1') ? 'A' : 'B',
-                e.target.value as LLMProvider
-              )
-            }
-            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors"
-          >
-            <option value="">Select Provider</option>
-            {providers.map((p) => (
-              <option key={p} value={p}>
-                {providerDisplayNames[p]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="bg-white/[0.015] border border-white/[0.06] rounded-md relative overflow-hidden group hover:border-orange-500/30 transition-colors">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-        {/* Model Select */}
-        <div>
-          <label className="text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1 block">Model</label>
-          <select
-            value={fighter.model}
-            onChange={(e) =>
-              setFighter({ ...fighter, model: e.target.value })
-            }
-            disabled={!fighter.provider}
-            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none transition-colors disabled:opacity-50"
-          >
-            <option value="">Select Model</option>
-            {fighter.provider &&
-              PROVIDER_MODELS[fighter.provider]?.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        </div>
-        {/* Provider color indicator */}
-        {fighter.provider && (
-          <div className="mt-3 px-6 pb-4 flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${providerColorDots[fighter.provider as LLMProvider]}`}
-            />
-            <span className={`text-xs ${modelColors[fighter.provider as LLMProvider]}`}>
-              {modelDisplayNames[fighter.provider as LLMProvider]}
-            </span>
+        {/* Header with avatar */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
+          <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center">
+            <User className="w-4 h-4 text-white/50" />
           </div>
-        )}
+          <div>
+            <p className="text-white text-sm font-semibold tracking-wide font-heading">{selectedProviderName}</p>
+            <p className="text-[11px] text-white/40">{selectedModelName}</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Provider Select */}
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-2">Provider</label>
+            <select
+              value={fighter.provider}
+              onChange={(e) => onProviderChange(isA ? 'A' : 'B', e.target.value as LLMProvider)}
+              className="wq-select"
+            >
+              <option value="">Select Provider</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>{providerDisplayNames[p]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Model Select */}
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-2">Model</label>
+            <select
+              value={fighter.model}
+              onChange={(e) => setFighter({ ...fighter, model: e.target.value })}
+              disabled={!fighter.provider}
+              className="wq-select disabled:opacity-50"
+            >
+              <option value="">Select Model</option>
+              {fighter.provider &&
+                PROVIDER_MODELS[fighter.provider]?.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -766,7 +767,11 @@ export default function BattlePage() {
               {battleState === 'setup' && (
                 <div>
                   {/* Header */}
-                  <div className="text-center mb-10">
+                  <div className="text-center mb-12 pb-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-white/[0.08] bg-white/[0.02] mb-4">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                      <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50">Classified · Combat Division</span>
+                    </div>
                     <h1
                       className="text-4xl md:text-5xl font-bold tracking-tight font-heading mb-3"
                       style={{ background: 'linear-gradient(to right, #f97316, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
@@ -779,7 +784,7 @@ export default function BattlePage() {
                   {/* Fighter Cards (hidden for Royale — auto-selects all 4 providers) */}
                   {!isRoyale && (
                     <>
-                      <div className="flex flex-col md:flex-row gap-4 items-center mb-8">
+                      <div className="flex flex-col md:flex-row gap-10 items-start mb-8">
                         <FighterCard
                           fighter={fighterA}
                           setFighter={setFighterA}
@@ -788,15 +793,16 @@ export default function BattlePage() {
                         />
 
                         {/* VS Badge */}
-                        <motion.div
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                          className="flex-shrink-0"
-                        >
-                          <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center" style={{ animation: 'pulse-glow 2s ease-in-out infinite', boxShadow: '0 0 40px rgba(249,115,22,0.6), 0 0 80px rgba(249,115,22,0.3)' }}>
-                            <span className="text-black text-base font-black tracking-wider font-heading">VS</span>
-                          </div>
-                        </motion.div>
+                        <div className="flex-shrink-0 self-center md:mt-14">
+                          <motion.div
+                            animate={{ scale: [1, 1.08, 1] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                          >
+                            <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center" style={{ animation: 'pulse-glow 2s ease-in-out infinite', boxShadow: '0 0 40px rgba(249,115,22,0.6), 0 0 80px rgba(249,115,22,0.3)' }}>
+                              <span className="text-black text-base font-black tracking-wider font-heading">VS</span>
+                            </div>
+                          </motion.div>
+                        </div>
 
                         <FighterCard
                           fighter={fighterB}
@@ -807,10 +813,10 @@ export default function BattlePage() {
                       </div>
 
                       {/* Random Matchup */}
-                      <div className="text-center mb-8">
+                      <div className="text-center mb-14">
                         <button
                           onClick={handleRandomMatchup}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.06] text-zinc-200 hover:text-white hover:border-orange-500/40 transition-all text-sm"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-white/[0.1] bg-white/[0.02] text-sm text-white/60 hover:text-white hover:border-orange-500/40 hover:bg-white/[0.04] transition-all"
                         >
                           <Shuffle className="h-4 w-4" />
                           Random Matchup
@@ -844,9 +850,13 @@ export default function BattlePage() {
                   )}
 
                   {/* Challenge Grid */}
-                  <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-white mb-4">Choose Your Challenge</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="mb-14">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                      <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Select Case File</h2>
+                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Choose investigation protocol</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {BATTLE_CHALLENGES.map((challenge) => {
                         const isSelected = selectedChallenge?.id === challenge.id && !useCustomPrompt;
                         return (
@@ -858,35 +868,49 @@ export default function BattlePage() {
                             setSelectedChallenge(challenge);
                             setUseCustomPrompt(false);
                           }}
-                          className={`text-left w-full p-5 rounded-md relative overflow-hidden transition-all ${
+                          className={`text-left w-full p-5 rounded-md relative overflow-hidden transition-all group ${
                             isSelected
                               ? 'bg-white/[0.015] border border-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.25)]'
-                              : 'bg-white/[0.015] border border-white/[0.06] hover:border-orange-500/40'
+                              : 'bg-white/[0.015] border border-white/[0.06] hover:border-orange-500/40 hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]'
                           }`}
                         >
+                          {/* Corner accents */}
+                          <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-orange-500 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                          <div className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-orange-500 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                          <div className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-orange-500 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                          <div className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-orange-500 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+
                           <div className="flex items-start gap-3">
-                            <span className="text-2xl">{challenge.icon}</span>
+                            <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-orange-500/15 text-orange-500' : 'bg-white/[0.04] text-white/45'}`}>
+                              <span className="text-lg">{challenge.icon}</span>
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-white text-sm">{challenge.name}</span>
+                                <span className={`text-sm font-semibold font-heading ${isSelected ? 'text-white' : 'text-white/85'}`}>{challenge.name}</span>
                                 <span
-                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                  className={`px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-[0.12em] border ${
                                     challenge.category === 'Mind Games'
-                                      ? 'bg-purple-500/20 text-purple-300'
-                                      : 'bg-orange-500/20 text-orange-300'
+                                      ? 'bg-purple-500/15 text-purple-400 border-purple-500/35'
+                                      : 'bg-orange-500/12 text-orange-400 border-orange-500/35'
                                   }`}
                                 >
                                   {challenge.category}
                                 </span>
                                 {challenge.special && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-500/20 text-red-300">
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-[0.12em] bg-green-500/12 text-green-400 border border-green-500/35">
                                     {challenge.special === 'blindfold' ? 'Blindfold' : challenge.special === 'royale' ? 'Royale' : 'Live Code'}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-white/50 line-clamp-2">
+                              <p className="text-[11px] text-white/40 leading-relaxed mb-2 line-clamp-2">
                                 {challenge.description}
                               </p>
+                              {/* Difficulty dots */}
+                              <div className="flex items-center gap-1.5">
+                                {[1, 2, 3].map(i => (
+                                  <div key={i} className={`w-2 h-2 rounded-full ${i <= (challenge.special === 'royale' ? 3 : challenge.special === 'code-duel' ? 3 : challenge.category === 'Mind Games' ? 2 : 1) ? 'bg-orange-500' : 'bg-white/15'}`} />
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </motion.button>
@@ -939,22 +963,25 @@ export default function BattlePage() {
                   </div>
 
                   {/* Start Battle Button */}
-                  <div className="text-center">
+                  <div className="text-center pb-24">
                     <motion.button
                       whileHover={canStartBattle ? { scale: 1.05 } : {}}
                       whileTap={canStartBattle ? { scale: 0.95 } : {}}
                       onClick={startBattle}
                       disabled={!canStartBattle}
-                      className={`${
+                      className={`mx-auto ${
                         canStartBattle
                           ? 'flex items-center justify-center gap-3 w-full max-w-md px-14 py-5 rounded-lg text-base font-bold uppercase tracking-[0.15em] bg-orange-500 text-black hover:bg-orange-600 font-heading'
-                          : 'flex items-center justify-center gap-3 w-full max-w-md px-14 py-5 rounded-lg text-base font-bold uppercase tracking-[0.15em] bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed'
+                          : 'flex items-center justify-center gap-3 w-full max-w-md px-14 py-5 rounded-lg text-base font-bold uppercase tracking-[0.15em] bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed font-heading'
                       }`}
-                      style={canStartBattle ? { boxShadow: '0 0 40px rgba(249,115,22,0.5)' } : {}}
+                      style={canStartBattle ? { boxShadow: '0 0 40px rgba(249,115,22,0.5), 0 0 80px rgba(249,115,22,0.25)' } : {}}
                     >
                       <Flame className="h-5 w-5" />
                       START BATTLE
                     </motion.button>
+                    {!canStartBattle && (
+                      <p className="text-[11px] font-mono text-white/35 mt-4">Select two suspects and a case file to begin</p>
+                    )}
                   </div>
                 </div>
               )}
