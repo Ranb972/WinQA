@@ -1493,11 +1493,17 @@ export default function BattlePage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
+              className="mx-auto max-w-[900px] px-6 pb-24"
             >
-              <h2 className="text-2xl font-bold text-white mb-6 text-center">Leaderboard</h2>
+              {/* Section header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Subject Performance Dossier</h2>
+                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Ranked by win rate</span>
+              </div>
 
               {leaderboardLoading ? (
-                <div className="text-center text-zinc-400 py-12">
+                <div className="text-center text-white/50 py-12">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
@@ -1505,134 +1511,91 @@ export default function BattlePage() {
                   >
                     <RotateCcw className="h-6 w-6" />
                   </motion.div>
-                  <p className="mt-2">Loading leaderboard...</p>
+                  <p className="mt-2 font-mono text-sm">Analyzing records...</p>
                 </div>
               ) : sortedLeaderboard.length === 0 ? (
                 <div className="text-center py-20">
-                  <div className="relative inline-block mb-6">
-                    <Trophy className="h-16 w-16 text-zinc-700 mx-auto" />
-                    <motion.div
-                      animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
-                      transition={{ repeat: Infinity, duration: 2.5 }}
-                      className="absolute -top-1 -right-1"
-                    >
-                      <Sparkles className="h-5 w-5 text-amber-500/60" />
-                    </motion.div>
-                    <Swords className="h-6 w-6 text-zinc-600 absolute -bottom-1 -left-2 rotate-[-20deg]" />
-                  </div>
-                  <p className="text-lg font-semibold text-zinc-200 mb-1">No battles yet</p>
-                  <p className="text-zinc-500 text-sm mb-6">Time to enter the arena!</p>
+                  <Trophy className="h-16 w-16 text-orange-500/20 mx-auto mb-6" />
+                  <p className="text-lg font-semibold text-white mb-1 font-heading">No battles recorded</p>
+                  <p className="text-white/50 text-sm mb-6">Complete your first investigation to populate the dossier</p>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setActiveTab('battle');
-                      resetBattle();
-                    }}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-shadow"
+                    onClick={() => { setActiveTab('battle'); resetBattle(); }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-orange-500 text-black font-bold font-heading uppercase tracking-wider hover:bg-orange-600 transition-colors"
+                    style={{ boxShadow: '0 0 30px rgba(249,115,22,0.4)' }}
                   >
                     <Swords className="h-4 w-4" />
-                    Start Your First Battle
+                    Start First Battle
                   </motion.button>
                 </div>
               ) : (
                 <div className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Rank</th>
-                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Model</th>
-                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Provider</th>
-                        <th
-                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
-                          onClick={() => toggleSort('wins')}
-                        >
-                          W/L/T {leaderboardSort.key === 'wins' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
-                        </th>
-                        <th
-                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
-                          onClick={() => toggleSort('winRate')}
-                        >
-                          Win Rate {leaderboardSort.key === 'winRate' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
-                        </th>
-                        <th
-                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
-                          onClick={() => toggleSort('totalBattles')}
-                        >
-                          Battles {leaderboardSort.key === 'totalBattles' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedLeaderboard.map((entry, idx) => {
-                        const winRate =
-                          entry.totalBattles > 0
-                            ? ((entry.wins / entry.totalBattles) * 100).toFixed(0)
-                            : '0';
-                        const rankBorder =
-                          idx === 0
-                            ? 'border-l-2 border-l-orange-500'
-                            : idx === 1
-                            ? 'border-l-2 border-l-zinc-300'
-                            : idx === 2
-                            ? 'border-l-2 border-l-amber-700'
-                            : '';
+                  {/* Header row */}
+                  <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
+                    <div className="col-span-1 text-[10px] font-mono uppercase tracking-[0.15em] text-white/40">Rank</div>
+                    <div className="col-span-5 text-[10px] font-mono uppercase tracking-[0.15em] text-white/40">Model</div>
+                    <div
+                      className="col-span-2 text-center text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => toggleSort('wins')}
+                    >
+                      Wins {leaderboardSort.key === 'wins' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
+                    </div>
+                    <div className="col-span-2 text-center text-[10px] font-mono uppercase tracking-[0.15em] text-white/40">Losses</div>
+                    <div
+                      className="col-span-2 text-right text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => toggleSort('winRate')}
+                    >
+                      Win Rate {leaderboardSort.key === 'winRate' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
+                    </div>
+                  </div>
 
-                        return (
-                          <motion.tr
-                            key={entry._id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: idx * 0.05 }}
-                            className={`border-b border-white/[0.04] hover:bg-white/[0.01] transition-colors ${rankBorder}${idx === 0 ? ' bg-orange-500/[0.08]' : ''}`}
-                          >
-                            <td className="py-3 px-3">
-                              <span className={`font-bold ${idx === 0 ? 'text-orange-500' : 'text-white'}`}>
-                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-white font-medium">
-                              {getDisplayName(entry.provider, entry.modelId)}
-                            </td>
-                            <td className="py-3 px-3">
-                              <span
-                                className={`text-xs ${
-                                  modelColors[entry.provider as LLMProvider] || 'text-zinc-400'
-                                }`}
-                              >
-                                {providerDisplayNames[entry.provider as LLMProvider] || entry.provider}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center text-white/50">
-                              <span className="text-orange-400">{entry.wins}</span>
-                              {' / '}
-                              <span className="text-red-400">{entry.losses}</span>
-                              {' / '}
-                              <span className="text-amber-400">{entry.ties}</span>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span
-                                className={`font-medium ${
-                                  idx === 0
-                                    ? 'text-orange-500 font-bold'
-                                    : Number(winRate) >= 60
-                                    ? 'text-orange-400'
-                                    : Number(winRate) >= 40
-                                    ? 'text-amber-400'
-                                    : 'text-red-400'
-                                }`}
-                              >
-                                {winRate}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center text-white/50">
-                              {entry.totalBattles}
-                            </td>
-                          </motion.tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {/* Data rows */}
+                  {sortedLeaderboard.map((entry, idx) => {
+                    const winRate = entry.totalBattles > 0 ? ((entry.wins / entry.totalBattles) * 100).toFixed(0) : '0';
+                    const isTop = idx === 0;
+
+                    return (
+                      <motion.div
+                        key={entry._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className={`grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/[0.04] hover:bg-white/[0.01] transition-colors items-center ${isTop ? 'bg-orange-500/[0.08]' : ''}`}
+                      >
+                        {/* Rank */}
+                        <div className="col-span-1">
+                          <span className={`text-sm font-bold font-heading ${isTop ? 'text-orange-500' : 'text-white/50'}`}>
+                            {isTop ? '●' : idx + 1}
+                          </span>
+                        </div>
+
+                        {/* Model + Provider */}
+                        <div className="col-span-5">
+                          <p className="text-sm text-white font-semibold font-heading">{getDisplayName(entry.provider, entry.modelId)}</p>
+                          <p className="text-[10px] text-white/40">{providerDisplayNames[entry.provider as LLMProvider] || entry.provider}</p>
+                        </div>
+
+                        {/* Wins */}
+                        <div className="col-span-2 text-center">
+                          <span className="text-sm text-white font-semibold">{entry.wins}</span>
+                        </div>
+
+                        {/* Losses */}
+                        <div className="col-span-2 text-center">
+                          <span className="text-sm text-white/70">{entry.losses}</span>
+                        </div>
+
+                        {/* Win Rate + Progress Bar */}
+                        <div className="col-span-2 flex flex-col items-end gap-1">
+                          <span className={`text-sm font-bold ${isTop ? 'text-orange-500' : 'text-white'}`}>{winRate}%</span>
+                          <div className="w-16 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${isTop ? 'bg-orange-500' : 'bg-white/30'}`} style={{ width: `${winRate}%` }} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -1646,11 +1609,17 @@ export default function BattlePage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
+              className="mx-auto max-w-[800px] px-6 pb-24"
             >
-              <h2 className="text-2xl font-bold text-white mb-6 text-center">Battle History</h2>
+              {/* Section header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Case Files · Closed Investigations</h2>
+                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Past battles</span>
+              </div>
 
               {historyLoading ? (
-                <div className="text-center text-zinc-400 py-12">
+                <div className="text-center text-white/50 py-12">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
@@ -1658,34 +1627,22 @@ export default function BattlePage() {
                   >
                     <RotateCcw className="h-6 w-6" />
                   </motion.div>
-                  <p className="mt-2">Loading history...</p>
+                  <p className="mt-2 font-mono text-sm">Retrieving case files...</p>
                 </div>
               ) : history.length === 0 ? (
                 <div className="text-center py-20">
-                  <div className="relative inline-block mb-6">
-                    <ScrollText className="h-16 w-16 text-orange-500/40 mx-auto" />
-                    <motion.div
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute -top-1 -right-2"
-                    >
-                      <Zap className="h-5 w-5 text-orange-500/60" />
-                    </motion.div>
-                    <Shield className="h-6 w-6 text-orange-500/30 absolute -bottom-1 -left-2" />
-                  </div>
-                  <p className="text-lg font-semibold text-white mb-1">No battle history yet</p>
-                  <p className="text-white/50 text-sm mb-6">Time to enter the arena!</p>
+                  <ScrollText className="h-16 w-16 text-orange-500/20 mx-auto mb-6" />
+                  <p className="text-lg font-semibold text-white mb-1 font-heading">No case files recorded</p>
+                  <p className="text-white/50 text-sm mb-6">Complete your first investigation to build the archive</p>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setActiveTab('battle');
-                      resetBattle();
-                    }}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-shadow"
+                    onClick={() => { setActiveTab('battle'); resetBattle(); }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-orange-500 text-black font-bold font-heading uppercase tracking-wider hover:bg-orange-600 transition-colors"
+                    style={{ boxShadow: '0 0 30px rgba(249,115,22,0.4)' }}
                   >
                     <Swords className="h-4 w-4" />
-                    Start Your First Battle
+                    Start First Battle
                   </motion.button>
                 </div>
               ) : (
@@ -1714,37 +1671,50 @@ export default function BattlePage() {
                         key={entry._id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden hover:border-orange-500/30 transition-colors"
+                        className="bg-white/[0.015] border border-white/[0.06] rounded-md p-4 hover:border-orange-500/30 transition-colors group relative overflow-hidden"
                       >
+                        {/* Corner accents */}
+                        <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+
                         <button
-                          onClick={() =>
-                            setExpandedHistoryId(isExpanded ? null : entry._id)
-                          }
-                          className="w-full text-left p-4 flex items-center justify-between hover:bg-white/[0.03] transition-colors"
+                          onClick={() => setExpandedHistoryId(isExpanded ? null : entry._id)}
+                          className="w-full text-left flex items-center justify-between gap-4"
                         >
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <span className="text-[9px] font-mono text-white/35 whitespace-nowrap">
-                              {date}
-                            </span>
-                            <span className="text-sm font-semibold text-white font-heading truncate">
-                              {getDisplayName(entry.modelA.provider, entry.modelA.model)}
-                              <span className="text-white/30 text-[10px] mx-2">vs</span>
-                              {getDisplayName(entry.modelB.provider, entry.modelB.model)}
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-orange-500/12 text-orange-400 border border-orange-500/35 hidden sm:inline">
-                              {entry.challengeName}
-                            </span>
+                          {/* Left: Suspects + Challenge */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-semibold text-white truncate font-heading">
+                                {getDisplayName(entry.modelA.provider, entry.modelA.model)}
+                              </span>
+                              <span className="text-[10px] text-white/30">vs</span>
+                              <span className="text-sm font-semibold text-white truncate font-heading">
+                                {getDisplayName(entry.modelB.provider, entry.modelB.model)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-white/40">Challenge:</span>
+                              <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-[0.12em] bg-orange-500/12 text-orange-400 border border-orange-500/35">
+                                {entry.challengeName}
+                              </span>
+                            </div>
                           </div>
+
+                          {/* Right: Verdict + Timestamp + Chevron */}
                           <div className="flex items-center gap-3 flex-shrink-0">
-                            <span
-                              className="px-3 py-1 rounded bg-orange-500/15 text-orange-500 text-[10px] font-mono font-bold uppercase tracking-wider border border-orange-500/35"
-                            >
-                              {winnerName}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-white/40">Verdict:</span>
+                                <span className="px-3 py-1 rounded bg-orange-500/15 text-orange-500 text-[10px] font-mono font-bold uppercase tracking-[0.12em] border border-orange-500/35">
+                                  {winnerName}
+                                </span>
+                              </div>
+                              <span className="text-[9px] font-mono text-white/35">{date}</span>
+                            </div>
                             {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 text-white/50" />
+                              <ChevronUp className="h-4 w-4 text-white/30" />
                             ) : (
-                              <ChevronDown className="h-4 w-4 text-white/50" />
+                              <ChevronDown className="h-4 w-4 text-white/30" />
                             )}
                           </div>
                         </button>
