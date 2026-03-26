@@ -192,12 +192,15 @@ function FighterCard({
 }) {
   return (
     <div className="flex-1 min-w-0">
-      <div className="bg-white/[0.02] backdrop-blur-xl border border-orange-500/20 rounded-2xl p-6">
-        <h3 className="text-sm font-medium text-zinc-400 mb-4">{label}</h3>
+      <div className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden hover:border-orange-500/30 transition-colors">
+        <div className="px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
+          <h3 className="text-white/40 text-[10px] font-mono uppercase tracking-wider">{label}</h3>
+        </div>
+        <div className="p-6">
 
         {/* Provider Select */}
         <div className="mb-3">
-          <label className="text-xs text-zinc-500 mb-1 block">Provider</label>
+          <label className="text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1 block">Provider</label>
           <select
             value={fighter.provider}
             onChange={(e) =>
@@ -219,7 +222,7 @@ function FighterCard({
 
         {/* Model Select */}
         <div>
-          <label className="text-xs text-zinc-500 mb-1 block">Model</label>
+          <label className="text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1 block">Model</label>
           <select
             value={fighter.model}
             onChange={(e) =>
@@ -238,9 +241,10 @@ function FighterCard({
           </select>
         </div>
 
+        </div>
         {/* Provider color indicator */}
         {fighter.provider && (
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 px-6 pb-4 flex items-center gap-2">
             <div
               className={`h-2 w-2 rounded-full ${providerColorDots[fighter.provider as LLMProvider]}`}
             />
@@ -720,10 +724,14 @@ export default function BattlePage() {
   // --- RENDER ---
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black pt-24 pb-12 px-4">
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Ambient background */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse_at_center,rgba(249,115,22,0.08)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div className="relative pt-24 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 justify-center">
+        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1 justify-center">
           {[
             { id: 'battle' as ActiveTab, label: 'Battle', icon: <Swords className="h-4 w-4" /> },
             { id: 'leaderboard' as ActiveTab, label: 'Leaderboard', icon: <Trophy className="h-4 w-4" /> },
@@ -732,10 +740,10 @@ export default function BattlePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              className={`${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-orange-600/30 to-amber-600/30 text-orange-300 border border-orange-500/40'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'flex items-center gap-2 px-4 py-2 rounded-md text-sm bg-orange-500 text-black font-semibold'
+                  : 'flex items-center gap-2 px-4 py-2 rounded-md text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-all'
               }`}
             >
               {tab.icon}
@@ -760,12 +768,12 @@ export default function BattlePage() {
                   {/* Header */}
                   <div className="text-center mb-10">
                     <h1
-                      className="text-4xl md:text-5xl font-black mb-3 bg-gradient-to-r from-orange-400 via-amber-400 to-red-400 bg-clip-text text-transparent"
-                      style={{ textShadow: '0 0 40px rgba(249, 115, 22, 0.3)' }}
+                      className="text-4xl md:text-5xl font-bold tracking-tight font-heading mb-3"
+                      style={{ background: 'linear-gradient(to right, #f97316, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
                     >
                       AI BATTLE ARENA
                     </h1>
-                    <p className="text-zinc-400">Pit AI models against each other in epic challenges</p>
+                    <p className="text-white/50">Pit AI models against each other in epic challenges</p>
                   </div>
 
                   {/* Fighter Cards (hidden for Royale — auto-selects all 4 providers) */}
@@ -785,8 +793,8 @@ export default function BattlePage() {
                           transition={{ repeat: Infinity, duration: 2 }}
                           className="flex-shrink-0"
                         >
-                          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-full h-14 w-14 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-orange-500/30">
-                            VS
+                          <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center" style={{ animation: 'pulse-glow 2s ease-in-out infinite', boxShadow: '0 0 40px rgba(249,115,22,0.6), 0 0 80px rgba(249,115,22,0.3)' }}>
+                            <span className="text-black text-base font-black tracking-wider font-heading">VS</span>
                           </div>
                         </motion.div>
 
@@ -813,10 +821,10 @@ export default function BattlePage() {
 
                   {/* Royale Info Banner — shows auto-selected models */}
                   {isRoyale && (
-                    <div className="mb-8 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-5">
+                    <div className="mb-8 bg-white/[0.015] border border-orange-500/30 rounded-md p-5">
                       <div className="flex items-center gap-2 mb-3">
-                        <Crown className="h-5 w-5 text-amber-400" />
-                        <span className="font-bold text-amber-300 text-sm">Battle Royale — one model from each provider</span>
+                        <Crown className="h-5 w-5 text-orange-400" />
+                        <span className="font-bold text-orange-300 text-sm">Battle Royale — one model from each provider</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {providers.map((p) => (
@@ -841,10 +849,6 @@ export default function BattlePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {BATTLE_CHALLENGES.map((challenge) => {
                         const isSelected = selectedChallenge?.id === challenge.id && !useCustomPrompt;
-                        const isMindGames = challenge.category === 'Mind Games';
-                        const hoverClass = isMindGames
-                          ? 'hover:border-orange-500/40 hover:bg-orange-500/5'
-                          : 'hover:border-amber-500/40 hover:bg-amber-500/5';
                         return (
                         <motion.button
                           key={challenge.id}
@@ -854,10 +858,10 @@ export default function BattlePage() {
                             setSelectedChallenge(challenge);
                             setUseCustomPrompt(false);
                           }}
-                          className={`text-left p-4 rounded-xl border transition-all duration-200 ${
+                          className={`text-left w-full p-5 rounded-md relative overflow-hidden transition-all ${
                             isSelected
-                              ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/20 ring-1 ring-orange-500/30'
-                              : `bg-white/[0.02] border-white/[0.06] ${hoverClass}`
+                              ? 'bg-white/[0.015] border border-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.25)]'
+                              : 'bg-white/[0.015] border border-white/[0.06] hover:border-orange-500/40'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -868,8 +872,8 @@ export default function BattlePage() {
                                 <span
                                   className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                                     challenge.category === 'Mind Games'
-                                      ? 'bg-blue-500/20 text-blue-300'
-                                      : 'bg-purple-500/20 text-purple-300'
+                                      ? 'bg-purple-500/20 text-purple-300'
+                                      : 'bg-orange-500/20 text-orange-300'
                                   }`}
                                 >
                                   {challenge.category}
@@ -880,7 +884,7 @@ export default function BattlePage() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-zinc-400 line-clamp-2">
+                              <p className="text-xs text-white/50 line-clamp-2">
                                 {challenge.description}
                               </p>
                             </div>
@@ -897,17 +901,17 @@ export default function BattlePage() {
                           setUseCustomPrompt(true);
                           setSelectedChallenge(null);
                         }}
-                        className={`text-left p-4 rounded-xl border transition-all duration-200 ${
+                        className={`text-left w-full p-5 rounded-md relative overflow-hidden transition-all ${
                           useCustomPrompt
-                            ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/10'
-                            : 'bg-white/[0.02] border-white/[0.06] hover:border-orange-500/40'
+                            ? 'bg-white/[0.015] border border-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.25)]'
+                            : 'bg-white/[0.015] border border-white/[0.06] hover:border-orange-500/40'
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <span className="text-2xl">✏️</span>
                           <div>
                             <span className="font-medium text-white text-sm">Custom Prompt</span>
-                            <p className="text-xs text-zinc-400 mt-1">Write your own challenge</p>
+                            <p className="text-xs text-white/50 mt-1">Write your own challenge</p>
                           </div>
                         </div>
                       </motion.button>
@@ -941,11 +945,12 @@ export default function BattlePage() {
                       whileTap={canStartBattle ? { scale: 0.95 } : {}}
                       onClick={startBattle}
                       disabled={!canStartBattle}
-                      className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
+                      className={`${
                         canStartBattle
-                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50'
-                          : 'bg-white/[0.02] text-zinc-500 cursor-not-allowed'
+                          ? 'flex items-center justify-center gap-3 w-full max-w-md px-14 py-5 rounded-lg text-base font-bold uppercase tracking-[0.15em] bg-orange-500 text-black hover:bg-orange-600 font-heading'
+                          : 'flex items-center justify-center gap-3 w-full max-w-md px-14 py-5 rounded-lg text-base font-bold uppercase tracking-[0.15em] bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed'
                       }`}
+                      style={canStartBattle ? { boxShadow: '0 0 40px rgba(249,115,22,0.5)' } : {}}
                     >
                       <Flame className="h-5 w-5" />
                       START BATTLE
@@ -963,13 +968,13 @@ export default function BattlePage() {
                     className="text-center mb-8"
                   >
                     <motion.h2
-                      animate={{ textShadow: ['0 0 20px rgba(245, 158, 11, 0.3)', '0 0 40px rgba(245, 158, 11, 0.6)', '0 0 20px rgba(245, 158, 11, 0.3)'] }}
+                      animate={{ textShadow: ['0 0 20px rgba(249, 115, 22, 0.3)', '0 0 40px rgba(249, 115, 22, 0.6)', '0 0 20px rgba(249, 115, 22, 0.3)'] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="text-2xl md:text-3xl font-black text-amber-400 mb-2"
+                      className="text-2xl md:text-3xl font-black text-orange-400 mb-2"
                     >
                       ⚔️ BATTLE IN PROGRESS
                     </motion.h2>
-                    <p className="text-sm font-medium text-orange-300/80 mb-1">
+                    <p className="text-sm font-medium text-orange-400/80 mb-1">
                       {selectedChallenge?.name || 'Custom Challenge'}
                     </p>
                     {selectedChallenge?.userDescription && (
@@ -982,10 +987,10 @@ export default function BattlePage() {
                         {battleExplanation}
                       </p>
                     )}
-                    <div className="mt-2 bg-white/[0.02] border border-amber-500/20 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+                    <div className="mt-2 bg-white/[0.02] border border-orange-500/20 rounded-md px-4 py-3 max-w-2xl mx-auto">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-sm">🎯</span>
-                        <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+                        <span className="text-xs font-semibold text-orange-400/80 uppercase tracking-wider">Mission</span>
                       </div>
                       <p className="text-sm text-zinc-200 line-clamp-2">
                         {battlePrompt}
@@ -1007,11 +1012,11 @@ export default function BattlePage() {
                             opacity: 1,
                             y: 0,
                             borderColor: response && !response.error
-                              ? ['rgba(16, 185, 129, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(51, 65, 85, 0.5)']
+                              ? ['rgba(249, 115, 22, 0.6)', 'rgba(249, 115, 22, 0.6)', 'rgba(51, 65, 85, 0.5)']
                               : 'rgba(51, 65, 85, 0.5)',
                           }}
                           transition={{ delay: idx * 0.1, borderColor: { duration: 1.5, times: [0, 0.3, 1] } }}
-                          className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5"
+                          className="bg-white/[0.015] border border-white/[0.06] rounded-md p-5"
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -1046,7 +1051,7 @@ export default function BattlePage() {
                             <div className="space-y-3">
                               <div className="h-2 bg-white/[0.02] rounded-full overflow-hidden relative">
                                 <motion.div
-                                  className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 rounded-full"
+                                  className="h-full bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-full"
                                   initial={{ width: '0%' }}
                                   animate={{ width: '100%' }}
                                   transition={{ duration: 45, ease: 'linear' }}
@@ -1057,7 +1062,7 @@ export default function BattlePage() {
                                   transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
                                 />
                               </div>
-                              <p className="text-sm text-amber-400/80 animate-pulse">Generating response...</p>
+                              <p className="text-sm text-orange-400/80 animate-pulse">Generating response...</p>
                             </div>
                           ) : response.error ? (
                             <div className="text-sm text-red-400 bg-red-500/10 rounded-lg p-3">
@@ -1116,17 +1121,17 @@ export default function BattlePage() {
                         className="text-center mb-8"
                       >
                         <div className="flex items-center justify-center gap-2 mb-2">
-                          <Trophy className="h-6 w-6 text-amber-400" />
+                          <Trophy className="h-6 w-6 text-orange-400" />
                           <h2 className="text-2xl font-bold text-white">WHO WINS?</h2>
-                          <Trophy className="h-6 w-6 text-amber-400" />
+                          <Trophy className="h-6 w-6 text-orange-400" />
                         </div>
                         {selectedChallenge && (
                           <div className="mt-3">
-                            <p className="text-sm font-medium text-orange-300/80">
+                            <p className="text-sm font-medium text-orange-400/80">
                               {selectedChallenge.name}
                             </p>
                             {selectedChallenge.userDescription && (
-                              <p className="text-xs italic text-zinc-400 mt-0.5">
+                              <p className="text-xs italic text-white/50 mt-0.5">
                                 {selectedChallenge.userDescription}
                               </p>
                             )}
@@ -1138,10 +1143,10 @@ export default function BattlePage() {
                           </p>
                         )}
                         {battlePrompt && (
-                          <div className="mt-2 bg-white/[0.02] border border-amber-500/20 border-l-2 border-l-amber-500/50 rounded-xl px-4 py-3 max-w-2xl mx-auto">
+                          <div className="mt-2 bg-white/[0.02] border border-orange-500/20 border-l-2 border-l-orange-500/50 rounded-md px-4 py-3 max-w-2xl mx-auto">
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-sm">🎯</span>
-                              <span className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">Mission</span>
+                              <span className="text-xs font-semibold text-orange-400/80 uppercase tracking-wider">Mission</span>
                             </div>
                             <p className="text-sm text-zinc-200">{battlePrompt}</p>
                           </div>
@@ -1166,9 +1171,9 @@ export default function BattlePage() {
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: idx * 0.1 }}
-                              className={`bg-white/[0.02] backdrop-blur-xl border rounded-2xl p-5 transition-all ${
+                              className={`bg-white/[0.015] border rounded-md p-5 transition-all ${
                                 winner === `model${key}`
-                                  ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10'
+                                  ? 'border-orange-500/50 shadow-lg shadow-orange-500/10'
                                   : 'border-white/[0.06]'
                               }`}
                             >
@@ -1222,9 +1227,9 @@ export default function BattlePage() {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => setWinner(key)}
-                              className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                              className={`px-5 py-2.5 rounded-md font-medium text-sm transition-all ${
                                 winner === key
-                                  ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300'
+                                  ? 'bg-orange-500/20 border-2 border-orange-500 text-orange-300'
                                   : 'bg-white/[0.02] border border-white/[0.06] text-zinc-200 hover:border-white/[0.12]'
                               }`}
                             >
@@ -1237,9 +1242,9 @@ export default function BattlePage() {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => setWinner('tie')}
-                          className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                          className={`px-5 py-2.5 rounded-md font-medium text-sm transition-all ${
                             winner === 'tie'
-                              ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-300'
+                              ? 'bg-orange-500/20 border-2 border-orange-500 text-orange-300'
                               : 'bg-white/[0.02] border border-white/[0.06] text-zinc-200 hover:border-white/[0.12]'
                           }`}
                         >
@@ -1254,11 +1259,12 @@ export default function BattlePage() {
                           whileTap={winner ? { scale: 0.95 } : {}}
                           onClick={handleBlindfoldOrSubmit}
                           disabled={!winner || saveStatus === 'saving'}
-                          className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-base transition-all ${
+                          className={`inline-flex items-center gap-2 px-8 py-3 rounded-lg font-bold text-base uppercase tracking-[0.1em] font-heading transition-all ${
                             winner
-                              ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
-                              : 'bg-white/[0.02] text-zinc-500 cursor-not-allowed'
+                              ? 'bg-orange-500 text-black hover:bg-orange-600'
+                              : 'bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed'
                           }`}
+                          style={winner ? { boxShadow: '0 0 40px rgba(249,115,22,0.5)' } : {}}
                         >
                           {saveStatus === 'saving' ? (
                             <>
@@ -1313,30 +1319,30 @@ export default function BattlePage() {
                     <motion.div
                       animate={{
                         boxShadow: [
-                          '0 0 30px rgba(245, 158, 11, 0.2)',
-                          '0 0 80px rgba(245, 158, 11, 0.5)',
-                          '0 0 30px rgba(245, 158, 11, 0.2)',
+                          '0 0 30px rgba(249, 115, 22, 0.2)',
+                          '0 0 80px rgba(249, 115, 22, 0.5)',
+                          '0 0 30px rgba(249, 115, 22, 0.2)',
                         ],
                       }}
                       transition={{ repeat: Infinity, duration: 2.5 }}
-                      className="inline-block bg-gradient-to-b from-white/[0.03] to-white/[0.01] backdrop-blur-xl border border-amber-500/40 rounded-3xl px-12 py-10"
+                      className="inline-block bg-white/[0.02] border border-orange-500/40 rounded-lg px-12 py-10"
                     >
                       <motion.div
                         animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.1, 1] }}
                         transition={{ duration: 0.6, delay: 0.3 }}
                       >
-                        <Trophy className="h-16 w-16 text-amber-400 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                        <Trophy className="h-16 w-16 text-orange-400 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
                       </motion.div>
                       {winner === 'tie' ? (
                         <>
-                          <h2 className="text-4xl md:text-5xl font-black text-amber-400 mb-2 drop-shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                          <h2 className="text-4xl md:text-5xl font-black text-orange-400 mb-2 drop-shadow-[0_0_20px_rgba(249,115,22,0.3)]">
                             IT&apos;S A TIE!
                           </h2>
-                          <p className="text-sm text-zinc-400">Both fighters scored equally</p>
+                          <p className="text-sm text-white/50">Both fighters scored equally</p>
                         </>
                       ) : (
                         <>
-                          <h2 className="text-4xl md:text-5xl font-black text-emerald-400 mb-3 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                          <h2 className="text-4xl md:text-5xl font-black text-orange-400 mb-3 drop-shadow-[0_0_20px_rgba(249,115,22,0.3)]">
                             WINNER!
                           </h2>
                           <p className="text-2xl text-white font-bold mb-2">
@@ -1351,7 +1357,7 @@ export default function BattlePage() {
                               ? getDisplayName(fighterB.provider, fighterB.model)
                               : `Model ${winner?.replace('model', '')}`}
                           </p>
-                          <p className="text-sm text-zinc-400 mt-1">
+                          <p className="text-sm text-white/50 mt-1">
                             Voted champion by you
                           </p>
                         </>
@@ -1374,22 +1380,22 @@ export default function BattlePage() {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.3 + idx * 0.15 }}
-                              className={`bg-white/[0.02] backdrop-blur-xl border rounded-xl p-4 flex items-center gap-4 ${
+                              className={`bg-white/[0.015] border rounded-md p-4 flex items-center gap-4 ${
                                 r.rank === 1
-                                  ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
+                                  ? 'border-orange-400/50 shadow-lg shadow-orange-500/20 ring-1 ring-orange-500/20'
                                   : 'border-white/[0.06]'
                               }`}
                             >
                               <span className="text-2xl">{medal}</span>
                               <div className="flex-1 min-w-0">
-                                <h3 className={`font-medium text-sm ${r.rank === 1 ? 'text-amber-300' : 'text-white'}`}>
+                                <h3 className={`font-medium text-sm ${r.rank === 1 ? 'text-orange-300' : 'text-white'}`}>
                                   {getDisplayName(r.provider, r.model)}
                                 </h3>
                                 <span className="text-xs text-zinc-500">
                                   {providerDisplayNames[r.provider as LLMProvider] || r.provider}
                                 </span>
                               </div>
-                              {r.rank === 1 && <Crown className="h-4 w-4 text-amber-400" />}
+                              {r.rank === 1 && <Crown className="h-4 w-4 text-orange-400" />}
                             </motion.div>
                           );
                         })}
@@ -1406,21 +1412,21 @@ export default function BattlePage() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 + idx * 0.15 }}
-                          className={`bg-white/[0.02] backdrop-blur-xl border rounded-xl p-5 transition-all ${
+                          className={`bg-white/[0.015] border rounded-md p-5 transition-all ${
                             item.isWinner
-                              ? 'border-amber-400/50 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/20'
+                              ? 'border-orange-400/50 shadow-lg shadow-orange-500/20 ring-1 ring-orange-500/20'
                               : 'border-white/[0.06]'
                           }`}
                         >
                           <div className="flex items-center justify-center gap-2">
-                            {item.isWinner && <Crown className="h-5 w-5 text-amber-400" />}
-                            <h3 className={`font-medium text-base ${item.isWinner ? 'text-amber-300' : 'text-white'}`}>{item.label}</h3>
+                            {item.isWinner && <Crown className="h-5 w-5 text-orange-400" />}
+                            <h3 className={`font-medium text-base ${item.isWinner ? 'text-orange-300' : 'text-white'}`}>{item.label}</h3>
                           </div>
                           <p className="text-center text-xs text-zinc-500 mt-1">
                             {providerDisplayNames[item.provider as LLMProvider] || item.provider}
                           </p>
                           {item.isWinner && (
-                            <p className="text-center text-xs text-amber-400/70 mt-2 font-medium">Champion</p>
+                            <p className="text-center text-xs text-orange-400/70 mt-2 font-medium">Champion</p>
                           )}
                         </motion.div>
                       ))}
@@ -1433,14 +1439,15 @@ export default function BattlePage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={resetBattle}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg shadow-orange-500/20"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-orange-500 text-black font-bold font-heading uppercase tracking-wider hover:bg-orange-600 transition-colors"
+                      style={{ boxShadow: '0 0 30px rgba(249,115,22,0.4)' }}
                     >
                       <Swords className="h-4 w-4" />
                       New Battle
                     </motion.button>
                     <button
                       onClick={() => setActiveTab('leaderboard')}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-zinc-200 hover:text-white hover:border-white/[0.12] transition-all font-medium"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-orange-500/[0.08] border border-orange-500/30 text-orange-300 hover:text-orange-200 hover:border-orange-500/50 transition-all font-medium"
                     >
                       <Trophy className="h-4 w-4" />
                       Leaderboard
@@ -1502,27 +1509,27 @@ export default function BattlePage() {
                   </motion.button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-zinc-400 border-b border-white/[0.06]">
-                        <th className="text-left py-3 px-3 font-medium">Rank</th>
-                        <th className="text-left py-3 px-3 font-medium">Model</th>
-                        <th className="text-left py-3 px-3 font-medium">Provider</th>
+                      <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Rank</th>
+                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Model</th>
+                        <th className="text-left py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40">Provider</th>
                         <th
-                          className="text-center py-3 px-3 font-medium cursor-pointer hover:text-white transition-colors"
+                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
                           onClick={() => toggleSort('wins')}
                         >
                           W/L/T {leaderboardSort.key === 'wins' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
                         </th>
                         <th
-                          className="text-center py-3 px-3 font-medium cursor-pointer hover:text-white transition-colors"
+                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
                           onClick={() => toggleSort('winRate')}
                         >
                           Win Rate {leaderboardSort.key === 'winRate' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
                         </th>
                         <th
-                          className="text-center py-3 px-3 font-medium cursor-pointer hover:text-white transition-colors"
+                          className="text-center py-3 px-3 text-[10px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:text-white transition-colors"
                           onClick={() => toggleSort('totalBattles')}
                         >
                           Battles {leaderboardSort.key === 'totalBattles' && (leaderboardSort.dir === 'desc' ? '↓' : '↑')}
@@ -1537,7 +1544,7 @@ export default function BattlePage() {
                             : '0';
                         const rankBorder =
                           idx === 0
-                            ? 'border-l-2 border-l-amber-400'
+                            ? 'border-l-2 border-l-orange-500'
                             : idx === 1
                             ? 'border-l-2 border-l-zinc-300'
                             : idx === 2
@@ -1550,10 +1557,10 @@ export default function BattlePage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: idx * 0.05 }}
-                            className={`border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors ${rankBorder}`}
+                            className={`border-b border-white/[0.04] hover:bg-white/[0.01] transition-colors ${rankBorder}${idx === 0 ? ' bg-orange-500/[0.08]' : ''}`}
                           >
                             <td className="py-3 px-3">
-                              <span className="font-bold text-white">
+                              <span className={`font-bold ${idx === 0 ? 'text-orange-500' : 'text-white'}`}>
                                 {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                               </span>
                             </td>
@@ -1569,8 +1576,8 @@ export default function BattlePage() {
                                 {providerDisplayNames[entry.provider as LLMProvider] || entry.provider}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-center text-zinc-200">
-                              <span className="text-emerald-400">{entry.wins}</span>
+                            <td className="py-3 px-3 text-center text-white/50">
+                              <span className="text-orange-400">{entry.wins}</span>
                               {' / '}
                               <span className="text-red-400">{entry.losses}</span>
                               {' / '}
@@ -1579,8 +1586,10 @@ export default function BattlePage() {
                             <td className="py-3 px-3 text-center">
                               <span
                                 className={`font-medium ${
-                                  Number(winRate) >= 60
-                                    ? 'text-emerald-400'
+                                  idx === 0
+                                    ? 'text-orange-500 font-bold'
+                                    : Number(winRate) >= 60
+                                    ? 'text-orange-400'
                                     : Number(winRate) >= 40
                                     ? 'text-amber-400'
                                     : 'text-red-400'
@@ -1589,7 +1598,7 @@ export default function BattlePage() {
                                 {winRate}%
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-center text-zinc-400">
+                            <td className="py-3 px-3 text-center text-white/50">
                               {entry.totalBattles}
                             </td>
                           </motion.tr>
@@ -1627,18 +1636,18 @@ export default function BattlePage() {
               ) : history.length === 0 ? (
                 <div className="text-center py-20">
                   <div className="relative inline-block mb-6">
-                    <ScrollText className="h-16 w-16 text-zinc-700 mx-auto" />
+                    <ScrollText className="h-16 w-16 text-orange-500/40 mx-auto" />
                     <motion.div
                       animate={{ opacity: [0.3, 1, 0.3] }}
                       transition={{ repeat: Infinity, duration: 2 }}
                       className="absolute -top-1 -right-2"
                     >
-                      <Zap className="h-5 w-5 text-amber-500/60" />
+                      <Zap className="h-5 w-5 text-orange-500/60" />
                     </motion.div>
-                    <Shield className="h-6 w-6 text-zinc-600 absolute -bottom-1 -left-2" />
+                    <Shield className="h-6 w-6 text-orange-500/30 absolute -bottom-1 -left-2" />
                   </div>
-                  <p className="text-lg font-semibold text-zinc-200 mb-1">No battle history yet</p>
-                  <p className="text-zinc-500 text-sm mb-6">Time to enter the arena!</p>
+                  <p className="text-lg font-semibold text-white mb-1">No battle history yet</p>
+                  <p className="text-white/50 text-sm mb-6">Time to enter the arena!</p>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -1678,41 +1687,37 @@ export default function BattlePage() {
                         key={entry._id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl overflow-hidden"
+                        className="bg-white/[0.015] border border-white/[0.06] rounded-md overflow-hidden hover:border-orange-500/30 transition-colors"
                       >
                         <button
                           onClick={() =>
                             setExpandedHistoryId(isExpanded ? null : entry._id)
                           }
-                          className="w-full text-left p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                          className="w-full text-left p-4 flex items-center justify-between hover:bg-white/[0.03] transition-colors"
                         >
                           <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <span className="text-xs text-zinc-500 whitespace-nowrap">
+                            <span className="text-[9px] font-mono text-white/35 whitespace-nowrap">
                               {date}
                             </span>
-                            <span className="text-sm text-white font-medium truncate">
+                            <span className="text-sm font-semibold text-white font-heading truncate">
                               {getDisplayName(entry.modelA.provider, entry.modelA.model)}
-                              <span className="text-zinc-500 mx-2">vs</span>
+                              <span className="text-white/30 text-[10px] mx-2">vs</span>
                               {getDisplayName(entry.modelB.provider, entry.modelB.model)}
                             </span>
-                            <span className="text-xs text-zinc-400 hidden sm:inline">
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-orange-500/12 text-orange-400 border border-orange-500/35 hidden sm:inline">
                               {entry.challengeName}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0">
                             <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                entry.winner === 'tie'
-                                  ? 'bg-amber-500/20 text-amber-300'
-                                  : 'bg-emerald-500/20 text-emerald-300'
-                              }`}
+                              className="px-3 py-1 rounded bg-orange-500/15 text-orange-500 text-[10px] font-mono font-bold uppercase tracking-wider border border-orange-500/35"
                             >
                               {winnerName}
                             </span>
                             {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 text-zinc-400" />
+                              <ChevronUp className="h-4 w-4 text-white/50" />
                             ) : (
-                              <ChevronDown className="h-4 w-4 text-zinc-400" />
+                              <ChevronDown className="h-4 w-4 text-white/50" />
                             )}
                           </div>
                         </button>
@@ -1727,7 +1732,7 @@ export default function BattlePage() {
                               className="overflow-hidden"
                             >
                               <div className="px-4 pb-4 border-t border-white/[0.06] pt-4">
-                                <p className="text-xs text-zinc-500 mb-3">
+                                <p className="text-xs text-white/50 mb-3">
                                   <strong>Prompt:</strong> {entry.prompt}
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1737,11 +1742,11 @@ export default function BattlePage() {
                                       <span className="text-xs font-medium text-white">
                                         {getDisplayName(entry.modelA.provider, entry.modelA.model)}
                                       </span>
-                                      <span className="text-xs text-amber-400">
+                                      <span className="text-xs text-orange-400">
                                         {entry.ratings.modelA.total}/15
                                       </span>
                                     </div>
-                                    <p className="text-xs text-zinc-400 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                    <p className="text-xs text-white/50 whitespace-pre-wrap max-h-32 overflow-y-auto">
                                       {entry.responseA.content}
                                     </p>
                                   </div>
@@ -1751,11 +1756,11 @@ export default function BattlePage() {
                                       <span className="text-xs font-medium text-white">
                                         {getDisplayName(entry.modelB.provider, entry.modelB.model)}
                                       </span>
-                                      <span className="text-xs text-amber-400">
+                                      <span className="text-xs text-orange-400">
                                         {entry.ratings.modelB.total}/15
                                       </span>
                                     </div>
-                                    <p className="text-xs text-zinc-400 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                    <p className="text-xs text-white/50 whitespace-pre-wrap max-h-32 overflow-y-auto">
                                       {entry.responseB.content}
                                     </p>
                                   </div>
@@ -1772,6 +1777,7 @@ export default function BattlePage() {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
       </div>
     </div>
   );
