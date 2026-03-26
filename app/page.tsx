@@ -173,7 +173,7 @@ const featureSections = [
   },
 ];
 
-// Rotating Image Preview Component (Dashboard)
+// Rotating Image Preview Component (Dashboard) — 16:9 aspect ratio
 function RotatingImagePreview({ images, priority = false }: { images: string[]; priority?: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -186,7 +186,7 @@ function RotatingImagePreview({ images, priority = false }: { images: string[]; 
   }, [images.length]);
 
   return (
-    <div className="relative h-[200px] md:h-[220px] rounded-lg overflow-hidden group border border-white/[0.06]">
+    <div className="relative w-full md:w-72 shrink-0 aspect-video rounded-lg overflow-hidden group border border-white/[0.06] bg-zinc-900">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -200,13 +200,13 @@ function RotatingImagePreview({ images, priority = false }: { images: string[]; 
             src={images[currentIndex]}
             alt="Feature preview"
             fill
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 768px) 100vw, 288px"
             priority={priority && currentIndex === 0}
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
           />
         </motion.div>
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
     </div>
   );
 }
@@ -231,24 +231,22 @@ function FeatureShowcaseSection({
     <MotionWrapper delay={index * 0.1}>
       <section className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden hover:border-orange-500/30 transition-all duration-300 group">
         {/* Corner accents */}
-        <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-orange-500/40 rounded-tl-lg" />
-        <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-orange-500/40 rounded-tr-lg" />
-        <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-orange-500/40 rounded-bl-lg" />
-        <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-orange-500/40 rounded-br-lg" />
+        <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-orange-500/30 rounded-tl-lg pointer-events-none" />
+        <div className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-orange-500/30 rounded-tr-lg pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-orange-500/30 rounded-bl-lg pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-orange-500/30 rounded-br-lg pointer-events-none" />
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 md:p-6 border-b border-white/[0.06]">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-              <Icon className="h-5 w-5 text-orange-500" />
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded bg-orange-500/20 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-orange-500" />
             </div>
-            <h2 className="text-sm font-medium uppercase tracking-wider text-white font-heading">
-              {feature.title}
-            </h2>
+            <span className="text-sm font-medium uppercase tracking-wider text-white ml-3">{feature.title}</span>
           </div>
           <Link href={feature.href}>
             <motion.button
-              className="bg-orange-500 hover:bg-orange-400 text-black font-medium px-4 py-2 rounded text-sm transition-colors inline-flex items-center gap-2"
+              className="bg-orange-500 hover:bg-orange-400 text-black font-medium px-4 py-1.5 rounded text-sm transition-colors inline-flex items-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -258,9 +256,9 @@ function FeatureShowcaseSection({
         </div>
 
         {/* Content */}
-        <div className="grid md:grid-cols-2 gap-6 p-4 md:p-6">
+        <div className="flex flex-col md:flex-row gap-5 p-5">
           <RotatingImagePreview images={feature.images} priority={isFirst} />
-          <ul className="space-y-3">
+          <ul className="flex-1 space-y-2.5">
             {feature.bullets.map((bullet, idx) => {
               const BulletIcon = bullet.icon;
               return (
@@ -281,16 +279,14 @@ function FeatureShowcaseSection({
         </div>
 
         {/* Footer */}
-        <div className="px-4 md:px-6 pb-4 md:pb-6">
-          <div className="pt-3 border-t border-white/[0.04]">
-            {isLoading ? (
-              <div className="h-4 w-48 bg-white/[0.04] rounded animate-pulse"></div>
-            ) : (
-              <p className="text-xs text-zinc-600 font-mono">
-                {feature.statsTemplate(stats)}
-              </p>
-            )}
-          </div>
+        <div className="px-5 pb-4">
+          {isLoading ? (
+            <div className="h-4 w-48 bg-white/[0.04] rounded animate-pulse"></div>
+          ) : (
+            <p className="text-xs text-zinc-600 font-mono">
+              {feature.statsTemplate(stats)}
+            </p>
+          )}
         </div>
       </section>
     </MotionWrapper>
@@ -381,15 +377,23 @@ function Dashboard() {
     fetchStats();
   }, []);
 
+  const statCards = [
+    { icon: FlaskConical, value: 4, label: 'AI Providers' },
+    { icon: Swords, value: 9, label: 'Battle Challenges' },
+    { icon: Bug, value: stats.bugs || 0, label: 'Documented Bugs' },
+    { icon: TestTube2, value: stats.testCases || 0, label: 'Test Cases' },
+  ];
+
   return (
-    <div className="space-y-8">
+    <div>
+      {/* Welcome */}
       <MotionWrapper>
-        <header className="mb-4">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-orange-500 text-xs font-mono uppercase tracking-wider mb-4">
+        <header>
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-500 text-xs font-mono uppercase tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
             AI Investigation Unit
           </span>
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-white font-heading">
+          <h1 className="text-3xl font-semibold tracking-tight text-white mt-4 font-heading">
             Welcome back!
           </h1>
           <p className="text-zinc-500 text-base mt-2">
@@ -400,24 +404,56 @@ function Dashboard() {
 
       {error && (
         <MotionWrapper>
-          <div className="bg-orange-950/20 border border-orange-900/30 rounded-lg p-4">
+          <div className="bg-orange-950/20 border border-orange-900/30 rounded-lg p-4 mt-6">
             <p className="text-orange-400 text-sm">Unable to load stats: {error}</p>
           </div>
         </MotionWrapper>
       )}
 
-      {featureSections.map((feature, index) => (
-        <FeatureShowcaseSection
-          key={feature.id}
-          feature={feature}
-          stats={stats}
-          isLoading={isLoading}
-          index={index}
-          isFirst={index === 0}
-        />
-      ))}
+      {/* Stats row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+        {statCards.map((s, i) => {
+          const StatIcon = s.icon;
+          return (
+            <MotionWrapper key={i} delay={i * 0.05}>
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 hover:border-orange-500/30 transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-3">
+                  <StatIcon className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="text-2xl font-semibold text-white">
+                  {isLoading ? <span className="inline-block w-8 h-6 bg-white/[0.04] rounded animate-pulse" /> : s.value}
+                </div>
+                <div className="text-zinc-500 text-sm mt-1">{s.label}</div>
+              </div>
+            </MotionWrapper>
+          );
+        })}
+      </div>
 
-      <UnderDevelopmentSection />
+      {/* Divider */}
+      <div className="flex items-center gap-4 my-10">
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
+        <span className="text-xs font-mono uppercase tracking-widest text-zinc-600">Testing Toolkit</span>
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
+      </div>
+
+      {/* Feature cards */}
+      <div className="space-y-4">
+        {featureSections.map((feature, index) => (
+          <FeatureShowcaseSection
+            key={feature.id}
+            feature={feature}
+            stats={stats}
+            isLoading={isLoading}
+            index={index}
+            isFirst={index === 0}
+          />
+        ))}
+      </div>
+
+      <div className="mt-10">
+        <UnderDevelopmentSection />
+      </div>
     </div>
   );
 }

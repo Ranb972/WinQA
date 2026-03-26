@@ -110,7 +110,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
         className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
           isActive
-            ? 'bg-orange-500/10 text-orange-500 border border-orange-500/30'
+            ? 'text-orange-500'
             : 'text-zinc-400 hover:text-white hover:bg-white/5'
         )}
       >
@@ -196,8 +196,8 @@ export default function Navbar() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-white tracking-tight font-heading">
-                Win<span className="text-orange-500">QA</span>
+              <span className="text-xl font-bold text-orange-500 tracking-tight font-heading">
+                WinQA
               </span>
             </Link>
 
@@ -221,7 +221,7 @@ export default function Navbar() {
                       className={cn(
                         'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                         isActive
-                          ? 'bg-orange-500/10 text-orange-500 border border-orange-500/30'
+                          ? 'text-orange-500'
                           : 'text-zinc-400 hover:text-white hover:bg-white/5'
                       )}
                     >
