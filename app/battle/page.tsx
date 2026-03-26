@@ -729,7 +729,7 @@ export default function BattlePage() {
       {/* Ambient background */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse_at_center,rgba(249,115,22,0.08)_0%,transparent_70%)] pointer-events-none" />
       <div className="absolute inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      <div className="relative pt-24 pb-12 px-4">
+      <div className="relative pt-4 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1 justify-center mb-10">
