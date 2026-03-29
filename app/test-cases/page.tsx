@@ -201,7 +201,7 @@ export default function TestCasesPage() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
               <Plus className="w-4 h-4" />
-              New Test Case
+              File New Case
             </button>
           </motion.div>
         </div>
@@ -225,7 +225,7 @@ export default function TestCasesPage() {
         <div className="w-1 h-5 bg-orange-500 rounded-full" />
         <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Case Library</h2>
         <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
-          {filteredCases.length} record{filteredCases.length !== 1 ? 's' : ''}
+          Investigation protocols
         </span>
       </div>
 
@@ -257,16 +257,16 @@ export default function TestCasesPage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <TestTube2 className="w-16 h-16 text-orange-500/20 mb-4" />
             <h3 className="font-heading text-lg font-semibold text-white mb-2">
-              {searchQuery ? 'NO MATCHING TEST CASES' : 'NO TEST CASES YET'}
+              {searchQuery ? 'NO MATCHING CASES' : 'NO CASES FILED'}
             </h3>
             <p className="text-sm text-white/50 max-w-xs mb-6">
               {searchQuery
                 ? 'Try adjusting your search query'
-                : 'Create your first test case to get started'}
+                : 'Create structured test scenarios to systematically probe AI weaknesses.'}
             </p>
             {!searchQuery && (
               <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
-                + Create Test Case
+                + File New Case
               </button>
             )}
           </div>
@@ -305,19 +305,19 @@ export default function TestCasesPage() {
         <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
-              {editingCase ? 'Edit Test Case' : 'New Test Case'}
+              {editingCase ? 'Update Case File' : 'File Investigation Case'}
             </DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
               {editingCase
-                ? 'Update your test case details'
-                : 'Create a new test case for AI testing'}
+                ? 'Update your case file details'
+                : 'Create a structured investigation scenario'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Title *
+                Case Title *
               </label>
               <input
                 value={formData.title}
@@ -331,7 +331,7 @@ export default function TestCasesPage() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Description
+                Case Brief
               </label>
               <input
                 value={formData.description}
@@ -345,7 +345,7 @@ export default function TestCasesPage() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Initial Prompt *
+                Opening Statement *
               </label>
               <textarea
                 value={formData.initial_prompt}
@@ -359,7 +359,7 @@ export default function TestCasesPage() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Expected Outcome
+                Expected Verdict
               </label>
               <textarea
                 value={formData.expected_outcome}
@@ -408,7 +408,7 @@ export default function TestCasesPage() {
             {/* Initial Prompt */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
-                Prompt
+                Opening Statement
               </label>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
                 <p className="text-sm text-zinc-400 whitespace-pre-wrap">
@@ -421,7 +421,7 @@ export default function TestCasesPage() {
             {viewingTestCase?.expected_outcome && (
               <div>
                 <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
-                  Expected Outcome
+                  Expected Verdict
                 </label>
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
                   <p className="text-sm text-zinc-400 whitespace-pre-wrap">

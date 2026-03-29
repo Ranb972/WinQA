@@ -125,7 +125,7 @@ export default function PromptCard({
         {/* Bad Prompt */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400">Bad Prompt</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400">Weak Approach</p>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -150,7 +150,7 @@ export default function PromptCard({
         {/* Good Prompt */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400">Good Prompt</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400">Refined Technique</p>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -176,7 +176,7 @@ export default function PromptCard({
         {explanation && (
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1">
-              Why it matters
+              Analysis
             </p>
             <p className="text-sm text-zinc-400 line-clamp-2">{explanation}</p>
           </div>

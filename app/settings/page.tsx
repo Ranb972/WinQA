@@ -443,8 +443,8 @@ export default function SettingsPage() {
               <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-zinc-400">
-                  <span className="font-medium text-orange-500">Add your own API keys</span> for higher rate limits and better reliability.
-                  Your keys are <span className="text-green-400 font-medium">encrypted</span> before being stored locally in your browser.
+                  <span className="font-medium text-orange-500">Configure your authentication credentials</span> for higher rate limits and better reliability.
+                  Your credentials are <span className="text-green-400 font-medium">encrypted</span> before being stored locally in your browser.
                 </p>
               </div>
             </div>
@@ -456,7 +456,7 @@ export default function SettingsPage() {
           <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">API Keys</h2>
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Authentication Credentials</h2>
             </div>
 
             <div className="space-y-6">
@@ -618,7 +618,7 @@ export default function SettingsPage() {
               <div className="text-sm">
                 {hasAnyKey && (
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30">
-                    {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} keys configured
+                    {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} credentials active
                   </span>
                 )}
               </div>
@@ -630,12 +630,12 @@ export default function SettingsPage() {
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Encrypting...
+                    Securing...
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    Save All Keys
+                    Save Credentials
                   </>
                 )}
               </button>
@@ -648,10 +648,10 @@ export default function SettingsPage() {
           <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Custom Providers</h2>
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Connected Sources</h2>
             </div>
             <p className="text-sm text-zinc-400 mb-6 ml-4">
-              Add OpenAI-compatible API providers (max {MAX_CUSTOM_PROVIDERS})
+              Connect OpenAI-compatible intelligence sources (max {MAX_CUSTOM_PROVIDERS})
             </p>
 
             {customProviders.length > 0 && (
@@ -673,7 +673,7 @@ export default function SettingsPage() {
 
             {customProviders.length === 0 && (
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center py-4 mb-4">
-                No custom providers configured
+                No intelligence sources connected
               </p>
             )}
 
@@ -683,13 +683,13 @@ export default function SettingsPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-white/[0.08] text-zinc-500 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                Add Custom Provider
+                Connect New Source
               </button>
             )}
 
             {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center">
-                Maximum {MAX_CUSTOM_PROVIDERS} custom providers reached
+                Maximum {MAX_CUSTOM_PROVIDERS} sources connected
               </p>
             )}
           </div>
@@ -712,10 +712,10 @@ export default function SettingsPage() {
           <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Export / Import Data</h2>
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Evidence Transfer</h2>
             </div>
             <p className="text-sm text-zinc-400 mb-6 ml-4">
-              Backup your data or restore from a previous export
+              Backup case files or restore from previous archives
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -729,7 +729,7 @@ export default function SettingsPage() {
                 ) : (
                   <Download className="h-6 w-6 text-green-400" />
                 )}
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Export Data</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Export Case Files</span>
               </button>
 
               <label className="cursor-pointer">
@@ -746,28 +746,28 @@ export default function SettingsPage() {
                   ) : (
                     <Upload className="h-6 w-6 text-orange-500" />
                   )}
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Import Data</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Import Case Files</span>
                 </div>
               </label>
             </div>
 
             {pendingImportData && (
               <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06]">
-                <p className="text-sm text-zinc-400 mb-3">How would you like to import?</p>
+                <p className="text-sm text-zinc-400 mb-3">How should evidence be processed?</p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleImport('merge')}
                     disabled={isImporting}
                     className="flex-1 px-4 py-2 border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/50 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                   >
-                    Merge (Add to existing)
+                    Merge (Add to existing files)
                   </button>
                   <button
                     onClick={() => handleImport('replace')}
                     disabled={isImporting}
                     className="flex-1 px-4 py-2 border border-red-900/40 bg-red-950/25 text-red-400 hover:bg-red-950/40 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                   >
-                    Replace (Delete existing)
+                    Replace (Purge and rebuild)
                   </button>
                 </div>
                 <button
@@ -780,7 +780,7 @@ export default function SettingsPage() {
             )}
 
             <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 mt-4">
-              Export includes: bugs, prompts, test cases, and insights
+              Includes: incident logs, techniques, cases, and findings
             </p>
           </div>
         </MotionWrapper>
@@ -880,7 +880,7 @@ export default function SettingsPage() {
           <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-1 h-4 bg-orange-500/50 rounded-full" />
-              <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">How it works</h3>
+              <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Operating Procedures</h3>
             </div>
             <ul className="text-xs text-zinc-500 space-y-1 ml-4">
               <li>Click the <FlaskConical className="h-3 w-3 inline" /> button to test if your API key is valid</li>

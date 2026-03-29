@@ -292,7 +292,7 @@ function BugsPageContent() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
-              Add Bug
+              Log Incident
             </button>
           </motion.div>
         </div>
@@ -363,9 +363,7 @@ function BugsPageContent() {
       <div className="flex items-center gap-3 mb-6">
         <div className="w-1 h-5 bg-orange-500 rounded-full" />
         <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Incident Reports</h2>
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
-          {filteredBugs.length} record{filteredBugs.length !== 1 ? 's' : ''}
-        </span>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Active investigations</span>
       </div>
 
       {/* Content */}
@@ -394,12 +392,12 @@ function BugsPageContent() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Bug className="w-16 h-16 text-orange-500/20 mb-4" />
             <h3 className="font-heading text-lg font-semibold text-white mb-2">
-              {hasActiveFilters ? 'NO MATCHING BUGS' : 'NO BUGS REPORTED'}
+              {hasActiveFilters ? 'NO MATCHING INCIDENTS' : 'NO INCIDENTS LOGGED'}
             </h3>
             <p className="text-sm text-white/50 max-w-xs mb-6">
               {hasActiveFilters
                 ? 'Try adjusting your search or filters'
-                : 'Bug reports will appear here when you flag issues in Chat Lab'}
+                : 'Your investigation logs are clean. Document AI failures as you find them.'}
             </p>
           </div>
         </MotionWrapper>
@@ -434,7 +432,7 @@ function BugsPageContent() {
                         statusColors[bug.status]
                       )}
                     >
-                      {bug.status}
+                      {bug.status === 'Open' ? 'Open Case' : bug.status === 'Resolved' ? 'Case Closed' : bug.status}
                     </Badge>
                   </button>
                   <Badge
@@ -483,7 +481,7 @@ function BugsPageContent() {
                 <div className="border-t border-white/[0.06] p-4 space-y-4 animate-slide-down">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
-                      Prompt
+                      Evidence: Prompt
                     </p>
                     <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap">
                       {bug.prompt_context}
@@ -492,7 +490,7 @@ function BugsPageContent() {
 
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
-                      Model Response
+                      Suspect Response
                     </p>
                     <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {bug.model_response}
@@ -502,7 +500,7 @@ function BugsPageContent() {
                   {bug.user_notes && (
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
-                        Notes
+                        Investigator Notes
                       </p>
                       <p className="text-sm text-zinc-400">{bug.user_notes}</p>
                     </div>
@@ -519,9 +517,9 @@ function BugsPageContent() {
       <Dialog open={!!editingBug} onOpenChange={() => setEditingBug(null)}>
         <DialogContent className="bg-black border border-white/[0.08]">
           <DialogHeader>
-            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Update Status</DialogTitle>
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Update Case Status</DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
-              Change the status of this bug report
+              Change the status of this incident report
             </DialogDescription>
           </DialogHeader>
 
@@ -561,15 +559,15 @@ function BugsPageContent() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Add Bug Report</DialogTitle>
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Log New Incident</DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
-              Document an AI response issue you&apos;ve encountered
+              Document an AI failure or anomaly
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Prompt Context *</label>
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Evidence: Prompt *</label>
               <textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
@@ -579,7 +577,7 @@ function BugsPageContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Model Response *</label>
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Suspect Response *</label>
               <textarea
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
@@ -590,7 +588,7 @@ function BugsPageContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Model Used</label>
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Suspect Model</label>
                 {mounted && (
                   <Select
                     value={formData.model_used}
@@ -610,7 +608,7 @@ function BugsPageContent() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Issue Type</label>
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Incident Type</label>
                 {mounted && (
                   <Select
                     value={formData.issue_type}
@@ -650,7 +648,7 @@ function BugsPageContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Notes (optional)</label>
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Investigator Notes (optional)</label>
               <textarea
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
@@ -672,7 +670,7 @@ function BugsPageContent() {
               disabled={isSubmitting}
               className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
-              {isSubmitting ? 'Creating...' : 'Create Bug Report'}
+              {isSubmitting ? 'Logging...' : 'Log Incident'}
             </button>
           </DialogFooter>
         </DialogContent>

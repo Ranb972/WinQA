@@ -274,7 +274,7 @@ function PromptsPageContent() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
-              Add Prompt
+              Archive Technique
             </button>
           </motion.div>
         </div>
@@ -332,7 +332,7 @@ function PromptsPageContent() {
         <div className="w-1 h-5 bg-orange-500 rounded-full" />
         <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Prompt Archive</h2>
         <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
-          {filteredPrompts.length} record{filteredPrompts.length !== 1 ? 's' : ''}
+          Documented techniques
         </span>
       </div>
 
@@ -367,17 +367,17 @@ function PromptsPageContent() {
           <Library className="w-16 h-16 text-orange-500/20 mb-4" />
           <h3 className="font-heading text-lg font-semibold text-white mb-2">
             {searchQuery || showFavoritesOnly || selectedTag
-              ? 'NO MATCHING PROMPTS'
-              : 'NO PROMPTS YET'}
+              ? 'NO MATCHING TECHNIQUES'
+              : 'NO TECHNIQUES ARCHIVED'}
           </h3>
           <p className="text-sm text-white/50 max-w-xs mb-6">
             {searchQuery || showFavoritesOnly || selectedTag
               ? 'Try adjusting your filters'
-              : 'Start building your prompt library'}
+              : 'Start building your interrogation playbook. Save prompts that work.'}
           </p>
           {!searchQuery && !showFavoritesOnly && !selectedTag && (
             <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
-              + Add First Prompt
+              + Archive First Technique
             </button>
           )}
         </div>
@@ -412,10 +412,10 @@ function PromptsPageContent() {
         <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
-              {editingPrompt ? 'Edit Prompt' : 'Add Prompt'}
+              {editingPrompt ? 'Update Technique' : 'Archive Interrogation Technique'}
             </DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
-              Document a bad prompt example and its improved version
+              Document a weak approach and its refined technique
             </DialogDescription>
           </DialogHeader>
 
@@ -434,7 +434,7 @@ function PromptsPageContent() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400 mb-1.5 block">
-                Bad Prompt *
+                Weak Approach *
               </label>
               <textarea
                 value={formData.bad_prompt_example}
@@ -448,7 +448,7 @@ function PromptsPageContent() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400 mb-1.5 block">
-                Good Prompt *
+                Refined Technique *
               </label>
               <textarea
                 value={formData.good_prompt_example}
@@ -462,14 +462,14 @@ function PromptsPageContent() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Explanation
+                Analysis
               </label>
               <textarea
                 value={formData.explanation}
                 onChange={(e) =>
                   setFormData({ ...formData, explanation: e.target.value })
                 }
-                placeholder="Why is the good prompt better?"
+                placeholder="Why is the refined technique more effective?"
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[60px]"
               />
             </div>
@@ -538,7 +538,7 @@ function PromptsPageContent() {
               disabled={isSubmitting}
               className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
-              {isSubmitting ? 'Saving...' : editingPrompt ? 'Update' : 'Create'}
+              {isSubmitting ? 'Saving...' : editingPrompt ? 'Update' : 'Archive'}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -557,7 +557,7 @@ function PromptsPageContent() {
             {/* Bad Prompt */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400 mb-2 block">
-                Bad Prompt
+                Weak Approach
               </label>
               <div className="bg-rose-950/30 border border-rose-900/30 rounded-lg p-4">
                 <p className="text-sm text-rose-300/80 whitespace-pre-wrap">
@@ -569,7 +569,7 @@ function PromptsPageContent() {
             {/* Good Prompt */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400 mb-2 block">
-                Good Prompt
+                Refined Technique
               </label>
               <div className="bg-emerald-950/30 border border-emerald-900/30 rounded-lg p-4">
                 <p className="text-sm text-emerald-300/80 whitespace-pre-wrap">
@@ -582,7 +582,7 @@ function PromptsPageContent() {
             {viewingPrompt?.explanation && (
               <div>
                 <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
-                  Why it matters
+                  Analysis
                 </label>
                 <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
                   {viewingPrompt.explanation}

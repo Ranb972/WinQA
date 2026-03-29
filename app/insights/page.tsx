@@ -244,7 +244,7 @@ function InsightsPageContent() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
               <Plus className="w-4 h-4" />
-              Add Insight
+              Record Finding
             </button>
           </motion.div>
         </div>
@@ -301,7 +301,7 @@ function InsightsPageContent() {
         <div className="w-1 h-5 bg-orange-500 rounded-full" />
         <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Field Notes</h2>
         <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
-          {filteredInsights.length} record{filteredInsights.length !== 1 ? 's' : ''}
+          Documented discoveries
         </span>
       </div>
 
@@ -336,16 +336,16 @@ function InsightsPageContent() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Lightbulb className="w-16 h-16 text-orange-500/20 mb-4" />
             <h3 className="font-heading text-lg font-semibold text-white mb-2">
-              {hasActiveFilters ? 'NO MATCHING INSIGHTS' : 'NO INSIGHTS YET'}
+              {hasActiveFilters ? 'NO MATCHING FINDINGS' : 'NO FINDINGS RECORDED'}
             </h3>
             <p className="text-sm text-white/50 max-w-xs mb-6">
               {hasActiveFilters
                 ? 'Try adjusting your search or tag filter'
-                : 'Start documenting your learnings about AI behavior'}
+                : 'Document patterns and discoveries from your AI investigations.'}
             </p>
             {!hasActiveFilters && (
               <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
-                + Add First Insight
+                + Record First Finding
               </button>
             )}
           </div>
@@ -442,17 +442,17 @@ function InsightsPageContent() {
         <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
-              {editingInsight ? 'Edit Insight' : 'New Insight'}
+              {editingInsight ? 'Update Finding' : 'Record Investigation Finding'}
             </DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
-              Document a learning or observation about AI models
+              Record a pattern or discovery from your investigations
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Title *
+                Finding Title *
               </label>
               <input
                 value={formData.title}
@@ -464,12 +464,12 @@ function InsightsPageContent() {
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
-                Content *
+                Detailed Findings *
               </label>
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Describe your insight in detail..."
+                placeholder="Describe your findings in detail..."
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[150px]"
               />
             </div>
@@ -556,7 +556,7 @@ function InsightsPageContent() {
           <div className="space-y-4 py-4">
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1 block">
-                Content
+                Detailed Findings
               </label>
               <p className="text-sm text-zinc-400 whitespace-pre-wrap bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
                 {viewingInsight?.content}

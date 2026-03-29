@@ -84,14 +84,14 @@ export default function TestCaseCard({
       </div>
       <div className="px-4 pb-4 space-y-3 flex-1 overflow-hidden flex flex-col">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1">Prompt</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1">Opening Statement</p>
           <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 line-clamp-3">
             {initialPrompt}
           </p>
         </div>
         {expectedOutcome && (
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1">Expected</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1">Expected Verdict</p>
             <p className="text-sm text-zinc-400 line-clamp-2">{expectedOutcome}</p>
           </div>
         )}
@@ -103,7 +103,7 @@ export default function TestCaseCard({
           className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors mt-auto"
         >
           <Play className="h-4 w-4" />
-          Run Test
+          Execute Case
         </button>
       </div>
     </div>
