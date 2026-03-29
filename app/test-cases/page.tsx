@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, TestTube2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -189,23 +186,23 @@ export default function TestCasesPage() {
       <MotionWrapper>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
-              <TestTube2 className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+              <TestTube2 className="w-6 h-6 text-black" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
-                <span className="text-white">Test Cases</span>
+              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
+                Test Cases
               </h1>
-              <p className="text-zinc-400 mt-1">
-                Manage and run your AI testing scenarios
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Structured investigation scenarios
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
+            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
+              <Plus className="w-4 h-4" />
               New Test Case
-            </Button>
+            </button>
           </motion.div>
         </div>
       </MotionWrapper>
@@ -213,21 +210,30 @@ export default function TestCasesPage() {
       {/* Search */}
       <MotionWrapper delay={0.1}>
         <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-          <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search test cases..."
-            className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
+            className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
           />
         </div>
       </MotionWrapper>
+
+      {/* Section Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-1 h-5 bg-orange-500 rounded-full" />
+        <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Case Library</h2>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
+          {filteredCases.length} record{filteredCases.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
       {/* Content */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-6">
+            <div key={i} className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <Skeleton className="h-6 w-40 mb-2" />
@@ -248,21 +254,20 @@ export default function TestCasesPage() {
         </div>
       ) : filteredCases.length === 0 ? (
         <MotionWrapper>
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🧪</div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              {searchQuery ? 'No matching test cases' : 'No test cases yet'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <TestTube2 className="w-16 h-16 text-orange-500/20 mb-4" />
+            <h3 className="font-heading text-lg font-semibold text-white mb-2">
+              {searchQuery ? 'NO MATCHING TEST CASES' : 'NO TEST CASES YET'}
             </h3>
-            <p className="text-zinc-400 mb-6">
+            <p className="text-sm text-white/50 max-w-xs mb-6">
               {searchQuery
                 ? 'Try adjusting your search query'
                 : 'Create your first test case to get started'}
             </p>
             {!searchQuery && (
-              <Button onClick={openNewDialog} className="btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Test Case
-              </Button>
+              <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
+                + Create Test Case
+              </button>
             )}
           </div>
         </MotionWrapper>
@@ -297,12 +302,12 @@ export default function TestCasesPage() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] max-w-2xl">
+        <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {editingCase ? 'Edit Test Case' : 'New Test Case'}
             </DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogDescription className="text-sm text-zinc-400">
               {editingCase
                 ? 'Update your test case details'
                 : 'Create a new test case for AI testing'}
@@ -311,90 +316,89 @@ export default function TestCasesPage() {
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Title *
               </label>
-              <Input
+              <input
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
                 placeholder="e.g., Code Generation Test"
-                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Description
               </label>
-              <Input
+              <input
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="Brief description of the test"
-                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Initial Prompt *
               </label>
-              <Textarea
+              <textarea
                 value={formData.initial_prompt}
                 onChange={(e) =>
                   setFormData({ ...formData, initial_prompt: e.target.value })
                 }
                 placeholder="The prompt to send to the AI model..."
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[120px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[120px]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Expected Outcome
               </label>
-              <Textarea
+              <textarea
                 value={formData.expected_outcome}
                 onChange={(e) =>
                   setFormData({ ...formData, expected_outcome: e.target.value })
                 }
                 placeholder="What you expect the AI to respond with..."
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[80px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px]"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setDialogOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="btn-primary"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving...' : editingCase ? 'Update' : 'Create'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] max-w-2xl">
+        <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {viewingTestCase?.title}
             </DialogTitle>
             {viewingTestCase?.description && (
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription className="text-sm text-zinc-400">
                 {viewingTestCase.description}
               </DialogDescription>
             )}
@@ -403,7 +407,7 @@ export default function TestCasesPage() {
           <div className="space-y-4 py-4">
             {/* Initial Prompt */}
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-2 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
                 Prompt
               </label>
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
@@ -416,7 +420,7 @@ export default function TestCasesPage() {
             {/* Expected Outcome */}
             {viewingTestCase?.expected_outcome && (
               <div>
-                <label className="text-sm font-medium text-zinc-400 mb-2 block">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
                   Expected Outcome
                 </label>
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4">
@@ -429,7 +433,7 @@ export default function TestCasesPage() {
 
             {/* Created Date */}
             {viewingTestCase?.created_at && (
-              <div className="text-xs text-zinc-500">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25">
                 Created {new Date(viewingTestCase.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
@@ -440,13 +444,12 @@ export default function TestCasesPage() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setViewDialogOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Close
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

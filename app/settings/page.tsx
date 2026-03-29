@@ -21,7 +21,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -109,44 +108,29 @@ export default function SettingsPage() {
   const [securityExpanded, setSecurityExpanded] = useState(false);
   const { toast } = useToast();
 
-  // Test status per provider
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({});
   const [testErrors, setTestErrors] = useState<Record<string, string>>({});
-
-  // Track which fields are being edited (show full key vs masked)
   const [editing, setEditing] = useState<Record<string, boolean>>({});
-
-  // Model preferences state
   const [modelPreferences, setModelPreferencesState] = useState<ModelPreferences>({});
-
-  // Custom providers state
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(null);
-
-  // Export/Import state
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
   const [showReplaceWarning, setShowReplaceWarning] = useState(false);
 
-  // Load keys, model preferences, and custom providers on mount
   useEffect(() => {
     async function loadData() {
       if (!isLoaded) return;
 
       setIsLoading(true);
       try {
-        // Load API keys
         const stored = await getApiKeys(user?.id);
         setKeysState(stored);
         setSavedKeys(stored);
-
-        // Load model preferences
         const prefs = getModelPreferences();
         setModelPreferencesState(prefs);
-
-        // Load custom providers
         const providers = await getCustomProviders(user?.id);
         setCustomProviders(providers);
       } catch {
@@ -164,7 +148,6 @@ export default function SettingsPage() {
 
   const handleKeyChange = (provider: LLMProvider, value: string) => {
     setKeysState((prev) => ({ ...prev, [provider]: value }));
-    // Clear test status when key changes
     setTestStatus((prev) => ({ ...prev, [provider]: 'idle' }));
     setTestErrors((prev) => {
       const updated = { ...prev };
@@ -251,18 +234,15 @@ export default function SettingsPage() {
   const hasChanges = JSON.stringify(keys) !== JSON.stringify(savedKeys);
   const hasAnyKey = Object.values(savedKeys).some((k) => k && k.trim());
 
-  // Handle model preference change
   const handleModelChange = (provider: LLMProvider, modelId: string) => {
     setModelPreference(provider, modelId);
     setModelPreferencesState((prev) => ({ ...prev, [provider]: modelId }));
   };
 
-  // Handle custom provider save (add or update)
   const handleSaveProvider = async (
     providerData: Omit<CustomProvider, 'id'> & { id?: string }
   ) => {
     if (providerData.id) {
-      // Update existing
       const updated = customProviders.map((p) =>
         p.id === providerData.id ? { ...p, ...providerData } : p
       );
@@ -274,7 +254,6 @@ export default function SettingsPage() {
         variant: 'success',
       });
     } else {
-      // Add new
       const newProvider: CustomProvider = {
         ...providerData,
         id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -292,13 +271,11 @@ export default function SettingsPage() {
     setEditingProvider(null);
   };
 
-  // Handle custom provider delete
   const handleDeleteProvider = async (id: string) => {
     await removeCustomProvider(id, user?.id);
     setCustomProviders((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Handle custom provider toggle
   const handleToggleProvider = async (id: string) => {
     await toggleCustomProvider(id, user?.id);
     setCustomProviders((prev) =>
@@ -306,14 +283,12 @@ export default function SettingsPage() {
     );
   };
 
-  // Handle custom provider test
   const handleTestCustomProvider = async (
     provider: CustomProvider
   ): Promise<{ valid: boolean; error?: string }> => {
     return testCustomProviderConnection(provider);
   };
 
-  // Handle data export
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -348,7 +323,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle import file selection
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -357,7 +331,6 @@ export default function SettingsPage() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        // Basic validation
         if (!data.version || !data.data) {
           throw new Error('Invalid format');
         }
@@ -371,10 +344,9 @@ export default function SettingsPage() {
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
-  // Handle import mode selection
   const handleImport = (mode: 'merge' | 'replace') => {
     if (mode === 'replace') {
       setShowReplaceWarning(true);
@@ -383,7 +355,6 @@ export default function SettingsPage() {
     executeImport(mode);
   };
 
-  // Execute the actual import
   const executeImport = async (mode: 'merge' | 'replace') => {
     setIsImporting(true);
     setShowReplaceWarning(false);
@@ -422,18 +393,15 @@ export default function SettingsPage() {
     }
   };
 
-  // Display value: show masked unless editing or visibility toggled
   const getDisplayValue = (provider: LLMProvider) => {
     const value = keys[provider] || '';
     const isEditing = editing[provider];
     const isVisible = visibility[provider];
 
-    // If editing or visibility toggled, show actual value
     if (isEditing || isVisible) {
       return value;
     }
 
-    // If saved and has value, show masked
     if (savedKeys[provider] && !isEditing) {
       return maskApiKey(savedKeys[provider]!);
     }
@@ -445,8 +413,8 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
         <div className="flex items-center gap-3 text-zinc-400">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading settings...</span>
+          <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+          <span className="font-mono text-xs uppercase tracking-[0.12em]">Loading settings...</span>
         </div>
       </div>
     );
@@ -457,20 +425,20 @@ export default function SettingsPage() {
       <div className="max-w-3xl mx-auto">
         <MotionWrapper>
           {/* Header */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/30">
-              <Settings className="h-6 w-6 text-orange-500" />
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+              <Settings className="w-6 h-6 text-black" />
             </div>
-            <h1 className="text-3xl font-bold text-white">Settings</h1>
+            <div>
+              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">Settings</h1>
+              <p className="text-sm text-zinc-400 mt-0.5">Investigation parameters</p>
+            </div>
           </div>
-          <p className="text-zinc-400 mb-8 ml-1">
-            Manage your personal API keys and preferences
-          </p>
         </MotionWrapper>
 
         {/* Info Banner */}
         <MotionWrapper delay={0.1}>
-          <div className="glass-card rounded-xl p-4 mb-8 border border-orange-500/20 bg-orange-500/5">
+          <div className="bg-orange-500/[0.04] border border-orange-500/20 p-4 mb-8">
             <div className="flex gap-3">
               <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div>
@@ -485,10 +453,11 @@ export default function SettingsPage() {
 
         {/* API Keys Section */}
         <MotionWrapper delay={0.2}>
-          <div className="glass-card rounded-2xl p-6 border border-white/[0.06]">
-            <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-              <span className="text-2xl">🔑</span> API Keys
-            </h2>
+          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-5 bg-orange-500 rounded-full" />
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">API Keys</h2>
+            </div>
 
             <div className="space-y-6">
               {providers.map((provider, index) => {
@@ -513,19 +482,19 @@ export default function SettingsPage() {
                           {provider.name}
                         </label>
                         {isSaved && status === 'idle' && (
-                          <span className="flex items-center gap-1 text-xs text-green-400">
+                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-green-400">
                             <Check className="h-3 w-3" />
                             Configured
                           </span>
                         )}
                         {status === 'valid' && (
-                          <span className="flex items-center gap-1 text-xs text-green-400">
+                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-green-400">
                             <Check className="h-3 w-3" />
                             Valid
                           </span>
                         )}
                         {status === 'invalid' && (
-                          <span className="flex items-center gap-1 text-xs text-rose-400">
+                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-red-400">
                             <X className="h-3 w-3" />
                             Invalid
                           </span>
@@ -535,12 +504,12 @@ export default function SettingsPage() {
                         href={provider.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-orange-500 hover:text-orange-400 transition-colors"
+                        className="text-[10px] font-mono uppercase tracking-[0.12em] text-orange-500 hover:text-orange-400 transition-colors"
                       >
-                        Get API Key →
+                        Get API Key &rarr;
                       </a>
                     </div>
-                    <p className="text-xs text-zinc-500 mb-2">{provider.description}</p>
+                    <p className="text-[10px] font-mono text-white/30 mb-2">{provider.description}</p>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Input
@@ -550,12 +519,12 @@ export default function SettingsPage() {
                           onFocus={() => handleFocus(provider.key)}
                           onBlur={() => handleBlur(provider.key)}
                           placeholder={provider.placeholder}
-                          className="pr-10 bg-white/[0.02] border-white/[0.06] text-white placeholder:text-zinc-500 focus:border-orange-500/50 focus:ring-orange-500/30"
+                          className="pr-10 bg-white/[0.02] border-white/[0.06] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/30"
                         />
                         <button
                           type="button"
                           onClick={() => toggleVisibility(provider.key)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                         >
                           {isVisible ? (
                             <EyeOff className="h-4 w-4" />
@@ -565,19 +534,16 @@ export default function SettingsPage() {
                         </button>
                       </div>
 
-                      {/* Test Button */}
                       {currentValue && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <button
                           onClick={() => handleTestKey(provider.key)}
                           disabled={status === 'testing'}
-                          className={`transition-colors ${
+                          className={`h-10 w-10 flex items-center justify-center transition-colors ${
                             status === 'valid'
                               ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
                               : status === 'invalid'
-                              ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
-                              : 'text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10'
+                              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                              : 'text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10'
                           }`}
                           title="Test API key"
                         >
@@ -586,41 +552,36 @@ export default function SettingsPage() {
                           ) : (
                             <FlaskConical className="h-4 w-4" />
                           )}
-                        </Button>
+                        </button>
                       )}
 
-                      {/* Clear Button */}
                       {currentValue && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <button
                           onClick={() => handleClearKey(provider.key)}
-                          className="text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10"
+                          className="h-10 w-10 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Clear API key"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </button>
                       )}
                     </div>
 
-                    {/* Error Message */}
                     <AnimatePresence>
                       {error && (
                         <motion.p
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="text-xs text-rose-400 mt-2"
+                          className="text-xs text-red-400 mt-2 font-mono"
                         >
                           {error}
                         </motion.p>
                       )}
                     </AnimatePresence>
 
-                    {/* Model Selection Dropdown */}
                     {PROVIDER_MODELS[provider.key] && (
                       <div className="mt-3">
-                        <label className="text-xs text-zinc-500 mb-1 block">
+                        <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1 block">
                           Model
                         </label>
                         <Select
@@ -630,16 +591,16 @@ export default function SettingsPage() {
                           <SelectTrigger className="bg-white/[0.02] border-white/[0.06] h-8 text-sm">
                             <SelectValue placeholder="Select model" />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-900 border-white/[0.06]">
+                          <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
                             {PROVIDER_MODELS[provider.key].map((model) => (
                               <SelectItem
                                 key={model.id}
                                 value={model.id}
-                                className="text-zinc-400 focus:bg-white/[0.02] text-sm"
+                                className="text-zinc-400 focus:bg-white/[0.04] text-sm"
                               >
                                 {model.name}
                                 {model.default && (
-                                  <span className="text-zinc-500 ml-1">(Default)</span>
+                                  <span className="text-white/30 ml-1">(Default)</span>
                                 )}
                               </SelectItem>
                             ))}
@@ -656,43 +617,43 @@ export default function SettingsPage() {
             <div className="mt-8 flex items-center justify-between">
               <div className="text-sm">
                 {hasAnyKey && (
-                  <span className="text-zinc-500">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30">
                     {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} keys configured
                   </span>
                 )}
               </div>
-              <Button
+              <button
                 onClick={handleSaveAll}
                 disabled={!hasChanges || isSaving}
-                className="bg-orange-500 hover:bg-orange-400 text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Encrypting...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="h-4 w-4" />
                     Save All Keys
                   </>
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         </MotionWrapper>
 
         {/* Custom Providers Section */}
         <MotionWrapper delay={0.25}>
-          <div className="glass-card rounded-2xl p-6 border border-white/[0.06] mt-6">
-            <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
-              <span className="text-2xl">🔌</span> Custom Providers
-            </h2>
-            <p className="text-sm text-zinc-400 mb-6">
+          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-1 h-5 bg-orange-500 rounded-full" />
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Custom Providers</h2>
+            </div>
+            <p className="text-sm text-zinc-400 mb-6 ml-4">
               Add OpenAI-compatible API providers (max {MAX_CUSTOM_PROVIDERS})
             </p>
 
-            {/* List existing custom providers */}
             {customProviders.length > 0 && (
               <div className="space-y-3 mb-4">
                 <AnimatePresence>
@@ -710,34 +671,30 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Empty state */}
             {customProviders.length === 0 && (
-              <p className="text-xs text-zinc-500 text-center py-4 mb-4">
-                No custom providers configured. Add providers like OpenAI, Anthropic, or any OpenAI-compatible API.
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center py-4 mb-4">
+                No custom providers configured
               </p>
             )}
 
-            {/* Add button (disabled if at max) */}
             {customProviders.length < MAX_CUSTOM_PROVIDERS && (
-              <Button
+              <button
                 onClick={() => setShowAddModal(true)}
-                variant="outline"
-                className="w-full border-dashed border-white/[0.06] text-zinc-400 hover:text-white hover:border-white/[0.12]"
+                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-white/[0.08] text-zinc-500 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4" />
                 Add Custom Provider
-              </Button>
+              </button>
             )}
 
             {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
-              <p className="text-xs text-zinc-500 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center">
                 Maximum {MAX_CUSTOM_PROVIDERS} custom providers reached
               </p>
             )}
           </div>
         </MotionWrapper>
 
-        {/* Custom Provider Modal */}
         <CustomProviderModal
           open={showAddModal || !!editingProvider}
           onOpenChange={(open) => {
@@ -752,31 +709,29 @@ export default function SettingsPage() {
 
         {/* Export/Import Section */}
         <MotionWrapper delay={0.27}>
-          <div className="glass-card rounded-2xl p-6 border border-white/[0.06] mt-6">
-            <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
-              <span className="text-2xl">💾</span> Export / Import Data
-            </h2>
-            <p className="text-sm text-zinc-400 mb-6">
+          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-1 h-5 bg-orange-500 rounded-full" />
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Export / Import Data</h2>
+            </div>
+            <p className="text-sm text-zinc-400 mb-6 ml-4">
               Backup your data or restore from a previous export
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Export Button */}
-              <Button
+              <button
                 onClick={handleExport}
                 disabled={isExporting}
-                variant="outline"
-                className="h-20 flex-col gap-2 border-white/[0.06] hover:border-green-500/50 hover:bg-green-500/10"
+                className="h-20 flex flex-col items-center justify-center gap-2 border border-white/[0.06] hover:border-green-500/50 hover:bg-green-500/10 transition-colors rounded-lg"
               >
                 {isExporting ? (
                   <Loader2 className="h-6 w-6 animate-spin text-green-400" />
                 ) : (
                   <Download className="h-6 w-6 text-green-400" />
                 )}
-                <span className="text-zinc-400">Export Data</span>
-              </Button>
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Export Data</span>
+              </button>
 
-              {/* Import Button */}
               <label className="cursor-pointer">
                 <input
                   type="file"
@@ -785,50 +740,46 @@ export default function SettingsPage() {
                   className="hidden"
                   disabled={isImporting}
                 />
-                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/[0.06] rounded-md hover:border-orange-500/50 hover:bg-orange-500/10 transition-colors">
+                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/[0.06] rounded-lg hover:border-orange-500/50 hover:bg-orange-500/10 transition-colors">
                   {isImporting ? (
                     <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
                   ) : (
                     <Upload className="h-6 w-6 text-orange-500" />
                   )}
-                  <span className="text-zinc-400">Import Data</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Import Data</span>
                 </div>
               </label>
             </div>
 
-            {/* Import Mode Selection */}
             {pendingImportData && (
-              <div className="mt-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+              <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06]">
                 <p className="text-sm text-zinc-400 mb-3">How would you like to import?</p>
                 <div className="flex gap-3">
-                  <Button
+                  <button
                     onClick={() => handleImport('merge')}
                     disabled={isImporting}
-                    variant="outline"
-                    className="flex-1 border-white/[0.06] hover:border-green-500/50"
+                    className="flex-1 px-4 py-2 border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/50 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                   >
                     Merge (Add to existing)
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={() => handleImport('replace')}
                     disabled={isImporting}
-                    variant="outline"
-                    className="flex-1 border-white/[0.06] hover:border-rose-500/50 text-rose-400"
+                    className="flex-1 px-4 py-2 border border-red-900/40 bg-red-950/25 text-red-400 hover:bg-red-950/40 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                   >
                     Replace (Delete existing)
-                  </Button>
+                  </button>
                 </div>
-                <Button
+                <button
                   onClick={() => setPendingImportData(null)}
-                  variant="ghost"
-                  className="w-full mt-2 text-zinc-500"
+                  className="w-full mt-2 py-2 text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
                 >
                   Cancel
-                </Button>
+                </button>
               </div>
             )}
 
-            <p className="text-xs text-zinc-500 mt-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 mt-4">
               Export includes: bugs, prompts, test cases, and insights
             </p>
           </div>
@@ -836,23 +787,23 @@ export default function SettingsPage() {
 
         {/* Replace Warning Dialog */}
         <AlertDialog open={showReplaceWarning} onOpenChange={setShowReplaceWarning}>
-          <AlertDialogContent className="glass border-white/[0.06] bg-black">
+          <AlertDialogContent className="bg-black border border-white/[0.08]">
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2 text-rose-400">
+              <AlertDialogTitle className="flex items-center gap-2 text-red-400 font-mono text-xs uppercase tracking-[0.16em]">
                 <AlertTriangle className="h-5 w-5" />
                 Replace all data?
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-zinc-400">
+              <AlertDialogDescription className="text-sm text-zinc-400">
                 This will permanently delete all your existing bugs, prompts, test cases, and insights before importing the new data. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-white/[0.06] text-zinc-400 hover:bg-white/[0.02]">
+              <AlertDialogCancel className="border-white/[0.06] text-zinc-400 hover:bg-white/[0.02] font-mono text-xs uppercase tracking-[0.12em]">
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => executeImport('replace')}
-                className="bg-rose-600 hover:bg-rose-500 text-white"
+                className="bg-red-600 hover:bg-red-500 text-white font-mono text-xs uppercase tracking-[0.12em]"
               >
                 Yes, replace all
               </AlertDialogAction>
@@ -865,14 +816,14 @@ export default function SettingsPage() {
           <div className="mt-6">
             <button
               onClick={() => setSecurityExpanded(!securityExpanded)}
-              className="w-full p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-colors flex items-center justify-between"
+              className="w-full p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-white/[0.12] transition-colors flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-green-400" />
-                <span className="text-sm font-medium text-zinc-400">Security Information</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">Security Information</span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-zinc-400 transition-transform ${
+                className={`h-4 w-4 text-white/30 transition-transform ${
                   securityExpanded ? 'rotate-180' : ''
                 }`}
               />
@@ -887,7 +838,7 @@ export default function SettingsPage() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 mt-2 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <div className="p-4 mt-2 bg-green-500/5 border border-green-500/20 rounded-lg">
                     <ul className="text-xs text-zinc-400 space-y-2">
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
@@ -914,7 +865,7 @@ export default function SettingsPage() {
                         <span>You can delete your keys anytime</span>
                       </li>
                     </ul>
-                    <p className="text-xs text-zinc-500 mt-4 pt-3 border-t border-white/[0.06]">
+                    <p className="font-mono text-[10px] text-white/25 mt-4 pt-3 border-t border-white/[0.06]">
                       Your keys are as secure as your browser and device. Clear your browser data to remove all stored keys.
                     </p>
                   </div>
@@ -926,13 +877,16 @@ export default function SettingsPage() {
 
         {/* Usage Info */}
         <MotionWrapper delay={0.4}>
-          <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-            <h3 className="text-sm font-medium text-zinc-400 mb-2">How it works</h3>
-            <ul className="text-xs text-zinc-500 space-y-1">
-              <li>• Click the <FlaskConical className="h-3 w-3 inline" /> button to test if your API key is valid</li>
-              <li>• Keys are sent with each request to use your own rate limits</li>
-              <li>• If no custom key is set, the app uses default shared keys (with lower limits)</li>
-              <li>• Keys are masked by default - click the eye icon or focus the field to reveal</li>
+          <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-1 h-4 bg-orange-500/50 rounded-full" />
+              <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">How it works</h3>
+            </div>
+            <ul className="text-xs text-zinc-500 space-y-1 ml-4">
+              <li>Click the <FlaskConical className="h-3 w-3 inline" /> button to test if your API key is valid</li>
+              <li>Keys are sent with each request to use your own rate limits</li>
+              <li>If no custom key is set, the app uses default shared keys (with lower limits)</li>
+              <li>Keys are masked by default - click the eye icon or focus the field to reveal</li>
             </ul>
           </div>
         </MotionWrapper>

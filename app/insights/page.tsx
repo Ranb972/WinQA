@@ -4,11 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Lightbulb, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -233,23 +229,23 @@ function InsightsPageContent() {
       <MotionWrapper>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
-              <Lightbulb className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+              <Lightbulb className="w-6 h-6 text-black" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
-                <span className="text-white">Insights</span>
+              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
+                Insights
               </h1>
-              <p className="text-zinc-400 mt-1">
-                Document your learnings about AI models and prompt engineering
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Investigation findings and patterns
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
+            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
+              <Plus className="w-4 h-4" />
               Add Insight
-            </Button>
+            </button>
           </motion.div>
         </div>
       </MotionWrapper>
@@ -259,24 +255,24 @@ function InsightsPageContent() {
         <div className="space-y-4 mb-6">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <Input
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+            <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title or content..."
-              className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
+              className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
             />
           </div>
 
           {/* Tag Filter */}
           {allTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-zinc-500">Tags:</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Tags:</span>
               <Badge
-                className={`cursor-pointer transition-all ${
+                className={`cursor-pointer transition-all text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 ${
                   !selectedTag
                     ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
-                    : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
+                    : 'bg-white/[0.03] text-white/50 border-white/[0.04] hover:border-orange-500/30'
                 }`}
                 onClick={() => setSelectedTag(null)}
               >
@@ -285,10 +281,10 @@ function InsightsPageContent() {
               {allTags.map((tag) => (
                 <Badge
                   key={tag}
-                  className={`cursor-pointer transition-all ${
+                  className={`cursor-pointer transition-all text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 ${
                     selectedTag === tag
                       ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
-                      : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
+                      : 'bg-white/[0.03] text-white/50 border-white/[0.04] hover:border-orange-500/30'
                   }`}
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                 >
@@ -300,11 +296,20 @@ function InsightsPageContent() {
         </div>
       </MotionWrapper>
 
+      {/* Section Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-1 h-5 bg-orange-500 rounded-full" />
+        <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Field Notes</h2>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
+          {filteredInsights.length} record{filteredInsights.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {/* Content */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="glass-card rounded-lg p-6">
+            <div key={i} className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-5 w-5 rounded" />
@@ -328,21 +333,20 @@ function InsightsPageContent() {
         </div>
       ) : filteredInsights.length === 0 ? (
         <MotionWrapper>
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">💡</div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              {hasActiveFilters ? 'No matching insights' : 'No insights yet'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Lightbulb className="w-16 h-16 text-orange-500/20 mb-4" />
+            <h3 className="font-heading text-lg font-semibold text-white mb-2">
+              {hasActiveFilters ? 'NO MATCHING INSIGHTS' : 'NO INSIGHTS YET'}
             </h3>
-            <p className="text-zinc-400 mb-6">
+            <p className="text-sm text-white/50 max-w-xs mb-6">
               {hasActiveFilters
                 ? 'Try adjusting your search or tag filter'
                 : 'Start documenting your learnings about AI behavior'}
             </p>
             {!hasActiveFilters && (
-              <Button onClick={openNewDialog} className="btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Insight
-              </Button>
+              <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
+                + Add First Insight
+              </button>
             )}
           </div>
         </MotionWrapper>
@@ -354,77 +358,79 @@ function InsightsPageContent() {
                 whileHover={{ scale: 1.02, y: -4 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               >
-                <Card
-                  className="glass-card card-hover group h-[280px] flex flex-col cursor-pointer"
+                <div
+                  className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden hover:border-orange-500/30 transition-all duration-300 group h-[280px] flex flex-col cursor-pointer"
                   onClick={() => {
                     setViewingInsight(insight);
                     setViewDialogOpen(true);
                   }}
                 >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-amber-400" />
-                    <CardTitle className="text-white text-lg line-clamp-2">
-                      {insight.title}
-                    </CardTitle>
-                    {insight.is_public && (
-                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-                        Example
-                      </span>
-                    )}
+                  {/* Corner accents */}
+                  <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-orange-500/30 rounded-tl-lg pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-orange-500/30 rounded-tr-lg pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-orange-500/30 rounded-bl-lg pointer-events-none" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-orange-500/30 rounded-br-lg pointer-events-none" />
+
+                  <div className="p-4 pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="h-5 w-5 text-orange-500 shrink-0" />
+                        <h3 className="text-white text-lg font-semibold line-clamp-2">
+                          {insight.title}
+                        </h3>
+                        {insight.is_public && (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-orange-500/30 bg-orange-500/10 text-orange-500 shrink-0">
+                            Example
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(insight);
+                          }}
+                          className="h-8 w-8 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        {!insight.is_public && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(insight._id);
+                            }}
+                            className="h-8 w-8 flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(insight);
-                      }}
-                      className="h-8 w-8 p-0 text-zinc-400 hover:text-white"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {!insight.is_public && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(insight._id);
-                        }}
-                        className="h-8 w-8 p-0 text-zinc-400 hover:text-rose-400"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div className="px-4 pb-4 space-y-3 flex-1 overflow-hidden">
+                    <p className="text-sm text-zinc-400 line-clamp-4">
+                      {insight.content}
+                    </p>
+
+                    {insight.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {insight.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2 py-0.5 rounded text-[10px] text-white/50 bg-white/[0.03] border border-white/[0.04] font-mono"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     )}
+
+                    <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25">
+                      Updated {formatDate(insight.updated_at)}
+                    </p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 flex-1 overflow-hidden">
-                <p className="text-sm text-zinc-400 line-clamp-4">
-                  {insight.content}
-                </p>
-
-                {insight.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {insight.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                <p className="text-xs text-zinc-500">
-                  Updated {formatDate(insight.updated_at)}
-                </p>
-              </CardContent>
-            </Card>
               </motion.div>
             </StaggerItem>
           ))}
@@ -433,58 +439,58 @@ function InsightsPageContent() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] max-w-2xl">
+        <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {editingInsight ? 'Edit Insight' : 'New Insight'}
             </DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogDescription className="text-sm text-zinc-400">
               Document a learning or observation about AI models
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Title *
               </label>
-              <Input
+              <input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Cohere struggles with Hebrew"
-                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Content *
               </label>
-              <Textarea
+              <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Describe your insight in detail..."
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[150px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[150px]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {formData.tags.map((tag) => (
                   <Badge
                     key={tag}
-                    className="bg-amber-600/20 text-amber-400 border-amber-600/30 cursor-pointer"
+                    className="bg-orange-500/10 text-orange-500 border-orange-500/30 cursor-pointer text-[10px] font-mono"
                     onClick={() => removeTag(tag)}
                   >
-                    {tag} ×
+                    {tag} x
                   </Badge>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Input
+                <input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -494,16 +500,15 @@ function InsightsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-white/[0.02] border-white/[0.06] text-white flex-1 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                  className="flex-1 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
                 />
-                <Button
+                <button
                   type="button"
-                  variant="outline"
                   onClick={() => addTag(tagInput)}
-                  className="border-white/[0.06] hover:border-orange-500/50"
+                  className="px-4 py-2 border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-orange-500/30 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                 >
                   Add
-                </Button>
+                </button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
                 {suggestedTags
@@ -511,7 +516,7 @@ function InsightsPageContent() {
                   .map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-white/[0.02] text-zinc-500 border-white/[0.06] cursor-pointer hover:border-orange-500/50 text-xs"
+                      className="bg-white/[0.03] text-white/50 border-white/[0.04] cursor-pointer hover:border-orange-500/30 text-[10px] font-mono"
                       onClick={() => addTag(tag)}
                     >
                       + {tag}
@@ -522,36 +527,35 @@ function InsightsPageContent() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setDialogOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="btn-primary"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving...' : editingInsight ? 'Update' : 'Create'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] max-w-2xl">
+        <DialogContent className="bg-black border border-white/[0.08] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {viewingInsight?.title}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1 block">
                 Content
               </label>
               <p className="text-sm text-zinc-400 whitespace-pre-wrap bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
@@ -561,36 +565,35 @@ function InsightsPageContent() {
 
             {viewingInsight?.tags && viewingInsight.tags.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-zinc-400 mb-1 block">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1 block">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-1">
                   {viewingInsight.tags.map((tag) => (
-                    <Badge
+                    <span
                       key={tag}
-                      className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
+                      className="px-2 py-0.5 rounded text-[10px] text-white/50 bg-white/[0.03] border border-white/[0.04] font-mono"
                     >
                       {tag}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-xs text-zinc-500">
+            <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.12em] text-white/25">
               <span>Created {formatDate(viewingInsight?.created_at || '')}</span>
               <span>Updated {formatDate(viewingInsight?.updated_at || '')}</span>
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setViewDialogOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Close
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

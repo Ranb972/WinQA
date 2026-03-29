@@ -4,9 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -76,7 +73,6 @@ function PromptsPageContent() {
     }
 
     if (action === 'new') {
-      // Small delay to ensure component is mounted
       setTimeout(() => setDialogOpen(true), 100);
     }
 
@@ -263,23 +259,23 @@ function PromptsPageContent() {
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center">
-              <Library className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+              <Library className="w-6 h-6 text-black" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                <span className="text-white">Prompt Library</span>
+              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
+                Prompt Library
               </h1>
-              <p className="text-sm sm:text-base text-zinc-400 mt-1">
-                Compare bad vs good prompts and learn best practices
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Interrogation techniques archive
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
+            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors w-full sm:w-auto justify-center">
+              <Plus className="w-4 h-4" />
               Add Prompt
-            </Button>
+            </button>
           </motion.div>
         </div>
       </MotionWrapper>
@@ -288,29 +284,27 @@ function PromptsPageContent() {
       <MotionWrapper delay={0.1}>
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-          <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search prompts..."
-            className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
+            className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
           />
         </div>
 
-        <Button
-          variant={showFavoritesOnly ? 'default' : 'outline'}
-          size="sm"
+        <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
           className={cn(
-            'transition-all shrink-0',
+            'flex items-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] transition-colors shrink-0',
             showFavoritesOnly
-              ? 'bg-orange-500 border-none text-white'
-              : 'border-white/[0.06] text-zinc-400 hover:text-white hover:border-orange-500/50'
+              ? 'bg-orange-500 text-black font-semibold'
+              : 'border border-white/[0.1] bg-white/[0.02] text-zinc-400 hover:text-white hover:border-orange-500/30'
           )}
         >
-          <Heart className={cn('h-4 w-4 mr-2', showFavoritesOnly && 'fill-current')} />
+          <Heart className={cn('h-3.5 w-3.5', showFavoritesOnly && 'fill-current')} />
           Favorites
-        </Button>
+        </button>
 
         {allTags.length > 0 && (
           <div className="w-full sm:w-auto flex flex-wrap gap-2">
@@ -319,10 +313,10 @@ function PromptsPageContent() {
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                 className={cn(
-                  'cursor-pointer transition-all text-xs',
+                  'cursor-pointer transition-all text-[10px] font-mono tracking-wider uppercase px-2 py-0.5',
                   selectedTag === tag
                     ? 'bg-orange-500/10 text-orange-500 border-orange-500/30'
-                    : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:border-orange-500/50'
+                    : 'bg-white/[0.03] text-white/50 border-white/[0.04] hover:border-orange-500/30'
                 )}
               >
                 {tag}
@@ -333,11 +327,20 @@ function PromptsPageContent() {
         </div>
       </MotionWrapper>
 
+      {/* Section Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-1 h-5 bg-orange-500 rounded-full" />
+        <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Prompt Archive</h2>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
+          {filteredPrompts.length} record{filteredPrompts.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {/* Content */}
       {isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-6">
+            <div key={i} className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
               <div className="flex items-start justify-between mb-3">
                 <Skeleton className="h-6 w-48" />
                 <div className="flex gap-1">
@@ -360,23 +363,22 @@ function PromptsPageContent() {
           ))}
         </div>
       ) : filteredPrompts.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-lg font-medium text-white mb-2">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Library className="w-16 h-16 text-orange-500/20 mb-4" />
+          <h3 className="font-heading text-lg font-semibold text-white mb-2">
             {searchQuery || showFavoritesOnly || selectedTag
-              ? 'No matching prompts'
-              : 'No prompts yet'}
+              ? 'NO MATCHING PROMPTS'
+              : 'NO PROMPTS YET'}
           </h3>
-          <p className="text-zinc-400 mb-6">
+          <p className="text-sm text-white/50 max-w-xs mb-6">
             {searchQuery || showFavoritesOnly || selectedTag
               ? 'Try adjusting your filters'
               : 'Start building your prompt library'}
           </p>
           {!searchQuery && !showFavoritesOnly && !selectedTag && (
-            <Button onClick={openNewDialog} className="btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Prompt
-            </Button>
+            <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
+              + Add First Prompt
+            </button>
           )}
         </div>
       ) : (
@@ -407,88 +409,88 @@ function PromptsPageContent() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {editingPrompt ? 'Edit Prompt' : 'Add Prompt'}
             </DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogDescription className="text-sm text-zinc-400">
               Document a bad prompt example and its improved version
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Title *
               </label>
-              <Input
+              <input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Specific Instructions"
-                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-rose-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400 mb-1.5 block">
                 Bad Prompt *
               </label>
-              <Textarea
+              <textarea
                 value={formData.bad_prompt_example}
                 onChange={(e) =>
                   setFormData({ ...formData, bad_prompt_example: e.target.value })
                 }
                 placeholder="The ineffective prompt..."
-                className="bg-rose-950/20 border-rose-900/30 text-rose-300 placeholder:text-rose-400/50 min-h-[80px] sm:min-h-[100px] focus:ring-1 focus:ring-rose-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-rose-950/20 border border-rose-900/30 text-rose-300 text-sm font-mono outline-none focus:border-rose-500/30 transition-colors placeholder:text-rose-400/50 resize-none min-h-[80px] sm:min-h-[100px]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-emerald-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400 mb-1.5 block">
                 Good Prompt *
               </label>
-              <Textarea
+              <textarea
                 value={formData.good_prompt_example}
                 onChange={(e) =>
                   setFormData({ ...formData, good_prompt_example: e.target.value })
                 }
                 placeholder="The improved prompt..."
-                className="bg-emerald-950/20 border-emerald-900/30 text-emerald-300 placeholder:text-emerald-400/50 min-h-[80px] sm:min-h-[100px] focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-emerald-950/20 border border-emerald-900/30 text-emerald-300 text-sm font-mono outline-none focus:border-emerald-500/30 transition-colors placeholder:text-emerald-400/50 resize-none min-h-[80px] sm:min-h-[100px]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Explanation
               </label>
-              <Textarea
+              <textarea
                 value={formData.explanation}
                 onChange={(e) =>
                   setFormData({ ...formData, explanation: e.target.value })
                 }
                 placeholder="Why is the good prompt better?"
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[60px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[60px]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-400 mb-1.5 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">
                 Tags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {formData.tags.map((tag) => (
                   <Badge
                     key={tag}
-                    className="bg-orange-500/10 text-orange-500 border-orange-500/30 cursor-pointer text-xs"
+                    className="bg-orange-500/10 text-orange-500 border-orange-500/30 cursor-pointer text-[10px] font-mono"
                     onClick={() => removeTag(tag)}
                   >
-                    {tag} ×
+                    {tag} x
                   </Badge>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Input
+                <input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -498,16 +500,15 @@ function PromptsPageContent() {
                     }
                   }}
                   placeholder="Add tag..."
-                  className="bg-white/[0.02] border-white/[0.06] text-white flex-1 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                  className="flex-1 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
                 />
-                <Button
+                <button
                   type="button"
-                  variant="outline"
                   onClick={() => addTag(tagInput)}
-                  className="border-white/[0.06] hover:border-orange-500/50"
+                  className="px-4 py-2 border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-orange-500/30 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
                 >
                   Add
-                </Button>
+                </button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
                 {suggestedTags
@@ -515,7 +516,7 @@ function PromptsPageContent() {
                   .map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-white/[0.02] text-zinc-500 border-white/[0.06] cursor-pointer hover:border-orange-500/50 text-xs"
+                      className="bg-white/[0.03] text-white/50 border-white/[0.04] cursor-pointer hover:border-orange-500/30 text-[10px] font-mono"
                       onClick={() => addTag(tag)}
                     >
                       + {tag}
@@ -526,29 +527,28 @@ function PromptsPageContent() {
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setDialogOpen(false)}
-              className="text-zinc-400 hover:text-white w-full sm:w-auto"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors w-full sm:w-auto"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="btn-primary w-full sm:w-auto"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isSubmitting ? 'Saving...' : editingPrompt ? 'Update' : 'Create'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">
               {viewingPrompt?.title}
             </DialogTitle>
           </DialogHeader>
@@ -556,7 +556,7 @@ function PromptsPageContent() {
           <div className="space-y-4 py-4">
             {/* Bad Prompt */}
             <div>
-              <label className="text-sm font-medium text-rose-400 mb-2 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-rose-400 mb-2 block">
                 Bad Prompt
               </label>
               <div className="bg-rose-950/30 border border-rose-900/30 rounded-lg p-4">
@@ -568,7 +568,7 @@ function PromptsPageContent() {
 
             {/* Good Prompt */}
             <div>
-              <label className="text-sm font-medium text-emerald-400 mb-2 block">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-400 mb-2 block">
                 Good Prompt
               </label>
               <div className="bg-emerald-950/30 border border-emerald-900/30 rounded-lg p-4">
@@ -581,7 +581,7 @@ function PromptsPageContent() {
             {/* Explanation */}
             {viewingPrompt?.explanation && (
               <div>
-                <label className="text-sm font-medium text-zinc-400 mb-2 block">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
                   Why it matters
                 </label>
                 <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
@@ -593,14 +593,14 @@ function PromptsPageContent() {
             {/* Tags */}
             {viewingPrompt?.tags && viewingPrompt.tags.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-zinc-400 mb-2 block">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-2 block">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-1">
                   {viewingPrompt.tags.map((tag) => (
                     <Badge
                       key={tag}
-                      className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-xs"
+                      className="bg-orange-500/10 text-orange-500 border-orange-500/30 text-[10px] font-mono"
                     >
                       {tag}
                     </Badge>
@@ -611,21 +611,20 @@ function PromptsPageContent() {
 
             {/* Favorite Status */}
             {viewingPrompt?.is_favorite && (
-              <div className="flex items-center gap-2 text-sm text-rose-400">
+              <div className="flex items-center gap-2 text-sm text-orange-500">
                 <Heart className="h-4 w-4 fill-current" />
-                <span>Favorited</span>
+                <span className="font-mono text-xs uppercase tracking-[0.12em]">Favorited</span>
               </div>
             )}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setViewDialogOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Close
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

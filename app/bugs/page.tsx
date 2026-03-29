@@ -4,10 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -43,22 +40,22 @@ interface BugReport {
 }
 
 const statusColors = {
-  Open: 'bg-rose-600/20 text-rose-400 border-rose-600/30',
-  Investigating: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
-  Resolved: 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30',
+  Open: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  Investigating: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+  Resolved: 'bg-green-500/10 text-green-400 border-green-500/30',
 };
 
 const severityColors = {
-  Low: 'bg-slate-600/20 text-slate-400 border-slate-600/30',
-  Medium: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
-  High: 'bg-rose-600/20 text-rose-400 border-rose-600/30',
+  Low: 'bg-green-500/10 text-green-400 border-green-500/30',
+  Medium: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  High: 'bg-red-500/10 text-red-400 border-red-500/30',
 };
 
 const issueTypeColors = {
-  Hallucination: 'bg-orange-600/20 text-orange-400 border-orange-600/30',
-  Formatting: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
-  Refusal: 'bg-red-600/20 text-red-400 border-red-600/30',
-  Logic: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
+  Hallucination: 'bg-orange-500/10 text-orange-500 border-orange-500/30',
+  Formatting: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  Refusal: 'bg-red-500/10 text-red-400 border-red-500/30',
+  Logic: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
 };
 
 function BugsPageContent() {
@@ -280,23 +277,23 @@ function BugsPageContent() {
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center">
-              <Bug className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+              <Bug className="w-6 h-6 text-black" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                <span className="text-white">Bug Log</span>
+              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
+                Bug Log
               </h1>
-              <p className="text-zinc-400 text-sm sm:text-base mt-1">
-                Track and manage AI response issues
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Document AI failures and anomalies
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={openNewDialog} className="btn-primary w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
+            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors w-full sm:w-auto justify-center">
+              <Plus className="w-4 h-4" />
               Add Bug
-            </Button>
+            </button>
           </motion.div>
         </div>
       </MotionWrapper>
@@ -306,80 +303,54 @@ function BugsPageContent() {
         <div className="space-y-4 mb-6">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <Input
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+            <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by prompt, response, or notes..."
-              className="pl-10 glass border-white/[0.06] text-white focus:border-orange-500/50"
+              className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
             />
           </div>
 
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-3">
-            <Filter className="h-4 w-4 text-zinc-500" />
+            <Filter className="h-4 w-4 text-white/30" />
             {mounted && (
               <>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 glass border-white/[0.06] text-sm">
+                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-white/[0.06]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
-                      All Status
-                    </SelectItem>
-                    <SelectItem value="Open" className="text-zinc-400 focus:bg-orange-500/10">
-                      Open
-                    </SelectItem>
-                    <SelectItem value="Investigating" className="text-zinc-400 focus:bg-orange-500/10">
-                      Investigating
-                    </SelectItem>
-                    <SelectItem value="Resolved" className="text-zinc-400 focus:bg-orange-500/10">
-                      Resolved
-                    </SelectItem>
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Status</SelectItem>
+                    <SelectItem value="Open" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Open</SelectItem>
+                    <SelectItem value="Investigating" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Investigating</SelectItem>
+                    <SelectItem value="Resolved" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Resolved</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-24 sm:w-32 glass border-white/[0.06] text-sm">
+                  <SelectTrigger className="w-24 sm:w-32 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
                     <SelectValue placeholder="Severity" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-white/[0.06]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
-                      All Severity
-                    </SelectItem>
-                    <SelectItem value="Low" className="text-zinc-400 focus:bg-orange-500/10">
-                      Low
-                    </SelectItem>
-                    <SelectItem value="Medium" className="text-zinc-400 focus:bg-orange-500/10">
-                      Medium
-                    </SelectItem>
-                    <SelectItem value="High" className="text-zinc-400 focus:bg-orange-500/10">
-                      High
-                    </SelectItem>
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Severity</SelectItem>
+                    <SelectItem value="Low" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Low</SelectItem>
+                    <SelectItem value="Medium" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Medium</SelectItem>
+                    <SelectItem value="High" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">High</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 glass border-white/[0.06] text-sm">
+                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
                     <SelectValue placeholder="Issue Type" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-white/[0.06]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-orange-500/10">
-                      All Types
-                    </SelectItem>
-                    <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-orange-500/10">
-                      Hallucination
-                    </SelectItem>
-                    <SelectItem value="Formatting" className="text-zinc-400 focus:bg-orange-500/10">
-                      Formatting
-                    </SelectItem>
-                    <SelectItem value="Refusal" className="text-zinc-400 focus:bg-orange-500/10">
-                      Refusal
-                    </SelectItem>
-                    <SelectItem value="Logic" className="text-zinc-400 focus:bg-orange-500/10">
-                      Logic
-                    </SelectItem>
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Types</SelectItem>
+                    <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Hallucination</SelectItem>
+                    <SelectItem value="Formatting" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Formatting</SelectItem>
+                    <SelectItem value="Refusal" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Refusal</SelectItem>
+                    <SelectItem value="Logic" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Logic</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -388,11 +359,20 @@ function BugsPageContent() {
         </div>
       </MotionWrapper>
 
+      {/* Section Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-1 h-5 bg-orange-500 rounded-full" />
+        <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Incident Reports</h2>
+        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">
+          {filteredBugs.length} record{filteredBugs.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {/* Content */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4">
+            <div key={i} className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-5 w-16 rounded-full" />
@@ -411,12 +391,12 @@ function BugsPageContent() {
         </div>
       ) : filteredBugs.length === 0 ? (
         <MotionWrapper>
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🐛</div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              {hasActiveFilters ? 'No matching bugs' : 'No bugs reported'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Bug className="w-16 h-16 text-orange-500/20 mb-4" />
+            <h3 className="font-heading text-lg font-semibold text-white mb-2">
+              {hasActiveFilters ? 'NO MATCHING BUGS' : 'NO BUGS REPORTED'}
             </h3>
-            <p className="text-zinc-400">
+            <p className="text-sm text-white/50 max-w-xs mb-6">
               {hasActiveFilters
                 ? 'Try adjusting your search or filters'
                 : 'Bug reports will appear here when you flag issues in Chat Lab'}
@@ -427,10 +407,16 @@ function BugsPageContent() {
         <StaggerContainer key={`${statusFilter}-${severityFilter}-${issueTypeFilter}`} className="space-y-3">
           {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
-              <div className="glass-card rounded-xl overflow-hidden hover:border-white/[0.1] transition-colors">
+              <div className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden hover:border-orange-500/30 transition-all duration-300 group">
+                {/* Corner accents */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-orange-500/30 rounded-tl-lg pointer-events-none" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-orange-500/30 rounded-tr-lg pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-orange-500/30 rounded-bl-lg pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-orange-500/30 rounded-br-lg pointer-events-none" />
+
               {/* Header Row */}
               <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
                 onClick={() =>
                   setExpandedId(expandedId === bug._id ? null : bug._id)
                 }
@@ -444,7 +430,7 @@ function BugsPageContent() {
                   >
                     <Badge
                       className={cn(
-                        'border cursor-pointer hover:opacity-80 transition-opacity text-xs',
+                        'border cursor-pointer hover:opacity-80 transition-opacity text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full',
                         statusColors[bug.status]
                       )}
                     >
@@ -452,44 +438,42 @@ function BugsPageContent() {
                     </Badge>
                   </button>
                   <Badge
-                    className={cn('border text-xs', issueTypeColors[bug.issue_type])}
+                    className={cn('border text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full', issueTypeColors[bug.issue_type])}
                   >
                     {bug.issue_type}
                   </Badge>
-                  <Badge className={cn('border text-xs', severityColors[bug.severity])}>
+                  <Badge className={cn('border text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full', severityColors[bug.severity])}>
                     {bug.severity}
                   </Badge>
                   {bug.is_public && (
-                    <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]">
+                    <Badge className="border border-orange-500/30 bg-orange-500/10 text-orange-500 text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full">
                       Example
                     </Badge>
                   )}
-                  <span className="text-xs sm:text-sm text-zinc-400 truncate max-w-[120px] sm:max-w-none">
+                  <span className="text-xs text-zinc-400 truncate max-w-[120px] sm:max-w-none font-mono">
                     {modelDisplayNames[bug.model_used as LLMProvider] || bug.model_used}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-[10px] font-mono text-white/30">
                     {formatDate(bug.created_at)}
                   </span>
                   {!bug.is_public && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(bug._id);
                       }}
-                      className="h-8 w-8 p-0 text-zinc-400 hover:text-rose-400"
+                      className="h-8 w-8 flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </button>
                   )}
                   {expandedId === bug._id ? (
-                    <ChevronUp className="h-4 w-4 text-zinc-400" />
+                    <ChevronUp className="h-4 w-4 text-white/30" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-zinc-400" />
+                    <ChevronDown className="h-4 w-4 text-white/30" />
                   )}
                 </div>
               </div>
@@ -498,26 +482,26 @@ function BugsPageContent() {
               {expandedId === bug._id && (
                 <div className="border-t border-white/[0.06] p-4 space-y-4 animate-slide-down">
                   <div>
-                    <p className="text-xs font-medium text-zinc-500 mb-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
                       Prompt
                     </p>
-                    <p className="text-sm text-zinc-400 bg-white/[0.02] rounded-lg p-3 whitespace-pre-wrap">
+                    <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap">
                       {bug.prompt_context}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-zinc-500 mb-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
                       Model Response
                     </p>
-                    <p className="text-sm text-zinc-400 bg-white/[0.02] rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {bug.model_response}
                     </p>
                   </div>
 
                   {bug.user_notes && (
                     <div>
-                      <p className="text-xs font-medium text-zinc-500 mb-1">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
                         Notes
                       </p>
                       <p className="text-sm text-zinc-400">{bug.user_notes}</p>
@@ -533,10 +517,10 @@ function BugsPageContent() {
 
       {/* Status Update Dialog */}
       <Dialog open={!!editingBug} onOpenChange={() => setEditingBug(null)}>
-        <DialogContent className="glass border-white/[0.06]">
+        <DialogContent className="bg-black border border-white/[0.08]">
           <DialogHeader>
-            <DialogTitle className="text-white">Update Status</DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Update Status</DialogTitle>
+            <DialogDescription className="text-sm text-zinc-400">
               Change the status of this bug report
             </DialogDescription>
           </DialogHeader>
@@ -547,73 +531,66 @@ function BugsPageContent() {
                 <SelectTrigger className="bg-white/[0.02] border-white/[0.06]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="glass border-white/[0.06]">
-                  <SelectItem value="Open" className="text-zinc-400 focus:bg-orange-500/10">
-                    Open
-                  </SelectItem>
-                  <SelectItem value="Investigating" className="text-zinc-400 focus:bg-orange-500/10">
-                    Investigating
-                  </SelectItem>
-                  <SelectItem value="Resolved" className="text-zinc-400 focus:bg-orange-500/10">
-                    Resolved
-                  </SelectItem>
+                <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                  <SelectItem value="Open" className="text-zinc-400 focus:bg-white/[0.04]">Open</SelectItem>
+                  <SelectItem value="Investigating" className="text-zinc-400 focus:bg-white/[0.04]">Investigating</SelectItem>
+                  <SelectItem value="Resolved" className="text-zinc-400 focus:bg-white/[0.04]">Resolved</SelectItem>
                 </SelectContent>
               </Select>
             )}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setEditingBug(null)}
-              className="text-zinc-400"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleStatusUpdate}
-              className="btn-primary"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors"
             >
               Update
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add New Bug Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">Add Bug Report</DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Add Bug Report</DialogTitle>
+            <DialogDescription className="text-sm text-zinc-400">
               Document an AI response issue you&apos;ve encountered
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400">Prompt Context *</label>
-              <Textarea
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Prompt Context *</label>
+              <textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
                 placeholder="What prompt or context triggered this issue?"
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[80px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px]"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400">Model Response *</label>
-              <Textarea
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Model Response *</label>
+              <textarea
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
                 placeholder="What was the problematic response?"
-                className="bg-white/[0.02] border-white/[0.06] text-white min-h-[100px] focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[100px]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-400">Model Used</label>
+              <div className="space-y-1.5">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Model Used</label>
                 {mounted && (
                   <Select
                     value={formData.model_used}
@@ -622,18 +599,18 @@ function BugsPageContent() {
                     <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-white/[0.06]">
-                      <SelectItem value="cohere" className="text-zinc-400 focus:bg-orange-500/10">Cohere</SelectItem>
-                      <SelectItem value="gemini" className="text-zinc-400 focus:bg-orange-500/10">Gemini</SelectItem>
-                      <SelectItem value="groq" className="text-zinc-400 focus:bg-orange-500/10">Groq</SelectItem>
-                      <SelectItem value="openrouter" className="text-zinc-400 focus:bg-orange-500/10">OpenRouter</SelectItem>
+                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                      <SelectItem value="cohere" className="text-zinc-400 focus:bg-white/[0.04]">Cohere</SelectItem>
+                      <SelectItem value="gemini" className="text-zinc-400 focus:bg-white/[0.04]">Gemini</SelectItem>
+                      <SelectItem value="groq" className="text-zinc-400 focus:bg-white/[0.04]">Groq</SelectItem>
+                      <SelectItem value="openrouter" className="text-zinc-400 focus:bg-white/[0.04]">OpenRouter</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-400">Issue Type</label>
+              <div className="space-y-1.5">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Issue Type</label>
                 {mounted && (
                   <Select
                     value={formData.issue_type}
@@ -642,18 +619,18 @@ function BugsPageContent() {
                     <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-white/[0.06]">
-                      <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-orange-500/10">Hallucination</SelectItem>
-                      <SelectItem value="Formatting" className="text-zinc-400 focus:bg-orange-500/10">Formatting</SelectItem>
-                      <SelectItem value="Refusal" className="text-zinc-400 focus:bg-orange-500/10">Refusal</SelectItem>
-                      <SelectItem value="Logic" className="text-zinc-400 focus:bg-orange-500/10">Logic</SelectItem>
+                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                      <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-white/[0.04]">Hallucination</SelectItem>
+                      <SelectItem value="Formatting" className="text-zinc-400 focus:bg-white/[0.04]">Formatting</SelectItem>
+                      <SelectItem value="Refusal" className="text-zinc-400 focus:bg-white/[0.04]">Refusal</SelectItem>
+                      <SelectItem value="Logic" className="text-zinc-400 focus:bg-white/[0.04]">Logic</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-400">Severity</label>
+              <div className="space-y-1.5">
+                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Severity</label>
                 {mounted && (
                   <Select
                     value={formData.severity}
@@ -662,42 +639,41 @@ function BugsPageContent() {
                     <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass border-white/[0.06]">
-                      <SelectItem value="Low" className="text-zinc-400 focus:bg-orange-500/10">Low</SelectItem>
-                      <SelectItem value="Medium" className="text-zinc-400 focus:bg-orange-500/10">Medium</SelectItem>
-                      <SelectItem value="High" className="text-zinc-400 focus:bg-orange-500/10">High</SelectItem>
+                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                      <SelectItem value="Low" className="text-zinc-400 focus:bg-white/[0.04]">Low</SelectItem>
+                      <SelectItem value="Medium" className="text-zinc-400 focus:bg-white/[0.04]">Medium</SelectItem>
+                      <SelectItem value="High" className="text-zinc-400 focus:bg-white/[0.04]">High</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400">Notes (optional)</label>
-              <Textarea
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Notes (optional)</label>
+              <textarea
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
                 placeholder="Any additional context or observations..."
-                className="bg-white/[0.02] border-white/[0.06] text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 transition-colors"
+                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[60px]"
               />
             </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setDialogOpen(false)}
-              className="text-zinc-400 w-full sm:w-auto"
+              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors w-full sm:w-auto"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleCreateBug}
               disabled={isSubmitting}
-              className="btn-primary w-full sm:w-auto"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isSubmitting ? 'Creating...' : 'Create Bug Report'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
