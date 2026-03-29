@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Search, X, Target } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -65,56 +64,58 @@ export default function DebugModelSelector({
   };
 
   return (
-    <div className="glass-card rounded-lg p-4 mt-3 border border-slate-700 animate-fade-in">
-      <div className="flex items-center justify-between mb-3">
+    <div className="mt-3 p-4 border border-white/[0.08] bg-[#070707] relative animate-fade-in">
+      {/* Corner accents */}
+      <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-orange-500" />
+      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-orange-500" />
+
+      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] mb-3">
         <div className="flex items-center gap-2">
           {isSuccess ? (
-            <Target className="h-4 w-4 text-emerald-400" />
+            <Target className="w-[13px] h-[13px] text-orange-500" />
           ) : (
-            <Search className="h-4 w-4 text-purple-400" />
+            <Search className="w-[13px] h-[13px] text-orange-500" />
           )}
-          <span className="text-sm font-medium text-slate-200">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-white">
             {isSuccess ? 'What Worked? Analysis' : 'AI Debug Analysis'}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={onClose}
-          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-200"
+          className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white transition-colors"
         >
           <X className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
-      <p className="text-xs text-slate-400 mb-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-3">
         {isSuccess
           ? 'Select a model to analyze what worked in your code:'
           : 'Select a model to analyze the error and suggest fixes:'}
       </p>
 
       <Select value={selectedModel} onValueChange={setSelectedModel}>
-        <SelectTrigger className="bg-slate-900/50 border-slate-700 mb-3">
+        <SelectTrigger className="w-full flex items-center justify-between px-3 py-2.5 border border-white/[0.08] bg-white/[0.02] hover:border-orange-500/25 transition-colors text-left mb-3">
           <SelectValue placeholder="Choose model" />
         </SelectTrigger>
-        <SelectContent className="bg-slate-900 border-slate-700">
+        <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
           {/* Built-in providers */}
           {BUILT_IN_OPTIONS.map((option) => (
             <SelectItem
               key={option.value}
               value={option.value}
-              className="text-slate-300 focus:bg-slate-800"
+              className="text-zinc-300 focus:bg-white/[0.04]"
             >
               <div className="flex flex-col">
-                <span>{option.label}</span>
-                <span className="text-xs text-slate-500">{option.description}</span>
+                <span className="font-mono text-xs text-white">{option.label}</span>
+                <span className="font-mono text-[10px] text-orange-500/60">{option.description}</span>
               </div>
             </SelectItem>
           ))}
 
           {/* Custom providers separator */}
           {enabledCustomProviders.length > 0 && (
-            <div className="px-2 py-1.5 text-xs text-slate-500 border-t border-slate-700 mt-1">
+            <div className="px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-white/30 border-t border-white/[0.06] mt-1">
               Custom Providers
             </div>
           )}
@@ -124,11 +125,11 @@ export default function DebugModelSelector({
             <SelectItem
               key={provider.id}
               value={`custom:${provider.id}`}
-              className="text-slate-300 focus:bg-slate-800"
+              className="text-zinc-300 focus:bg-white/[0.04]"
             >
               <div className="flex flex-col">
-                <span>{provider.name}</span>
-                <span className="text-xs text-slate-500">{provider.modelId}</span>
+                <span className="font-mono text-xs text-white">{provider.name}</span>
+                <span className="font-mono text-[10px] text-orange-500/60">{provider.modelId}</span>
               </div>
             </SelectItem>
           ))}
@@ -136,51 +137,40 @@ export default function DebugModelSelector({
       </Select>
 
       <div className="mb-3">
-        <p className="text-xs text-slate-400 mb-2">Output format:</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">Output format:</p>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={debugMode === 'summary' ? 'default' : 'outline'}
+          <button
             onClick={() => setDebugMode('summary')}
             className={debugMode === 'summary'
-              ? `${isSuccess ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-purple-600 hover:bg-purple-500'} text-white text-xs h-7`
-              : 'border-slate-600 text-slate-400 hover:text-slate-200 text-xs h-7'}
+              ? 'px-4 py-1.5 bg-orange-500 text-black font-mono text-[10px] uppercase tracking-[0.12em] font-semibold transition-colors'
+              : 'px-4 py-1.5 border border-white/[0.1] text-zinc-400 hover:text-white hover:border-orange-500/30 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors'}
           >
             Summary
-          </Button>
-          <Button
-            size="sm"
-            variant={debugMode === 'detailed' ? 'default' : 'outline'}
+          </button>
+          <button
             onClick={() => setDebugMode('detailed')}
             className={debugMode === 'detailed'
-              ? `${isSuccess ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-purple-600 hover:bg-purple-500'} text-white text-xs h-7`
-              : 'border-slate-600 text-slate-400 hover:text-slate-200 text-xs h-7'}
+              ? 'px-4 py-1.5 bg-orange-500 text-black font-mono text-[10px] uppercase tracking-[0.12em] font-semibold transition-colors'
+              : 'px-4 py-1.5 border border-white/[0.1] text-zinc-400 hover:text-white hover:border-orange-500/30 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors'}
           >
             Detailed
-          </Button>
+          </button>
         </div>
       </div>
 
       <div className="flex gap-2">
-        <Button
+        <button
           onClick={handleAnalyze}
-          size="sm"
-          className={`flex-1 bg-gradient-to-r ${
-            isSuccess
-              ? 'from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
-              : 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500'
-          }`}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.14em] font-semibold transition-colors"
         >
           {isSuccess ? 'Analyze Code' : 'Analyze Error'}
-        </Button>
-        <Button
+        </button>
+        <button
           onClick={onClose}
-          variant="ghost"
-          size="sm"
-          className="text-slate-400 hover:text-slate-200"
+          className="px-4 py-2.5 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </div>
   );

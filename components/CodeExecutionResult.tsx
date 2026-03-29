@@ -1,7 +1,6 @@
 'use client';
 
 import { CheckCircle, XCircle, Bot, Cpu, Target } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CodeExecutionResult, isInteractiveHTML, requiresDevEnvironment, wrapJSInHTML } from '@/lib/code-execution';
 import InteractivePreview from '@/components/InteractivePreview';
@@ -34,32 +33,32 @@ export default function CodeExecutionResultDisplay({
   return (
     <div
       className={cn(
-        'mt-2 rounded-lg p-3 font-mono text-sm',
+        'mt-2 p-3 font-mono text-sm',
         result.success
-          ? 'bg-emerald-950/30 border border-emerald-500/30'
-          : 'bg-rose-950/30 border border-rose-500/30'
+          ? 'border border-green-900/40 bg-green-950/30'
+          : 'border border-red-900/40 bg-red-950/25'
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-green-900/30 mb-2">
         <span
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium',
-            result.success ? 'text-emerald-400' : 'text-rose-400'
+            'flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.14em]',
+            result.success ? 'text-green-400' : 'text-red-400'
           )}
         >
           {result.success ? (
-            <CheckCircle className="h-3.5 w-3.5" />
+            <CheckCircle className="w-[13px] h-[13px] text-green-500" />
           ) : (
-            <XCircle className="h-3.5 w-3.5" />
+            <XCircle className="w-[13px] h-[13px] text-red-400" />
           )}
-          {result.success ? 'Success' : 'Error'}
+          {result.success ? 'Execution Success' : 'Execution Failed'}
         </span>
 
         <div className="flex items-center gap-2">
           {/* Engine indicator */}
           {result.engine && (
-            <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="flex items-center gap-1 font-mono text-[10px] tracking-[0.08em] text-white/30">
               <Cpu className="h-3 w-3" />
               {result.engine}
             </span>
@@ -67,7 +66,7 @@ export default function CodeExecutionResultDisplay({
 
           {/* Execution time */}
           {result.executionTime !== undefined && (
-            <span className="text-xs text-slate-500">
+            <span className="font-mono text-[10px] tracking-[0.08em] text-white/30">
               {result.executionTime.toFixed(1)}ms
             </span>
           )}
@@ -77,8 +76,8 @@ export default function CodeExecutionResultDisplay({
       {/* Output */}
       {hasOutput && (
         <div className="mb-2">
-          <div className="text-xs text-slate-500 mb-1">Output:</div>
-          <pre className="whitespace-pre-wrap text-slate-300 bg-slate-900/50 rounded p-2 overflow-x-auto">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30 mb-2">Output:</div>
+          <pre className="font-mono text-sm text-green-300 bg-green-950/40 border border-green-900/30 px-4 py-3 whitespace-pre-wrap overflow-x-auto">
             {result.output}
           </pre>
         </div>
@@ -87,8 +86,8 @@ export default function CodeExecutionResultDisplay({
       {/* Error */}
       {hasError && (
         <div>
-          <div className="text-xs text-rose-400/70 mb-1">Error:</div>
-          <pre className="whitespace-pre-wrap text-rose-300 bg-rose-950/30 rounded p-2 overflow-x-auto">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30 mb-2">Error:</div>
+          <pre className="font-mono text-xs text-red-300/80 leading-relaxed whitespace-pre-wrap overflow-x-auto">
             {result.error}
           </pre>
         </div>
@@ -96,7 +95,7 @@ export default function CodeExecutionResultDisplay({
 
       {/* No output message */}
       {result.success && !hasOutput && !showInteractivePreview && (
-        <div className="text-xs text-slate-500 italic">
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30">
           Code executed successfully with no output.
         </div>
       )}
@@ -113,28 +112,24 @@ export default function CodeExecutionResultDisplay({
 
       {/* Debug button (only on error) */}
       {!result.success && onDebugClick && (
-        <Button
+        <button
           onClick={onDebugClick}
-          variant="outline"
-          size="sm"
-          className="mt-3 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+          className="flex items-center gap-2 px-3 py-1.5 mt-4 border border-orange-500/30 bg-orange-500/[0.08] hover:bg-orange-500/[0.15] hover:border-orange-500/50 text-orange-400 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
         >
-          <Bot className="h-4 w-4 mr-1.5" />
+          <Bot className="w-[11px] h-[11px]" />
           AI Debug
-        </Button>
+        </button>
       )}
 
       {/* What Worked button (only on success) */}
       {result.success && onSuccessAnalysisClick && (
-        <Button
+        <button
           onClick={onSuccessAnalysisClick}
-          variant="ghost"
-          size="sm"
-          className="mt-3 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+          className="flex items-center gap-2 px-3 py-1.5 mt-4 border border-green-700/30 bg-green-950/30 hover:bg-green-900/30 text-green-400 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
         >
-          <Target className="h-4 w-4 mr-1.5" />
+          <Target className="w-[11px] h-[11px]" />
           What Worked?
-        </Button>
+        </button>
       )}
     </div>
   );
