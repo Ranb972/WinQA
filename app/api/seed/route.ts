@@ -55,6 +55,57 @@ export async function GET() {
   }
 }
 
+// PUT - Reseed: delete all is_public entries and insert fresh seed data
+export async function PUT() {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await dbConnect();
+
+    // Delete all existing public seed data across all collections
+    const deleted = await Promise.all([
+      BugReport.deleteMany({ is_public: true }),
+      PromptLibrary.deleteMany({ is_public: true }),
+      TestCase.deleteMany({ is_public: true }),
+      Insight.deleteMany({ is_public: true }),
+    ]);
+
+    // Insert new seed data with is_public: true
+    const [bugs, prompts, testCases, insights] = await Promise.all([
+      BugReport.insertMany(seedBugReports.map(d => ({ ...d, user_id: userId, is_public: true }))),
+      PromptLibrary.insertMany(seedPrompts.map(d => ({ ...d, user_id: userId, is_public: true }))),
+      TestCase.insertMany(seedTestCases.map(d => ({ ...d, user_id: userId, is_public: true }))),
+      Insight.insertMany(seedInsights.map(d => ({ ...d, user_id: userId, is_public: true }))),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Reseeded all collections',
+      deleted: {
+        bugs: deleted[0].deletedCount,
+        prompts: deleted[1].deletedCount,
+        testCases: deleted[2].deletedCount,
+        insights: deleted[3].deletedCount,
+      },
+      inserted: {
+        bugs: bugs.length,
+        prompts: prompts.length,
+        testCases: testCases.length,
+        insights: insights.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error reseeding data:', error);
+    return NextResponse.json(
+      { error: 'Failed to reseed data' },
+      { status: 500 }
+    );
+  }
+}
+
 // POST - Seed empty collections (scoped to authenticated user)
 export async function POST() {
   try {
