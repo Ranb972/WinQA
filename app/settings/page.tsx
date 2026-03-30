@@ -19,6 +19,7 @@ import {
   Download,
   Upload,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { Input } from '@/components/ui/input';
@@ -420,31 +421,41 @@ export default function SettingsPage() {
     );
   }
 
+  const calibratedCount = Object.values(savedKeys).filter((k) => k && k.trim()).length;
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-3xl mx-auto">
         <MotionWrapper>
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
-              <Settings className="w-6 h-6 text-black" />
+            <div className="w-12 h-12 rounded bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <Settings className="w-6 h-6 text-orange-500" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">Settings</h1>
-              <p className="text-sm text-zinc-400 mt-0.5">Investigation parameters</p>
+              <h1 className="font-heading text-2xl font-bold uppercase tracking-wider text-white">Settings</h1>
+              <p className="text-zinc-400 text-sm mt-1">Investigation parameters</p>
             </div>
           </div>
         </MotionWrapper>
 
         {/* Info Banner */}
         <MotionWrapper delay={0.1}>
-          <div className="bg-orange-500/[0.04] border border-orange-500/20 p-4 mb-8">
+          <div className="relative p-4 rounded bg-white/[0.015] border border-white/[0.06] overflow-hidden mb-8">
+            <div className="absolute top-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute top-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 right-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
             <div className="flex gap-3">
-              <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <Info className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm text-zinc-400">
-                  <span className="font-medium text-orange-500">Configure your authentication credentials</span> for higher rate limits and better reliability.
-                  Your credentials are <span className="text-green-400 font-medium">encrypted</span> before being stored locally in your browser.
+                <p className="text-zinc-400 text-sm">
+                  <span className="text-orange-500 font-medium">Configure your authentication credentials</span> for higher rate limits and better reliability.
+                  Your credentials are <span className="text-orange-500 font-medium">encrypted</span> before being stored locally in your browser.
                 </p>
               </div>
             </div>
@@ -453,13 +464,27 @@ export default function SettingsPage() {
 
         {/* API Keys Section */}
         <MotionWrapper delay={0.2}>
-          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Authentication Credentials</h2>
+          <div className="relative rounded bg-white/[0.015] border border-white/[0.06] overflow-hidden">
+            <div className="absolute top-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute top-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 right-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
+
+            {/* Section Header */}
+            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Authentication Credentials</h2>
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{calibratedCount}/{providers.length} Calibrated</span>
             </div>
 
-            <div className="space-y-6">
+            {/* Credential Rows */}
+            <div>
               {providers.map((provider, index) => {
                 const currentValue = keys[provider.key] || '';
                 const isSaved = savedKeys[provider.key] && savedKeys[provider.key]!.trim().length > 0;
@@ -474,96 +499,113 @@ export default function SettingsPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 * index, duration: 0.3 }}
-                    className="group"
+                    className="p-5 border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.02] transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-white">
-                          {provider.name}
-                        </label>
-                        {isSaved && status === 'idle' && (
-                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-green-400">
-                            <Check className="h-3 w-3" />
-                            Configured
-                          </span>
-                        )}
-                        {status === 'valid' && (
-                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-green-400">
-                            <Check className="h-3 w-3" />
-                            Valid
-                          </span>
-                        )}
-                        {status === 'invalid' && (
-                          <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-red-400">
-                            <X className="h-3 w-3" />
-                            Invalid
-                          </span>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center">
+                          <Settings className="w-4 h-4 text-orange-500" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-white font-medium text-sm">
+                              {provider.name}
+                            </label>
+                            {isSaved && status === 'idle' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <Check className="h-2.5 w-2.5" />
+                                Calibrated
+                              </span>
+                            )}
+                            {!isSaved && status === 'idle' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">
+                                Uncalibrated
+                              </span>
+                            )}
+                            {status === 'valid' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <Check className="h-2.5 w-2.5" />
+                                Valid
+                              </span>
+                            )}
+                            {status === 'invalid' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+                                <X className="h-2.5 w-2.5" />
+                                Invalid
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-zinc-500 text-xs mt-0.5">{provider.description}</p>
+                        </div>
                       </div>
                       <a
                         href={provider.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10px] font-mono uppercase tracking-[0.12em] text-orange-500 hover:text-orange-400 transition-colors"
+                        className="inline-flex items-center gap-1 text-orange-500 text-xs font-mono uppercase tracking-[0.15em] hover:text-orange-400 transition-colors"
                       >
-                        Get API Key &rarr;
+                        Acquire Key
+                        <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
-                    <p className="text-[10px] font-mono text-white/30 mb-2">{provider.description}</p>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          type={isVisible || isEditing ? 'text' : 'password'}
-                          value={isEditing ? currentValue : getDisplayValue(provider.key)}
-                          onChange={(e) => handleKeyChange(provider.key, e.target.value)}
-                          onFocus={() => handleFocus(provider.key)}
-                          onBlur={() => handleBlur(provider.key)}
-                          placeholder={provider.placeholder}
-                          className="pr-10 bg-white/[0.02] border-white/[0.06] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/30"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => toggleVisibility(provider.key)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                        >
-                          {isVisible ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
+
+                    <div className="mt-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-1.5">Authentication Key</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            type={isVisible || isEditing ? 'text' : 'password'}
+                            value={isEditing ? currentValue : getDisplayValue(provider.key)}
+                            onChange={(e) => handleKeyChange(provider.key, e.target.value)}
+                            onFocus={() => handleFocus(provider.key)}
+                            onBlur={() => handleBlur(provider.key)}
+                            placeholder={provider.placeholder}
+                            className="pr-10 h-10 bg-black border-white/[0.08] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility(provider.key)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                          >
+                            {isVisible ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+
+                        {currentValue && (
+                          <button
+                            onClick={() => handleTestKey(provider.key)}
+                            disabled={status === 'testing'}
+                            className={`h-10 w-10 rounded flex items-center justify-center transition-colors ${
+                              status === 'valid'
+                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                : status === 'invalid'
+                                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                                : 'text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10'
+                            }`}
+                            title="Test API key"
+                          >
+                            {status === 'testing' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FlaskConical className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
+
+                        {currentValue && (
+                          <button
+                            onClick={() => handleClearKey(provider.key)}
+                            className="h-10 w-10 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Clear API key"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-
-                      {currentValue && (
-                        <button
-                          onClick={() => handleTestKey(provider.key)}
-                          disabled={status === 'testing'}
-                          className={`h-10 w-10 flex items-center justify-center transition-colors ${
-                            status === 'valid'
-                              ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                              : status === 'invalid'
-                              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                              : 'text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10'
-                          }`}
-                          title="Test API key"
-                        >
-                          {status === 'testing' ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <FlaskConical className="h-4 w-4" />
-                          )}
-                        </button>
-                      )}
-
-                      {currentValue && (
-                        <button
-                          onClick={() => handleClearKey(provider.key)}
-                          className="h-10 w-10 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                          title="Clear API key"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
                     </div>
 
                     <AnimatePresence>
@@ -581,14 +623,14 @@ export default function SettingsPage() {
 
                     {PROVIDER_MODELS[provider.key] && (
                       <div className="mt-3">
-                        <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1 block">
-                          Model
+                        <label className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-1.5">
+                          Model Configuration
                         </label>
                         <Select
                           value={modelPreferences[provider.key] || getDefaultModel(provider.key) || ''}
                           onValueChange={(v) => handleModelChange(provider.key, v)}
                         >
-                          <SelectTrigger className="bg-white/[0.02] border-white/[0.06] h-8 text-sm">
+                          <SelectTrigger className="bg-black border-white/[0.08] h-10 text-sm focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20">
                             <SelectValue placeholder="Select model" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
@@ -614,18 +656,11 @@ export default function SettingsPage() {
             </div>
 
             {/* Save Button */}
-            <div className="mt-8 flex items-center justify-between">
-              <div className="text-sm">
-                {hasAnyKey && (
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/30">
-                    {Object.values(savedKeys).filter((k) => k && k.trim()).length} of {providers.length} credentials active
-                  </span>
-                )}
-              </div>
+            <div className="flex justify-center pt-6 px-5 pb-5">
               <button
                 onClick={handleSaveAll}
                 disabled={!hasChanges || isSaving}
-                className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-orange-500 hover:bg-orange-400 text-black text-xs font-mono uppercase tracking-[0.15em] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
@@ -645,53 +680,69 @@ export default function SettingsPage() {
 
         {/* Custom Providers Section */}
         <MotionWrapper delay={0.25}>
-          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Connected Sources</h2>
-            </div>
-            <p className="text-sm text-zinc-400 mb-6 ml-4">
-              Connect OpenAI-compatible intelligence sources (max {MAX_CUSTOM_PROVIDERS})
-            </p>
+          <div className="relative rounded bg-white/[0.015] border border-white/[0.06] overflow-hidden mt-6">
+            <div className="absolute top-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute top-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 right-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
 
-            {customProviders.length > 0 && (
-              <div className="space-y-3 mb-4">
-                <AnimatePresence>
-                  {customProviders.map((provider) => (
-                    <CustomProviderCard
-                      key={provider.id}
-                      provider={provider}
-                      onEdit={() => setEditingProvider(provider)}
-                      onDelete={() => handleDeleteProvider(provider.id)}
-                      onTest={() => handleTestCustomProvider(provider)}
-                      onToggle={() => handleToggleProvider(provider.id)}
-                    />
-                  ))}
-                </AnimatePresence>
+            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Connected Sources</h2>
               </div>
-            )}
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{customProviders.length}/{MAX_CUSTOM_PROVIDERS} Active</span>
+            </div>
 
-            {customProviders.length === 0 && (
-              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center py-4 mb-4">
-                No intelligence sources connected
+            <div className="px-5 py-4">
+              <p className="flex items-center gap-2 text-zinc-500 text-sm mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500/60" />
+                Connect OpenAI-compatible intelligence sources (max {MAX_CUSTOM_PROVIDERS})
               </p>
-            )}
 
-            {customProviders.length < MAX_CUSTOM_PROVIDERS && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-white/[0.08] text-zinc-500 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Connect New Source
-              </button>
-            )}
+              {customProviders.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  <AnimatePresence>
+                    {customProviders.map((provider) => (
+                      <CustomProviderCard
+                        key={provider.id}
+                        provider={provider}
+                        onEdit={() => setEditingProvider(provider)}
+                        onDelete={() => handleDeleteProvider(provider.id)}
+                        onTest={() => handleTestCustomProvider(provider)}
+                        onToggle={() => handleToggleProvider(provider.id)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
 
-            {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
-              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 text-center">
-                Maximum {MAX_CUSTOM_PROVIDERS} sources connected
-              </p>
-            )}
+              {customProviders.length === 0 && (
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/25 text-center py-4 mb-4">
+                  No intelligence sources connected
+                </p>
+              )}
+
+              {customProviders.length < MAX_CUSTOM_PROVIDERS && (
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded border border-dashed border-white/[0.08] text-zinc-500 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.15em] transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Connect New Source
+                </button>
+              )}
+
+              {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/25 text-center">
+                  Maximum {MAX_CUSTOM_PROVIDERS} sources connected
+                </p>
+              )}
+            </div>
           </div>
         </MotionWrapper>
 
@@ -709,79 +760,98 @@ export default function SettingsPage() {
 
         {/* Export/Import Section */}
         <MotionWrapper delay={0.27}>
-          <div className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-6 mt-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-1 h-5 bg-orange-500 rounded-full" />
-              <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Evidence Transfer</h2>
-            </div>
-            <p className="text-sm text-zinc-400 mb-6 ml-4">
-              Backup case files or restore from previous archives
-            </p>
+          <div className="relative rounded bg-white/[0.015] border border-white/[0.06] overflow-hidden mt-6">
+            <div className="absolute top-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute top-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute top-0 right-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 left-0 w-[2px] h-4 bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-4 h-[2px] bg-orange-500" />
+            <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="h-20 flex flex-col items-center justify-center gap-2 border border-white/[0.06] hover:border-green-500/50 hover:bg-green-500/10 transition-colors rounded-lg"
-              >
-                {isExporting ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-green-400" />
-                ) : (
-                  <Download className="h-6 w-6 text-green-400" />
-                )}
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Export Case Files</span>
-              </button>
-
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportFile}
-                  className="hidden"
-                  disabled={isImporting}
-                />
-                <div className="h-20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/[0.06] rounded-lg hover:border-orange-500/50 hover:bg-orange-500/10 transition-colors">
-                  {isImporting ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-                  ) : (
-                    <Upload className="h-6 w-6 text-orange-500" />
-                  )}
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">Import Case Files</span>
-                </div>
-              </label>
-            </div>
-
-            {pendingImportData && (
-              <div className="mt-4 p-4 bg-white/[0.02] border border-white/[0.06]">
-                <p className="text-sm text-zinc-400 mb-3">How should evidence be processed?</p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleImport('merge')}
-                    disabled={isImporting}
-                    className="flex-1 px-4 py-2 border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/50 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
-                  >
-                    Merge (Add to existing files)
-                  </button>
-                  <button
-                    onClick={() => handleImport('replace')}
-                    disabled={isImporting}
-                    className="flex-1 px-4 py-2 border border-red-900/40 bg-red-950/25 text-red-400 hover:bg-red-950/40 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
-                  >
-                    Replace (Purge and rebuild)
-                  </button>
-                </div>
-                <button
-                  onClick={() => setPendingImportData(null)}
-                  className="w-full mt-2 py-2 text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
-                >
-                  Cancel
-                </button>
+            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-5 bg-orange-500 rounded-full" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Evidence Transfer</h2>
               </div>
-            )}
+            </div>
 
-            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25 mt-4">
-              Includes: incident logs, techniques, cases, and findings
-            </p>
+            <div className="px-5 py-4">
+              <p className="flex items-center gap-2 text-zinc-500 text-sm mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500/60" />
+                Backup case files or restore from previous archives
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="group flex flex-col items-center gap-3 p-6 rounded bg-white/[0.02] border border-white/[0.08] hover:border-orange-500/30 transition-colors cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center group-hover:border-orange-500/30 transition-colors">
+                    {isExporting ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                    ) : (
+                      <Download className="w-5 h-5 text-zinc-400 group-hover:text-orange-500 transition-colors" />
+                    )}
+                  </div>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-zinc-400 group-hover:text-white transition-colors">Export Case Files</span>
+                </button>
+
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportFile}
+                    className="hidden"
+                    disabled={isImporting}
+                  />
+                  <div className="group flex flex-col items-center gap-3 p-6 rounded bg-white/[0.02] border border-white/[0.08] hover:border-orange-500/30 transition-colors">
+                    <div className="w-12 h-12 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center group-hover:border-orange-500/30 transition-colors">
+                      {isImporting ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                      ) : (
+                        <Upload className="w-5 h-5 text-zinc-400 group-hover:text-orange-500 transition-colors" />
+                      )}
+                    </div>
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] text-zinc-400 group-hover:text-white transition-colors">Import Case Files</span>
+                  </div>
+                </label>
+              </div>
+
+              {pendingImportData && (
+                <div className="mt-4 p-4 rounded bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-sm text-zinc-400 mb-3">How should evidence be processed?</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleImport('merge')}
+                      disabled={isImporting}
+                      className="flex-1 px-4 py-2 rounded border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/50 text-zinc-300 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
+                    >
+                      Merge (Add to existing files)
+                    </button>
+                    <button
+                      onClick={() => handleImport('replace')}
+                      disabled={isImporting}
+                      className="flex-1 px-4 py-2 rounded border border-red-900/40 bg-red-950/25 text-red-400 hover:bg-red-950/40 font-mono text-xs uppercase tracking-[0.12em] transition-colors"
+                    >
+                      Replace (Purge and rebuild)
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setPendingImportData(null)}
+                    className="w-full mt-2 py-2 text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 text-center mt-4">
+                Includes: incident logs, techniques, cases, and findings
+              </p>
+            </div>
           </div>
         </MotionWrapper>
 
@@ -816,7 +886,7 @@ export default function SettingsPage() {
           <div className="mt-6">
             <button
               onClick={() => setSecurityExpanded(!securityExpanded)}
-              className="w-full p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-white/[0.12] transition-colors flex items-center justify-between"
+              className="w-full p-4 bg-white/[0.02] border border-white/[0.06] rounded hover:border-white/[0.12] transition-colors flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-green-400" />
@@ -838,7 +908,7 @@ export default function SettingsPage() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 mt-2 bg-green-500/5 border border-green-500/20 rounded-lg">
+                  <div className="p-4 mt-2 bg-green-500/5 border border-green-500/20 rounded">
                     <ul className="text-xs text-zinc-400 space-y-2">
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
@@ -877,7 +947,7 @@ export default function SettingsPage() {
 
         {/* Usage Info */}
         <MotionWrapper delay={0.4}>
-          <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg">
+          <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.06] rounded">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-1 h-4 bg-orange-500/50 rounded-full" />
               <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Operating Procedures</h3>
