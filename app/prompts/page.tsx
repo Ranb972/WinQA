@@ -175,6 +175,11 @@ function PromptsPageContent() {
   };
 
   const handleToggleFavorite = async (id: string) => {
+    // Optimistic update: flip immediately in UI
+    setPrompts(prev =>
+      prev.map(p => p._id === id ? { ...p, is_favorite: !p.is_favorite } : p)
+    );
+
     try {
       const response = await fetch('/api/prompts', {
         method: 'PATCH',
@@ -183,9 +188,11 @@ function PromptsPageContent() {
       });
 
       if (!response.ok) throw new Error('Failed to toggle favorite');
-
-      fetchPrompts();
     } catch {
+      // Revert on failure
+      setPrompts(prev =>
+        prev.map(p => p._id === id ? { ...p, is_favorite: !p.is_favorite } : p)
+      );
       toast({
         title: 'Error',
         description: 'Failed to update favorite status',
