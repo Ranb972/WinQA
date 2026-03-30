@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus, AlertTriangle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -40,22 +40,22 @@ interface BugReport {
 }
 
 const statusColors = {
-  Open: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  Investigating: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
-  Resolved: 'bg-green-500/10 text-green-400 border-green-500/30',
+  Open: 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+  Investigating: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+  Resolved: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
 };
 
 const severityColors = {
-  Low: 'bg-green-500/10 text-green-400 border-green-500/30',
-  Medium: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  High: 'bg-red-500/10 text-red-400 border-red-500/30',
+  Low: 'bg-green-900/50 text-green-300',
+  Medium: 'bg-amber-900/50 text-amber-300',
+  High: 'bg-red-900/50 text-red-300',
 };
 
 const issueTypeColors = {
-  Hallucination: 'bg-orange-500/10 text-orange-500 border-orange-500/30',
-  Formatting: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-  Refusal: 'bg-red-500/10 text-red-400 border-red-500/30',
-  Logic: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  Hallucination: 'bg-red-500/20 text-red-400 border border-red-500/30',
+  Formatting: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+  Refusal: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
+  Logic: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
 };
 
 function BugsPageContent() {
@@ -277,20 +277,24 @@ function BugsPageContent() {
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
-              <Bug className="w-6 h-6 text-black" />
+            <div className="w-14 h-14 bg-white/[0.015] border border-white/[0.06] relative flex items-center justify-center">
+              <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 border-orange-500" />
+              <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 border-orange-500" />
+              <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 border-orange-500" />
+              <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 border-orange-500" />
+              <Bug className="text-orange-500 w-7 h-7" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
+              <h1 className="font-heading text-2xl font-bold uppercase tracking-wider text-white">
                 Bug Log
               </h1>
-              <p className="text-sm text-zinc-400 mt-0.5">
+              <p className="font-mono text-xs text-zinc-500 tracking-wide mt-1">
                 Document AI failures and anomalies
               </p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors w-full sm:w-auto justify-center">
+            <button onClick={openNewDialog} className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 flex items-center gap-2 transition-colors w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
               Log Incident
             </button>
@@ -302,13 +306,13 @@ function BugsPageContent() {
       <MotionWrapper delay={0.1}>
         <div className="space-y-4 mb-6">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <div className="bg-white/[0.015] border border-white/[0.06] focus-within:border-orange-500/30 relative flex items-center transition-colors">
+            <Search className="text-white/40 w-4 h-4 ml-4" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by prompt, response, or notes..."
-              className="w-full pl-10 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
+              className="bg-transparent border-0 text-sm text-white placeholder:text-white/30 font-mono py-3 px-3 flex-1 focus:outline-none"
             />
           </div>
 
@@ -318,39 +322,39 @@ function BugsPageContent() {
             {mounted && (
               <>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
+                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Status</SelectItem>
-                    <SelectItem value="Open" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Open</SelectItem>
-                    <SelectItem value="Investigating" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Investigating</SelectItem>
-                    <SelectItem value="Resolved" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Resolved</SelectItem>
+                  <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                    <SelectItem value="all" className="text-white focus:bg-white/[0.04] font-mono text-xs">All Status</SelectItem>
+                    <SelectItem value="Open" className="text-white focus:bg-white/[0.04] font-mono text-xs">Open</SelectItem>
+                    <SelectItem value="Investigating" className="text-white focus:bg-white/[0.04] font-mono text-xs">Investigating</SelectItem>
+                    <SelectItem value="Resolved" className="text-white focus:bg-white/[0.04] font-mono text-xs">Resolved</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-24 sm:w-32 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
+                  <SelectTrigger className="w-24 sm:w-32 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Severity" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Severity</SelectItem>
-                    <SelectItem value="Low" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Low</SelectItem>
-                    <SelectItem value="Medium" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Medium</SelectItem>
-                    <SelectItem value="High" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">High</SelectItem>
+                  <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                    <SelectItem value="all" className="text-white focus:bg-white/[0.04] font-mono text-xs">All Severity</SelectItem>
+                    <SelectItem value="Low" className="text-white focus:bg-white/[0.04] font-mono text-xs">Low</SelectItem>
+                    <SelectItem value="Medium" className="text-white focus:bg-white/[0.04] font-mono text-xs">Medium</SelectItem>
+                    <SelectItem value="High" className="text-white focus:bg-white/[0.04] font-mono text-xs">High</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.06] font-mono text-xs">
+                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Issue Type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                    <SelectItem value="all" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">All Types</SelectItem>
-                    <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Hallucination</SelectItem>
-                    <SelectItem value="Formatting" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Formatting</SelectItem>
-                    <SelectItem value="Refusal" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Refusal</SelectItem>
-                    <SelectItem value="Logic" className="text-zinc-400 focus:bg-white/[0.04] font-mono text-xs">Logic</SelectItem>
+                  <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                    <SelectItem value="all" className="text-white focus:bg-white/[0.04] font-mono text-xs">All Types</SelectItem>
+                    <SelectItem value="Hallucination" className="text-white focus:bg-white/[0.04] font-mono text-xs">Hallucination</SelectItem>
+                    <SelectItem value="Formatting" className="text-white focus:bg-white/[0.04] font-mono text-xs">Formatting</SelectItem>
+                    <SelectItem value="Refusal" className="text-white focus:bg-white/[0.04] font-mono text-xs">Refusal</SelectItem>
+                    <SelectItem value="Logic" className="text-white focus:bg-white/[0.04] font-mono text-xs">Logic</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -361,26 +365,28 @@ function BugsPageContent() {
 
       {/* Section Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-1 h-5 bg-orange-500 rounded-full" />
-        <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Incident Reports</h2>
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Active investigations</span>
+        <div className="w-1 h-4 bg-orange-500" />
+        <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/60">Incident Reports</span>
+        <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/30">Active Investigations</span>
+        <div className="flex-1 h-px bg-white/[0.06]" />
+        <span className="font-mono text-xs text-white/40">{filteredBugs.length} cases</span>
       </div>
 
       {/* Content */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white/[0.015] border border-white/[0.06] rounded-lg p-4">
+            <div key={i} className="bg-white/[0.015] border border-white/[0.06] p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-14" />
                   <Skeleton className="h-4 w-24 ml-2" />
                 </div>
                 <div className="flex items-center gap-4">
                   <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8" />
                   <Skeleton className="h-4 w-4" />
                 </div>
               </div>
@@ -389,12 +395,14 @@ function BugsPageContent() {
         </div>
       ) : filteredBugs.length === 0 ? (
         <MotionWrapper>
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Bug className="w-16 h-16 text-orange-500/20 mb-4" />
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-white/[0.02] border border-white/[0.06] rounded-full mb-4 inline-flex items-center justify-center">
+              <Bug className="text-white/20 w-8 h-8" />
+            </div>
             <h3 className="font-heading text-lg font-semibold text-white mb-2">
               {hasActiveFilters ? 'NO MATCHING INCIDENTS' : 'NO INCIDENTS LOGGED'}
             </h3>
-            <p className="text-sm text-white/50 max-w-xs mb-6">
+            <p className="text-white/40 font-mono text-sm max-w-xs mx-auto">
               {hasActiveFilters
                 ? 'Try adjusting your search or filters'
                 : 'Your investigation logs are clean. Document AI failures as you find them.'}
@@ -405,16 +413,19 @@ function BugsPageContent() {
         <StaggerContainer key={`${statusFilter}-${severityFilter}-${issueTypeFilter}`} className="space-y-3">
           {filteredBugs.map((bug) => (
             <StaggerItem key={bug._id}>
-              <div className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden hover:border-orange-500/30 transition-all duration-300 group">
+              <div className={cn(
+                "bg-white/[0.015] border border-white/[0.06] hover:border-white/[0.1] relative transition-all duration-200",
+                expandedId === bug._id && "border-orange-500/30"
+              )}>
                 {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-orange-500/30 rounded-tl-lg pointer-events-none" />
-                <div className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-orange-500/30 rounded-tr-lg pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-orange-500/30 rounded-bl-lg pointer-events-none" />
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-orange-500/30 rounded-br-lg pointer-events-none" />
+                <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 border-orange-500 pointer-events-none" />
+                <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 border-orange-500 pointer-events-none" />
+                <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 border-orange-500 pointer-events-none" />
+                <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 border-orange-500 pointer-events-none" />
 
               {/* Header Row */}
               <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                className="w-full p-4 hover:bg-white/[0.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left transition-colors cursor-pointer"
                 onClick={() =>
                   setExpandedId(expandedId === bug._id ? null : bug._id)
                 }
@@ -428,7 +439,7 @@ function BugsPageContent() {
                   >
                     <Badge
                       className={cn(
-                        'border cursor-pointer hover:opacity-80 transition-opacity text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full',
+                        'cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 text-[10px] font-mono uppercase tracking-[0.1em] font-medium',
                         statusColors[bug.status]
                       )}
                     >
@@ -436,25 +447,25 @@ function BugsPageContent() {
                     </Badge>
                   </button>
                   <Badge
-                    className={cn('border text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full', issueTypeColors[bug.issue_type])}
+                    className={cn('px-2 py-1 text-[10px] font-mono uppercase tracking-[0.1em] font-medium', issueTypeColors[bug.issue_type])}
                   >
                     {bug.issue_type}
                   </Badge>
-                  <Badge className={cn('border text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full', severityColors[bug.severity])}>
+                  <Badge className={cn('px-2 py-1 text-[10px] font-mono uppercase tracking-[0.1em] font-medium', severityColors[bug.severity])}>
                     {bug.severity}
                   </Badge>
                   {bug.is_public && (
-                    <Badge className="border border-orange-500/30 bg-orange-500/10 text-orange-500 text-[10px] font-mono font-semibold tracking-wider uppercase px-2.5 py-1 rounded-full">
+                    <Badge className="bg-white/[0.02] text-orange-400 border border-orange-500/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.1em] font-medium">
                       Example
                     </Badge>
                   )}
-                  <span className="text-xs text-zinc-400 truncate max-w-[120px] sm:max-w-none font-mono">
+                  <span className="px-2 py-1 bg-white/[0.02] border border-white/[0.06] text-xs font-mono text-white/60">
                     {modelDisplayNames[bug.model_used as LLMProvider] || bug.model_used}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                  <span className="text-[10px] font-mono text-white/30">
+                  <span className="text-white/40 text-xs font-mono">
                     {formatDate(bug.created_at)}
                   </span>
                   {!bug.is_public && (
@@ -468,41 +479,43 @@ function BugsPageContent() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
-                  {expandedId === bug._id ? (
-                    <ChevronUp className="h-4 w-4 text-white/30" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-white/30" />
-                  )}
+                  <ChevronDown className={cn(
+                    "text-white/40 w-4 h-4 transition-transform duration-200",
+                    expandedId === bug._id && "rotate-180"
+                  )} />
                 </div>
               </div>
 
               {/* Expanded Content */}
               {expandedId === bug._id && (
-                <div className="border-t border-white/[0.06] p-4 space-y-4 animate-slide-down">
+                <div className="border-t border-white/[0.06] p-6 space-y-6 animate-slide-down">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
+                    <p className="font-mono text-xs uppercase tracking-[0.15em] text-white/40 mb-2 flex items-center gap-2">
+                      <FileText className="text-white/40 w-4 h-4" />
                       Evidence: Prompt
                     </p>
-                    <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap">
+                    <p className="text-sm text-zinc-300 leading-relaxed bg-white/[0.01] border border-white/[0.04] p-4 whitespace-pre-wrap">
                       {bug.prompt_context}
                     </p>
                   </div>
 
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
+                    <p className="font-mono text-xs uppercase tracking-[0.15em] text-white/40 mb-2 flex items-center gap-2">
+                      <AlertTriangle className="text-orange-500/60 w-4 h-4" />
                       Suspect Response
                     </p>
-                    <p className="text-sm text-zinc-400 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    <p className="text-sm text-zinc-300 leading-relaxed bg-white/[0.01] border border-white/[0.04] border-l-2 border-l-orange-500/50 p-4 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {bug.model_response}
                     </p>
                   </div>
 
                   {bug.user_notes && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5">
+                      <p className="font-mono text-xs uppercase tracking-[0.15em] text-white/40 mb-2 flex items-center gap-2">
+                        <FileText className="text-white/40 w-4 h-4" />
                         Investigator Notes
                       </p>
-                      <p className="text-sm text-zinc-400">{bug.user_notes}</p>
+                      <p className="text-sm text-zinc-300 leading-relaxed bg-white/[0.01] border border-white/[0.04] p-4 whitespace-pre-wrap">{bug.user_notes}</p>
                     </div>
                   )}
                 </div>
@@ -515,9 +528,13 @@ function BugsPageContent() {
 
       {/* Status Update Dialog */}
       <Dialog open={!!editingBug} onOpenChange={() => setEditingBug(null)}>
-        <DialogContent className="bg-black border border-white/[0.08]">
+        <DialogContent className="bg-black border border-white/[0.06] relative">
+          <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-orange-500" />
+          <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-orange-500" />
+          <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-orange-500" />
+          <div className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-orange-500" />
           <DialogHeader>
-            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Update Case Status</DialogTitle>
+            <DialogTitle className="font-heading text-lg font-bold uppercase tracking-wider text-white">Update Case Status</DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
               Change the status of this incident report
             </DialogDescription>
@@ -526,13 +543,13 @@ function BugsPageContent() {
           <div className="py-4">
             {mounted && (
               <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger className="bg-white/[0.02] border-white/[0.06]">
+                <SelectTrigger className="bg-white/[0.015] border-white/[0.06] focus:border-orange-500/30">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                  <SelectItem value="Open" className="text-zinc-400 focus:bg-white/[0.04]">Open</SelectItem>
-                  <SelectItem value="Investigating" className="text-zinc-400 focus:bg-white/[0.04]">Investigating</SelectItem>
-                  <SelectItem value="Resolved" className="text-zinc-400 focus:bg-white/[0.04]">Resolved</SelectItem>
+                <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                  <SelectItem value="Open" className="text-white focus:bg-white/[0.04]">Open</SelectItem>
+                  <SelectItem value="Investigating" className="text-white focus:bg-white/[0.04]">Investigating</SelectItem>
+                  <SelectItem value="Resolved" className="text-white focus:bg-white/[0.04]">Resolved</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -541,13 +558,13 @@ function BugsPageContent() {
           <DialogFooter>
             <button
               onClick={() => setEditingBug(null)}
-              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors"
+              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-2.5 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleStatusUpdate}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors"
+              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 transition-colors"
             >
               Update
             </button>
@@ -557,103 +574,107 @@ function BugsPageContent() {
 
       {/* Add New Bug Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-black border border-white/[0.08] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-black border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto relative">
+          <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-orange-500" />
+          <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-orange-500" />
+          <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-orange-500" />
+          <div className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-orange-500" />
           <DialogHeader>
-            <DialogTitle className="font-mono text-xs uppercase tracking-[0.16em] text-white">Log New Incident</DialogTitle>
+            <DialogTitle className="font-heading text-lg font-bold uppercase tracking-wider text-white">Log New Incident</DialogTitle>
             <DialogDescription className="text-sm text-zinc-400">
               Document an AI failure or anomaly
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
-            <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Evidence: Prompt *</label>
+            <div className="space-y-2">
+              <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Evidence: Prompt *</label>
               <textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
                 placeholder="What prompt or context triggered this issue?"
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px]"
+                className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[80px]"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Suspect Response *</label>
+            <div className="space-y-2">
+              <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Suspect Response *</label>
               <textarea
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
                 placeholder="What was the problematic response?"
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[100px]"
+                className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[100px]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Suspect Model</label>
+              <div className="space-y-2">
+                <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Suspect Model</label>
                 {mounted && (
                   <Select
                     value={formData.model_used}
                     onValueChange={(value) => setFormData({ ...formData, model_used: value })}
                   >
-                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
+                    <SelectTrigger className="w-full bg-white/[0.015] border-white/[0.06] focus:border-orange-500/30">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                      <SelectItem value="cohere" className="text-zinc-400 focus:bg-white/[0.04]">Cohere</SelectItem>
-                      <SelectItem value="gemini" className="text-zinc-400 focus:bg-white/[0.04]">Gemini</SelectItem>
-                      <SelectItem value="groq" className="text-zinc-400 focus:bg-white/[0.04]">Groq</SelectItem>
-                      <SelectItem value="openrouter" className="text-zinc-400 focus:bg-white/[0.04]">OpenRouter</SelectItem>
+                    <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                      <SelectItem value="cohere" className="text-white focus:bg-white/[0.04]">Cohere</SelectItem>
+                      <SelectItem value="gemini" className="text-white focus:bg-white/[0.04]">Gemini</SelectItem>
+                      <SelectItem value="groq" className="text-white focus:bg-white/[0.04]">Groq</SelectItem>
+                      <SelectItem value="openrouter" className="text-white focus:bg-white/[0.04]">OpenRouter</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Incident Type</label>
+              <div className="space-y-2">
+                <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Incident Type</label>
                 {mounted && (
                   <Select
                     value={formData.issue_type}
                     onValueChange={(value) => setFormData({ ...formData, issue_type: value as typeof formData.issue_type })}
                   >
-                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
+                    <SelectTrigger className="w-full bg-white/[0.015] border-white/[0.06] focus:border-orange-500/30">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                      <SelectItem value="Hallucination" className="text-zinc-400 focus:bg-white/[0.04]">Hallucination</SelectItem>
-                      <SelectItem value="Formatting" className="text-zinc-400 focus:bg-white/[0.04]">Formatting</SelectItem>
-                      <SelectItem value="Refusal" className="text-zinc-400 focus:bg-white/[0.04]">Refusal</SelectItem>
-                      <SelectItem value="Logic" className="text-zinc-400 focus:bg-white/[0.04]">Logic</SelectItem>
+                    <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                      <SelectItem value="Hallucination" className="text-white focus:bg-white/[0.04]">Hallucination</SelectItem>
+                      <SelectItem value="Formatting" className="text-white focus:bg-white/[0.04]">Formatting</SelectItem>
+                      <SelectItem value="Refusal" className="text-white focus:bg-white/[0.04]">Refusal</SelectItem>
+                      <SelectItem value="Logic" className="text-white focus:bg-white/[0.04]">Logic</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Severity</label>
+              <div className="space-y-2">
+                <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Severity</label>
                 {mounted && (
                   <Select
                     value={formData.severity}
                     onValueChange={(value) => setFormData({ ...formData, severity: value as typeof formData.severity })}
                   >
-                    <SelectTrigger className="w-full bg-white/[0.02] border-white/[0.06]">
+                    <SelectTrigger className="w-full bg-white/[0.015] border-white/[0.06] focus:border-orange-500/30">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
-                      <SelectItem value="Low" className="text-zinc-400 focus:bg-white/[0.04]">Low</SelectItem>
-                      <SelectItem value="Medium" className="text-zinc-400 focus:bg-white/[0.04]">Medium</SelectItem>
-                      <SelectItem value="High" className="text-zinc-400 focus:bg-white/[0.04]">High</SelectItem>
+                    <SelectContent className="bg-zinc-900 border-white/[0.08]">
+                      <SelectItem value="Low" className="text-white focus:bg-white/[0.04]">Low</SelectItem>
+                      <SelectItem value="Medium" className="text-white focus:bg-white/[0.04]">Medium</SelectItem>
+                      <SelectItem value="High" className="text-white focus:bg-white/[0.04]">High</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">Investigator Notes (optional)</label>
+            <div className="space-y-2">
+              <label className="block font-mono text-xs uppercase tracking-[0.15em] text-white/40">Investigator Notes (optional)</label>
               <textarea
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
                 placeholder="Any additional context or observations..."
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[60px]"
+                className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[60px]"
               />
             </div>
           </div>
@@ -661,14 +682,14 @@ function BugsPageContent() {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <button
               onClick={() => setDialogOpen(false)}
-              className="px-4 py-2 border border-white/[0.06] hover:border-white/[0.15] text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-[0.12em] transition-colors w-full sm:w-auto"
+              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-2.5 transition-colors w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               onClick={handleCreateBug}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isSubmitting ? 'Logging...' : 'Log Incident'}
             </button>
@@ -695,7 +716,7 @@ function BugsPageSkeleton() {
       </div>
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-lg" />
+          <Skeleton key={i} className="h-32" />
         ))}
       </div>
     </div>
