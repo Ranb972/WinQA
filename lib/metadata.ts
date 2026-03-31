@@ -63,42 +63,57 @@ export const baseMetadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',
-  alternates: {
-    canonical: '/',
-  },
 };
 
 export const pageMetadata = {
   chatLab: {
     title: 'Chat Lab - Compare AI Models',
     description: 'Test and compare responses from multiple AI models side by side. Experiment with prompts and analyze LLM behavior.',
+    canonical: '/chat-lab',
   },
   codeTesting: {
     title: 'Code Testing Lab - Run & Debug Code',
     description: 'Execute and debug code snippets with AI assistance. Test your code in an interactive browser environment.',
+    canonical: '/code-testing',
   },
   testCases: {
     title: 'Test Cases - AI Testing Scenarios',
     description: 'Create and manage test scenarios for AI systems. Organize your prompt testing workflow efficiently.',
+    canonical: '/test-cases',
   },
   bugs: {
     title: 'Bug Log - Track AI Failures',
     description: 'Track hallucinations, formatting issues, and other AI failures. Document and analyze LLM edge cases.',
+    canonical: '/bugs',
   },
   prompts: {
     title: 'Prompt Library - Best Practices',
     description: 'Access a curated collection of effective prompts. Learn prompt engineering best practices and techniques.',
+    canonical: '/prompts',
   },
   insights: {
     title: 'Insights - AI Discoveries',
     description: 'Discover patterns and insights from your AI testing. Track trends and document your learnings.',
+    canonical: '/insights',
   },
   settings: {
     title: 'Settings',
     description: 'Configure your WinQA preferences and API keys for AI model providers.',
+    canonical: '/settings',
   },
   battle: {
     title: 'AI Battle Arena',
     description: 'Pit AI models against each other in head-to-head challenges. Code duels, blindfold tests, battle royale - 9 unique challenge types with live code execution.',
+    canonical: '/battle',
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    description: 'How WinQA collects, uses, and protects your data. API keys encrypted with AES-256-GCM, no data selling, Clerk authentication.',
+    canonical: '/privacy',
+  },
+  terms: {
+    title: 'Terms of Service',
+    description: 'Terms and conditions for using WinQA. Acceptable use, API key responsibility, intellectual property, and liability.',
+    canonical: '/terms',
   },
 };

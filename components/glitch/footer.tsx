@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -19,6 +20,23 @@ export function Footer() {
             </span>
             <span className="text-white/20">|</span>
             <span className="text-white/30 text-sm">AI Testing Playground</span>
+          </div>
+
+          {/* Center: Legal links */}
+          <div className="flex items-center gap-4">
+            <Link
+              href="/privacy"
+              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+            >
+              Privacy
+            </Link>
+            <span className="text-white/20">|</span>
+            <Link
+              href="/terms"
+              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+            >
+              Terms
+            </Link>
           </div>
 
           {/* Right: Link */}

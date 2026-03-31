@@ -5,6 +5,7 @@ import PageTransition from '@/components/PageTransition';
 export const metadata: Metadata = {
   title: pageMetadata.codeTesting.title,
   description: pageMetadata.codeTesting.description,
+  alternates: { canonical: pageMetadata.codeTesting.canonical },
   openGraph: {
     title: pageMetadata.codeTesting.title,
     description: pageMetadata.codeTesting.description,

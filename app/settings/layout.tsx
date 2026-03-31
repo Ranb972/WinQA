@@ -4,6 +4,7 @@ import { pageMetadata } from '@/lib/metadata';
 export const metadata: Metadata = {
   title: pageMetadata.settings.title,
   description: pageMetadata.settings.description,
+  alternates: { canonical: pageMetadata.settings.canonical },
   openGraph: {
     title: pageMetadata.settings.title,
     description: pageMetadata.settings.description,

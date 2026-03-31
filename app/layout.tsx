@@ -69,25 +69,94 @@ export default function RootLayout({
                         dangerouslySetInnerHTML={{
                             __html: JSON.stringify({
                                 '@context': 'https://schema.org',
-                                '@type': 'WebApplication',
-                                name: 'WinQA',
-                                url: 'https://winqa.ai',
-                                description:
-                                    'AI Testing Playground - Compare AI models, test prompts, track hallucinations, and build your prompt engineering knowledge base.',
-                                applicationCategory: 'DeveloperApplication',
-                                operatingSystem: 'Web',
-                                offers: {
-                                    '@type': 'Offer',
-                                    price: '0',
-                                    priceCurrency: 'USD',
-                                },
-                                featureList: [
-                                    'Compare AI models side-by-side',
-                                    'AI Battle Arena with 9 challenge types',
-                                    'Code execution lab (JavaScript, Python, TypeScript)',
-                                    'Bug and hallucination tracking',
-                                    'Prompt engineering library',
-                                    'Test case management',
+                                '@graph': [
+                                    {
+                                        '@type': 'Organization',
+                                        '@id': 'https://winqa.ai/#organization',
+                                        name: 'WinQA',
+                                        url: 'https://winqa.ai',
+                                        logo: {
+                                            '@type': 'ImageObject',
+                                            url: 'https://winqa.ai/images/og-image.png',
+                                        },
+                                        description:
+                                            'WinQA is an AI testing playground for developers and QA professionals. Compare AI models, test prompts, track hallucinations, and build prompt engineering expertise.',
+                                        sameAs: [
+                                            'https://github.com/Ranb972/WinQA',
+                                        ],
+                                        knowsAbout: [
+                                            'Artificial Intelligence Testing',
+                                            'Prompt Engineering',
+                                            'Large Language Model Evaluation',
+                                            'AI Quality Assurance',
+                                            'LLM Comparison',
+                                            'AI Hallucination Detection',
+                                        ],
+                                    },
+                                    {
+                                        '@type': 'WebSite',
+                                        '@id': 'https://winqa.ai/#website',
+                                        name: 'WinQA',
+                                        url: 'https://winqa.ai',
+                                        description:
+                                            'AI Testing Playground for developers and QA professionals.',
+                                        publisher: {
+                                            '@id': 'https://winqa.ai/#organization',
+                                        },
+                                        potentialAction: {
+                                            '@type': 'SearchAction',
+                                            target: {
+                                                '@type': 'EntryPoint',
+                                                urlTemplate:
+                                                    'https://winqa.ai/prompts?q={search_term_string}',
+                                            },
+                                            'query-input':
+                                                'required name=search_term_string',
+                                        },
+                                    },
+                                    {
+                                        '@type': 'WebApplication',
+                                        '@id': 'https://winqa.ai/#application',
+                                        name: 'WinQA',
+                                        url: 'https://winqa.ai',
+                                        description:
+                                            'AI Testing Playground - Compare AI models, test prompts, track hallucinations, and build your prompt engineering knowledge base.',
+                                        applicationCategory: 'DeveloperApplication',
+                                        operatingSystem: 'Web',
+                                        image: 'https://winqa.ai/images/og-image.png',
+                                        screenshot: [
+                                            'https://winqa.ai/images/screenshots/test-cases.png',
+                                            'https://winqa.ai/images/screenshots/prompts.png',
+                                            'https://winqa.ai/images/screenshots/insights.png',
+                                        ],
+                                        offers: {
+                                            '@type': 'Offer',
+                                            price: '0',
+                                            priceCurrency: 'USD',
+                                            availability: 'https://schema.org/InStock',
+                                        },
+                                        featureList: [
+                                            'Compare AI models side-by-side',
+                                            'AI Battle Arena with 9 challenge types',
+                                            'Code execution lab (JavaScript, Python, TypeScript)',
+                                            'Bug and hallucination tracking',
+                                            'Prompt engineering library',
+                                            'Test case management',
+                                        ],
+                                        creator: {
+                                            '@id': 'https://winqa.ai/#organization',
+                                        },
+                                        mainEntityOfPage: {
+                                            '@type': 'WebPage',
+                                            '@id': 'https://winqa.ai',
+                                        },
+                                        speakable: {
+                                            '@type': 'SpeakableSpecification',
+                                            cssSelector: [
+                                                "meta[name='description']",
+                                            ],
+                                        },
+                                    },
                                 ],
                             }),
                         }}

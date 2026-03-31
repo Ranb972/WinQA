@@ -5,6 +5,7 @@ import PageTransition from '@/components/PageTransition';
 export const metadata: Metadata = {
   title: pageMetadata.chatLab.title,
   description: pageMetadata.chatLab.description,
+  alternates: { canonical: pageMetadata.chatLab.canonical },
   openGraph: {
     title: pageMetadata.chatLab.title,
     description: pageMetadata.chatLab.description,
