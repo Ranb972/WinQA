@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+import { autoSeed } from './autoSeed';
 
 const MONGODB_URI = process.env.MONGODB_URI;
+let seeded = false;
 
 if (!MONGODB_URI) {
   throw new Error(
@@ -44,6 +46,13 @@ async function dbConnect(): Promise<typeof mongoose> {
   } catch (e) {
     cached.promise = null;
     throw e;
+  }
+
+  if (!seeded) {
+    seeded = true;
+    autoSeed().catch((err) => {
+      console.error('Auto-seed error:', err);
+    });
   }
 
   return cached.conn;
