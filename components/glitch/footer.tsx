@@ -22,8 +22,8 @@ export function Footer() {
             <span className="text-white/30 text-sm">AI Testing Playground</span>
           </div>
 
-          {/* Center: Legal links */}
-          <div className="flex items-center gap-4">
+          {/* Right: Legal + site link */}
+          <div className="flex items-center gap-3">
             <Link
               href="/privacy"
               className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
@@ -37,17 +37,16 @@ export function Footer() {
             >
               Terms
             </Link>
+            <span className="text-white/20">·</span>
+            <a
+              href="https://winqa.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+            >
+              winqa.ai
+            </a>
           </div>
-
-          {/* Right: Link */}
-          <a
-            href="https://winqa.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
-          >
-            winqa.ai
-          </a>
         </motion.div>
       </div>
     </footer>
