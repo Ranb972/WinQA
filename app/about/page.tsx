@@ -27,53 +27,53 @@ const features = [
     icon: FlaskConical,
     title: 'Chat Lab',
     description:
-      'Compare responses from multiple AI models side-by-side. Switch providers mid-conversation and see who gives the best answer.',
+      'Ask the same question to multiple models and see the answers next to each other. You can swap providers mid-conversation to see how a different model picks up the thread.',
   },
   {
     icon: Swords,
     title: 'AI Battle Arena',
     description:
-      '9 challenge types across Mind Games and Spectacular categories. Escalation, Interrogation, Code Duel, Blindfold, Battle Royale, and more.',
+      '9 challenges split between Mind Games and Spectacular. Escalation, Interrogation, Code Duel, Blindfold, Battle Royale — each one designed to expose a different weakness.',
   },
   {
     icon: Code,
     title: 'Code Testing Lab',
     description:
-      'Execute AI-generated code in real-time. JavaScript, Python, and TypeScript with live output and AI-powered debugging.',
+      'Paste AI-generated code and run it right in the browser. JavaScript, Python, TypeScript. See the output, see the errors, get AI help debugging.',
   },
   {
     icon: Bug,
     title: 'Bug Log',
     description:
-      'Document every hallucination, logic error, and formatting failure. Tag by category, track severity, and link bugs to the prompts that caused them.',
+      'When an AI hallucinates or gives you broken logic, log it here. Tag the type, note the severity, link it back to the prompt that triggered it.',
   },
   {
     icon: Library,
     title: 'Prompt Library',
     description:
-      'Save and organize effective prompts. Learn techniques like Chain of Thought, Few-Shot, and more. Copy-paste ready.',
+      'Keep your best prompts in one place. Chain of Thought, Few-Shot, whatever works for you. Everything is ready to copy and reuse.',
   },
   {
     icon: TestTube2,
     title: 'Test Cases',
     description:
-      'Create reusable test scenarios for systematic AI evaluation. Run every model through the same trial.',
+      'Write a test once, then run every model through it. Same input, different models, compare the output.',
   },
   {
     icon: Lightbulb,
     title: 'Insights',
     description:
-      'Record patterns in AI behavior. Map which models excel in which domains and build your knowledge base over time.',
+      'Gemini nails code but fumbles jokes? Write it down. Over time you build a map of what each model is actually good at.',
   },
 ];
 
 const providers = [
   { name: 'Cohere', description: 'Command R and Command R+ models' },
   { name: 'Google Gemini', description: 'Gemini Pro and Gemini Flash' },
-  { name: 'Groq', description: 'Ultra-fast inference with Llama and Mixtral' },
+  { name: 'Groq', description: 'Fast inference — Llama and Mixtral' },
   {
     name: 'OpenRouter',
-    description: 'Access to 100+ models through a single API',
+    description: '100+ models, one API',
   },
 ];
 
@@ -98,7 +98,7 @@ export default function AboutPage() {
             About WinQA
           </h1>
           <p className="text-zinc-400 text-base mt-3 leading-relaxed">
-            The AI testing playground for QA professionals, developers, and anyone curious about how AI models really perform.
+            A place to poke, prod, and stress-test AI models until they crack.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function AboutPage() {
             </h2>
             <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
               <p className="text-sm">
-                WinQA is a free AI testing playground where you can compare AI models side-by-side, pit them against each other in battle challenges, execute code in real-time, document hallucinations and failures, and build a structured knowledge base of prompt engineering techniques. Think of it as a QA lab purpose-built for interrogating AI.
+                You ask two AI models the same question, and one of them confidently gives you the wrong answer. Now what? WinQA lets you run that kind of experiment on purpose — compare models head to head, battle them against each other, execute their code live, and log every failure you find. It&apos;s a QA lab for AI.
               </p>
             </div>
           </section>
@@ -215,17 +215,16 @@ export default function AboutPage() {
             </h2>
             <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
               <p className="text-sm mb-3">
-                WinQA was created by{' '}
-                <span className="text-white">Ran</span>, a QA professional
-                turned developer. It was born from the intersection of QA
-                expertise and AI curiosity &mdash; the same instinct that makes
-                you poke at software until it breaks, applied to large language
-                models.
+                WinQA was built by{' '}
+                <span className="text-white">Ran</span>. He started in QA,
+                moved into development, and kept the QA habit — that itch
+                to poke at things until they break. When LLMs showed up, he
+                pointed that itch at AI.
               </p>
               <p className="text-sm">
-                The name? Named after his dog,{' '}
-                <span className="text-white">Win</span>. Because every good
-                investigation needs a loyal companion.
+                The name comes from his dog,{' '}
+                <span className="text-white">Win</span>. Every investigation
+                needs a sidekick.
               </p>
             </div>
           </section>
@@ -240,12 +239,10 @@ export default function AboutPage() {
             </h2>
             <div className="p-4 rounded-lg border border-orange-500/20 bg-orange-500/[0.03]">
               <p className="text-sm">
-                Making AI testing accessible to everyone. Whether you&apos;re a
-                QA professional stress-testing models before production, a
-                developer evaluating which LLM fits your use case, or just
-                someone curious about how AI models actually perform &mdash;
-                WinQA gives you the tools to test, compare, and document
-                everything you find. No paywalls, no credit card required.
+                Most AI testing happens in private Slack threads and scattered
+                notebooks. WinQA puts it all in one place — the tests, the
+                results, the failures, the stuff you figured out along the way.
+                It&apos;s free. No paywall, no credit card, no catch.
               </p>
             </div>
           </section>
@@ -282,8 +279,8 @@ export default function AboutPage() {
               Contact &amp; Feedback
             </h2>
             <p className="text-sm">
-              Have feedback, a feature request, or found a bug in the platform
-              itself? Open an issue on the{' '}
+              Something broken? Got an idea? Want to complain? Open an issue on
+              the{' '}
               <a
                 href="https://github.com/Ranb972/WinQA/issues"
                 target="_blank"
