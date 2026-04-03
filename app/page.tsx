@@ -474,20 +474,19 @@ function LandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Main landing content — fades in after intro */}
-      {!showIntro && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <HeroSection />
-          <BattleModes />
-          <ToolsSection />
-          <CTASection />
-          <Footer />
-        </motion.div>
-      )}
+      {/* Main landing content — always in DOM for SSR/crawlers,
+          fades in visually when intro completes */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showIntro ? 0 : 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        <HeroSection />
+        <BattleModes />
+        <ToolsSection />
+        <CTASection />
+        <Footer />
+      </motion.div>
 
       {/* Film grain overlay */}
       <FilmGrain />
