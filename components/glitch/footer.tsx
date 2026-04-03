@@ -25,6 +25,13 @@ export function Footer() {
           {/* Right: Legal + site link */}
           <div className="flex items-center gap-3">
             <Link
+              href="/about"
+              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+            >
+              About
+            </Link>
+            <span className="text-white/20">|</span>
+            <Link
               href="/privacy"
               className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
