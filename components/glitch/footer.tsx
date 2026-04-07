@@ -32,6 +32,13 @@ export function Footer() {
             </Link>
             <span className="text-white/20">|</span>
             <Link
+              href="/faq"
+              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+            >
+              FAQ
+            </Link>
+            <span className="text-white/20">|</span>
+            <Link
               href="/privacy"
               className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
