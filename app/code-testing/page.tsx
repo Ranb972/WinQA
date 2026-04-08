@@ -20,6 +20,10 @@ import {
   Target,
   Hash,
   Clock,
+  CheckCircle,
+  XCircle,
+  Cpu,
+  Search,
 } from 'lucide-react';
 import {
   Select,
@@ -28,8 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import CodeExecutionResultDisplay from '@/components/CodeExecutionResult';
-import DebugModelSelector, { DebugMode } from '@/components/DebugModelSelector';
+import InteractivePreview from '@/components/InteractivePreview';
+import DevEnvironmentRequired from '@/components/DevEnvironmentRequired';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import {
   SupportedLanguage,
@@ -37,11 +41,14 @@ import {
   LANGUAGE_DISPLAY_NAMES,
   isInteractiveHTML,
   requiresDevEnvironment,
+  wrapJSInHTML,
 } from '@/lib/code-execution';
 import { LLMProvider, ChatResponse } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import { getEnabledCustomProviders, CustomProvider } from '@/lib/custom-providers';
 import { getModelPreferences } from '@/lib/model-preferences';
+
+type DebugMode = 'summary' | 'detailed';
 
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
   { value: 'javascript', label: 'JavaScript' },
@@ -60,6 +67,30 @@ interface HistoryItem {
   code: string;
   prompt: string;
   timestamp: number;
+}
+
+// Corner accent helper — 8 small orange lines at all 4 corners
+function CornerAccents({ color = 'bg-orange-500/60' }: { color?: string }) {
+  return (
+    <>
+      <div className="absolute top-0 left-0 pointer-events-none">
+        <div className={`absolute top-0 left-0 w-3 h-px ${color}`} />
+        <div className={`absolute top-0 left-0 w-px h-3 ${color}`} />
+      </div>
+      <div className="absolute top-0 right-0 pointer-events-none">
+        <div className={`absolute top-0 right-0 w-3 h-px ${color}`} />
+        <div className={`absolute top-0 right-0 w-px h-3 ${color}`} />
+      </div>
+      <div className="absolute bottom-0 left-0 pointer-events-none">
+        <div className={`absolute bottom-0 left-0 w-3 h-px ${color}`} />
+        <div className={`absolute bottom-0 left-0 w-px h-3 ${color}`} />
+      </div>
+      <div className="absolute bottom-0 right-0 pointer-events-none">
+        <div className={`absolute bottom-0 right-0 w-3 h-px ${color}`} />
+        <div className={`absolute bottom-0 right-0 w-px h-3 ${color}`} />
+      </div>
+    </>
+  );
 }
 
 export default function CodeTestingPage() {
@@ -83,8 +114,9 @@ export default function CodeTestingPage() {
   const [successAnalysisResult, setSuccessAnalysisResult] = useState<string | null>(null);
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [debugSelectedModel, setDebugSelectedModel] = useState<string>('groq');
+  const [debugMode, setDebugMode] = useState<DebugMode>('summary');
 
-  // Load API keys and custom providers
   useEffect(() => {
     async function loadData() {
       const keys = await getApiKeys(user?.id);
@@ -103,12 +135,8 @@ export default function CodeTestingPage() {
     setShowSuccessSelector(false);
     setSuccessAnalysisResult(null);
 
-    // Check if code is interactive HTML - skip API call and render in iframe
     if (isInteractiveHTML(codeToRun) && !requiresDevEnvironment(codeToRun)) {
-      setResult({
-        success: true,
-        output: '',
-      });
+      setResult({ success: true, output: '' });
       setIsRunning(false);
       return;
     }
@@ -117,12 +145,8 @@ export default function CodeTestingPage() {
       const response = await fetch('/api/execute-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language,
-          code: codeToRun,
-        }),
+        body: JSON.stringify({ language, code: codeToRun }),
       });
-
       const data = await response.json() as CodeExecutionResult;
       setResult(data);
     } catch (error) {
@@ -150,7 +174,6 @@ export default function CodeTestingPage() {
       const modelPreferences = getModelPreferences();
       const customApiKeys = cachedApiKeys;
 
-      // Find custom provider if selected
       let customProvider: CustomProvider | undefined;
       if (selectedModel.startsWith('custom:')) {
         const providerId = selectedModel.replace('custom:', '');
@@ -176,18 +199,11 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
       });
 
       const data = await response.json() as ChatResponse;
+      if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Clean up the generated code (remove any markdown formatting if present)
       let cleanCode = data.content.trim();
-      // Remove markdown code blocks if the model included them
       const codeBlockMatch = cleanCode.match(/```(?:javascript|python|typescript|js|py|ts)?\n?([\s\S]*?)```/);
-      if (codeBlockMatch) {
-        cleanCode = codeBlockMatch[1].trim();
-      }
+      if (codeBlockMatch) cleanCode = codeBlockMatch[1].trim();
 
       setPendingCode(cleanCode);
     } catch (error) {
@@ -200,7 +216,6 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
     }
   };
 
-  // Code history action handlers
   const handleUseCode = () => {
     if (pendingCode) {
       setCode(pendingCode);
@@ -218,22 +233,17 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
     }
   };
 
-  const handleDiscard = () => {
-    setPendingCode(null);
-  };
+  const handleDiscard = () => { setPendingCode(null); };
 
   const addToHistory = (codeSnippet: string, promptText: string) => {
     setCodeHistory(prev => [
       { code: codeSnippet, prompt: promptText, timestamp: Date.now() },
       ...prev
-    ].slice(0, 5)); // Keep max 5 items
+    ].slice(0, 5));
   };
 
-  const handleUseFromHistory = (item: HistoryItem) => {
-    setCode(item.code);
-  };
+  const handleUseFromHistory = (item: HistoryItem) => { setCode(item.code); };
 
-  // Helper for relative time
   const getRelativeTime = (timestamp: number): string => {
     const diff = Date.now() - timestamp;
     const minutes = Math.floor(diff / 60000);
@@ -245,7 +255,7 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
     return `${hours} hours ago`;
   };
 
-  const handleDebugRequest = async (model: LLMProvider | string, mode: DebugMode) => {
+  const handleDebugRequest = async (model: LLMProvider | string, dMode: DebugMode) => {
     if (!result?.error || !code) return;
 
     setShowDebugSelector(false);
@@ -256,7 +266,6 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
       const modelPreferences = getModelPreferences();
       const customApiKeys = cachedApiKeys;
 
-      // Find custom provider if selected
       let customProvider: CustomProvider | undefined;
       if (model.startsWith('custom:')) {
         const providerId = model.replace('custom:', '');
@@ -293,7 +302,7 @@ Please analyze the error and explain:
 2. How to fix it
 3. Provide the corrected code`;
 
-      const debugPrompt = mode === 'summary' ? summaryPrompt : detailedPrompt;
+      const debugPrompt = dMode === 'summary' ? summaryPrompt : detailedPrompt;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -308,11 +317,7 @@ Please analyze the error and explain:
       });
 
       const data = await response.json() as ChatResponse;
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
+      if (data.error) throw new Error(data.error);
       setDebugResult(data.content);
     } catch (error) {
       setDebugResult(`Debug failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -321,7 +326,7 @@ Please analyze the error and explain:
     }
   };
 
-  const handleSuccessAnalysisRequest = async (model: LLMProvider | string, mode: DebugMode) => {
+  const handleSuccessAnalysisRequest = async (model: LLMProvider | string, dMode: DebugMode) => {
     if (!result?.success || !code) return;
 
     setShowSuccessSelector(false);
@@ -332,7 +337,6 @@ Please analyze the error and explain:
       const modelPreferences = getModelPreferences();
       const customApiKeys = cachedApiKeys;
 
-      // Find custom provider if selected
       let customProvider: CustomProvider | undefined;
       if (model.startsWith('custom:')) {
         const providerId = model.replace('custom:', '');
@@ -363,7 +367,7 @@ ${code}
 \`\`\`
 ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
-      const analysisPrompt = mode === 'summary' ? summaryPrompt : detailedPrompt;
+      const analysisPrompt = dMode === 'summary' ? summaryPrompt : detailedPrompt;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -378,11 +382,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       });
 
       const data = await response.json() as ChatResponse;
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
+      if (data.error) throw new Error(data.error);
       setSuccessAnalysisResult(data.content);
     } catch (error) {
       setSuccessAnalysisResult(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -392,9 +392,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
   };
 
   const handleRunClick = () => {
-    if (code.trim()) {
-      runCode(code);
-    }
+    if (code.trim()) runCode(code);
   };
 
   const getPlaceholder = () => {
@@ -413,14 +411,129 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
   const enabledCustomProviders = customProviders.filter((p) => p.enabled);
   const lineCount = code ? code.split('\n').length : 0;
 
+  // Result helpers
+  const hasOutput = result?.output && result.output.trim().length > 0;
+  const hasError = result?.error && result.error.trim().length > 0;
+  const showInteractivePreview = code && isInteractiveHTML(code) && !requiresDevEnvironment(code);
+  const showDevEnvironmentWarning = code && requiresDevEnvironment(code);
+  const previewCode = showInteractivePreview && code
+    ? (code.includes('<html') || code.includes('<body') ? code : wrapJSInHTML(code))
+    : null;
+  const isWrapped = Boolean(showInteractivePreview && code && !code.includes('<html') && !code.includes('<body'));
+
+  // Inline analysis selector renderer
+  const renderAnalysisSelector = (type: 'debug' | 'success') => {
+    const isSuccess = type === 'success';
+    const onClose = () => isSuccess ? setShowSuccessSelector(false) : setShowDebugSelector(false);
+    const handleAnalyze = () => {
+      if (isSuccess) {
+        handleSuccessAnalysisRequest(debugSelectedModel, debugMode);
+      } else {
+        handleDebugRequest(debugSelectedModel, debugMode);
+      }
+    };
+
+    return (
+      <div className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+        <CornerAccents />
+
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            {isSuccess ? (
+              <Target className="w-4 h-4 text-emerald-500" />
+            ) : (
+              <Search className="w-4 h-4 text-orange-500" />
+            )}
+            <span className={`font-mono text-[10px] tracking-[0.2em] uppercase ${isSuccess ? 'text-emerald-500' : 'text-orange-500'}`}>
+              {isSuccess ? 'What worked? Analysis' : 'AI Debug Analysis'}
+            </span>
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white/60 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
+          {isSuccess ? 'Select a model to analyze what worked:' : 'Select a model to analyze the error:'}
+        </p>
+
+        <Select value={debugSelectedModel} onValueChange={setDebugSelectedModel}>
+          <SelectTrigger className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.12] transition-colors text-left mb-3">
+            <SelectValue placeholder="Choose model" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg">
+            {MODEL_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="text-zinc-300 focus:bg-white/[0.04]">
+                <div className="flex flex-col">
+                  <span className="font-mono text-sm text-white">{opt.label}</span>
+                  <span className="font-mono text-[10px] text-orange-500">{opt.description}</span>
+                </div>
+              </SelectItem>
+            ))}
+            {enabledCustomProviders.length > 0 && (
+              <div className="px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-white/30 border-t border-white/[0.06] mt-1">
+                Custom Providers
+              </div>
+            )}
+            {enabledCustomProviders.map((provider) => (
+              <SelectItem key={provider.id} value={`custom:${provider.id}`} className="text-zinc-300 focus:bg-white/[0.04]">
+                <div className="flex flex-col">
+                  <span className="font-mono text-sm text-white">{provider.name}</span>
+                  <span className="font-mono text-[10px] text-orange-500">{provider.modelId}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="mb-4">
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-2">Output format:</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDebugMode('summary')}
+              className={debugMode === 'summary'
+                ? 'px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded font-mono text-[11px] tracking-[0.1em] uppercase text-orange-400 transition-colors'
+                : 'px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded font-mono text-[11px] tracking-[0.1em] uppercase text-white/50 hover:border-white/[0.12] transition-colors'}
+            >
+              Summary
+            </button>
+            <button
+              onClick={() => setDebugMode('detailed')}
+              className={debugMode === 'detailed'
+                ? 'px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded font-mono text-[11px] tracking-[0.1em] uppercase text-orange-400 transition-colors'
+                : 'px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded font-mono text-[11px] tracking-[0.1em] uppercase text-white/50 hover:border-white/[0.12] transition-colors'}
+            >
+              Detailed
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleAnalyze}
+            className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 py-2.5 transition-colors"
+          >
+            {isSuccess ? 'Analyze Code' : 'Analyze Error'}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 text-white/40 hover:text-white/60 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
-              <Code className="text-black w-6 h-6" />
+            <div className="w-12 h-12 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <Code className="w-6 h-6 text-orange-500" />
             </div>
             <div>
               <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
@@ -434,11 +547,11 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
           {/* Language Selector */}
           <Select value={language} onValueChange={(v) => setLanguage(v as SupportedLanguage)}>
-            <SelectTrigger className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-2 border border-white/[0.08] bg-white/[0.02] hover:border-orange-500/30 transition-colors">
+            <SelectTrigger className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg font-mono text-sm text-white/80 hover:border-white/[0.12] transition-colors">
               <Hash className="w-3 h-3 text-orange-500" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+            <SelectContent className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg">
               {LANGUAGE_OPTIONS.map((opt) => (
                 <SelectItem
                   key={opt.value}
@@ -453,31 +566,33 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
         </div>
       </MotionWrapper>
 
-      {/* Main Content */}
+      {/* Main Panel */}
       <MotionWrapper delay={0.1}>
-        <div className="border border-white/[0.06] bg-white/[0.015]">
+        <div className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden">
+          <CornerAccents />
+
           {/* Mode Tabs */}
-          <div className="flex items-center border-b border-white/[0.06]">
+          <div className="flex border-b border-white/[0.06]">
             <button
               onClick={() => setMode('write')}
-              className={`flex items-center gap-2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] -mb-px ${
+              className={`flex items-center gap-2 px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
                 mode === 'write'
-                  ? 'text-white bg-orange-500/[0.05] border-b-2 border-orange-500'
-                  : 'text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent'
+                  ? 'text-white border-b-2 border-orange-500'
+                  : 'text-white/40 hover:text-white/60 border-b-2 border-transparent'
               }`}
             >
-              <Terminal className="w-[11px] h-[11px]" />
+              <Terminal className="w-4 h-4" />
               Write Code
             </button>
             <button
               onClick={() => setMode('ask')}
-              className={`flex items-center gap-2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] -mb-px ${
+              className={`flex items-center gap-2 px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
                 mode === 'ask'
-                  ? 'text-white bg-orange-500/[0.05] border-b-2 border-orange-500'
-                  : 'text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent'
+                  ? 'text-white border-b-2 border-orange-500'
+                  : 'text-white/40 hover:text-white/60 border-b-2 border-transparent'
               }`}
             >
-              <Sparkles className="w-[11px] h-[11px]" />
+              <Sparkles className="w-4 h-4" />
               Ask AI
             </button>
           </div>
@@ -487,15 +602,18 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
             {/* Write Code Tab */}
             {mode === 'write' && (
               <div className="space-y-4">
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder={getPlaceholder()}
-                  className="w-full min-h-[200px] pl-12 pr-4 py-3 bg-[#050505] border border-white/[0.06] font-mono text-[13px] text-zinc-300 leading-relaxed resize-y outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 placeholder:font-mono placeholder:text-xs"
-                  style={{ caretColor: '#f97316' }}
-                />
+                <div>
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-orange-500 mb-2 block">Code Editor</span>
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder={getPlaceholder()}
+                    className="w-full min-h-[200px] bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 font-mono text-sm text-white/90 leading-relaxed resize-y outline-none focus:border-orange-500/50 transition-colors placeholder:text-white/30"
+                    style={{ caretColor: '#f97316' }}
+                  />
+                </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-3">
                   <button
                     onClick={() => {
                       setCode('');
@@ -504,30 +622,24 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       setSuccessAnalysisResult(null);
                     }}
                     disabled={!code.trim()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 hover:text-white border border-transparent hover:border-white/[0.08] transition-colors disabled:opacity-30"
+                    className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors disabled:opacity-30"
                   >
-                    <Trash2 className="w-[11px] h-[11px]" />
-                    Clear
+                    <span className="flex items-center gap-1.5">
+                      <Trash2 className="w-4 h-4" />
+                      Clear
+                    </span>
                   </button>
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <button
-                      onClick={handleRunClick}
-                      disabled={!code.trim() || isRunning}
-                      className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isRunning ? (
-                        <>
-                          <Loader2 className="w-[13px] h-[13px] animate-spin" />
-                          Running...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-[13px] h-[13px]" />
-                          Run Code
-                        </>
-                      )}
-                    </button>
-                  </motion.div>
+                  <button
+                    onClick={handleRunClick}
+                    disabled={!code.trim() || isRunning}
+                    className="flex items-center gap-2 px-5 py-2 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isRunning ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Running...</>
+                    ) : (
+                      <><Play className="w-4 h-4" /> Run Code</>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -537,33 +649,29 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
               <div className="space-y-4">
                 <div className="space-y-4">
                   <div>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">Prompt</span>
+                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-2 block">Prompt</span>
                     <textarea
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       placeholder={`Describe what ${LANGUAGE_DISPLAY_NAMES[language]} code you want...\n\nExample: "Write a function that reverses a string"`}
-                      className="w-full px-4 py-3 bg-black border border-white/[0.06] font-mono text-xs text-zinc-300 leading-relaxed resize-none outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 min-h-[100px]"
+                      className="w-full min-h-[100px] bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 font-mono text-sm text-white leading-relaxed resize-none outline-none focus:border-orange-500/50 transition-colors placeholder:text-white/30"
                       style={{ caretColor: '#f97316' }}
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
                     <div>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 mb-1.5 block">Model</span>
+                      <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-2 block">Model</span>
                       <Select value={selectedModel} onValueChange={setSelectedModel}>
-                        <SelectTrigger className="w-full sm:w-[250px] flex items-center justify-between px-3 py-2.5 border border-white/[0.08] bg-white/[0.02] hover:border-orange-500/25 transition-colors text-left">
+                        <SelectTrigger className="w-full sm:w-[250px] bg-white/[0.02] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.12] transition-colors text-left">
                           <SelectValue placeholder="Select model" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
+                        <SelectContent className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg">
                           {MODEL_OPTIONS.map((opt) => (
-                            <SelectItem
-                              key={opt.value}
-                              value={opt.value}
-                              className="text-zinc-400 focus:bg-white/[0.04]"
-                            >
+                            <SelectItem key={opt.value} value={opt.value} className="text-zinc-400 focus:bg-white/[0.04]">
                               <div className="flex flex-col">
-                                <span className="font-mono text-xs text-white">{opt.label}</span>
-                                <span className="font-mono text-[10px] text-orange-500/60">{opt.description}</span>
+                                <span className="font-mono text-sm text-white">{opt.label}</span>
+                                <span className="font-mono text-[10px] text-orange-500">{opt.description}</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -573,14 +681,10 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                                 Custom Providers
                               </div>
                               {enabledCustomProviders.map((provider) => (
-                                <SelectItem
-                                  key={provider.id}
-                                  value={`custom:${provider.id}`}
-                                  className="text-zinc-400 focus:bg-white/[0.04]"
-                                >
+                                <SelectItem key={provider.id} value={`custom:${provider.id}`} className="text-zinc-400 focus:bg-white/[0.04]">
                                   <div className="flex flex-col">
-                                    <span className="font-mono text-xs text-white">{provider.name}</span>
-                                    <span className="font-mono text-[10px] text-orange-500/60">{provider.modelId}</span>
+                                    <span className="font-mono text-sm text-white">{provider.name}</span>
+                                    <span className="font-mono text-[10px] text-orange-500">{provider.modelId}</span>
                                   </div>
                                 </SelectItem>
                               ))}
@@ -590,27 +694,17 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       </Select>
                     </div>
 
-                    <div className="w-full sm:w-auto sm:self-end">
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                        <button
-                          onClick={generateCode}
-                          disabled={!prompt.trim() || isGenerating}
-                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors"
-                        >
-                          {isGenerating ? (
-                            <>
-                              <Loader2 className="w-[13px] h-[13px] animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Bot className="w-[13px] h-[13px]" />
-                              Generate Code
-                            </>
-                          )}
-                        </button>
-                      </motion.div>
-                    </div>
+                    <button
+                      onClick={generateCode}
+                      disabled={!prompt.trim() || isGenerating}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGenerating ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+                      ) : (
+                        <><Sparkles className="w-4 h-4" /> Generate Code</>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -619,36 +713,34 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-4 border border-orange-500/20 bg-orange-500/[0.04]"
+                    className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6"
                   >
+                    <CornerAccents />
                     <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="w-[11px] h-[11px] text-orange-500" />
-                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-orange-400">Generated Code Preview</span>
+                      <Sparkles className="w-4 h-4 text-orange-500" />
+                      <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-orange-500">Generated Code Preview</span>
                     </div>
-                    <pre className="font-mono text-sm bg-[#050505] border border-white/[0.06] p-4 overflow-x-auto text-zinc-300 mb-4 max-h-[300px] overflow-y-auto">
+                    <pre className="font-mono text-sm bg-white/[0.02] border border-white/[0.04] rounded p-4 overflow-x-auto text-white/70 mb-4 max-h-[300px] overflow-y-auto">
                       {pendingCode}
                     </pre>
                     <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
                       <button
                         onClick={handleUseCode}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-[10px] uppercase tracking-[0.12em] font-semibold transition-colors"
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-transparent border border-orange-500 rounded text-orange-500 hover:bg-orange-500/10 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors"
                       >
-                        <Check className="w-[11px] h-[11px]" />
-                        Use This Code
+                        <Check className="w-4 h-4" /> Use This Code
                       </button>
                       <button
                         onClick={handleAddToCurrent}
-                        className="flex items-center justify-center gap-2 px-4 py-2 border border-white/[0.08] text-zinc-400 hover:text-white hover:border-orange-500/30 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded text-white/50 hover:border-white/[0.12] font-mono text-[11px] tracking-[0.15em] uppercase transition-colors"
                       >
-                        <Plus className="w-[11px] h-[11px]" />
-                        Add to Current
+                        <Plus className="w-4 h-4" /> Add to Current
                       </button>
                       <button
                         onClick={handleDiscard}
-                        className="flex items-center justify-center gap-2 px-4 py-2 text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-[0.12em] transition-colors"
+                        className="flex items-center justify-center gap-2 px-4 py-2 text-white/40 hover:text-white/60 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors"
                       >
-                        <X className="w-[11px] h-[11px]" />
-                        Discard
+                        <X className="w-4 h-4" /> Discard
                       </button>
                     </div>
                   </motion.div>
@@ -661,14 +753,14 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-4 mt-4"
                   >
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-orange-500 mb-2 block">Code Editor:</span>
+                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-orange-500 mb-2 block">Code Editor</span>
                     <textarea
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      className="w-full min-h-[200px] pl-12 pr-4 py-3 bg-[#050505] border border-white/[0.06] font-mono text-[13px] text-zinc-300 leading-relaxed resize-y outline-none focus:border-orange-500/30 transition-colors"
+                      className="w-full min-h-[200px] bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 font-mono text-sm text-white/90 leading-relaxed resize-y outline-none focus:border-orange-500/50 transition-colors"
                       style={{ caretColor: '#f97316' }}
                     />
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-3">
                       <button
                         onClick={() => {
                           setCode('');
@@ -676,55 +768,44 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                           setDebugResult(null);
                           setSuccessAnalysisResult(null);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 hover:text-white border border-transparent hover:border-white/[0.08] transition-colors"
+                        className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors"
                       >
-                        <Trash2 className="w-[11px] h-[11px]" />
-                        Clear
+                        <span className="flex items-center gap-1.5">
+                          <Trash2 className="w-4 h-4" /> Clear
+                        </span>
                       </button>
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                        <button
-                          onClick={handleRunClick}
-                          disabled={!code.trim() || isRunning}
-                          className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isRunning ? (
-                            <>
-                              <Loader2 className="w-[13px] h-[13px] animate-spin" />
-                              Running...
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-[13px] h-[13px]" />
-                              Run Code
-                            </>
-                          )}
-                        </button>
-                      </motion.div>
+                      <button
+                        onClick={handleRunClick}
+                        disabled={!code.trim() || isRunning}
+                        className="flex items-center gap-2 px-5 py-2 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isRunning ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Running...</>
+                        ) : (
+                          <><Play className="w-4 h-4" /> Run Code</>
+                        )}
+                      </button>
                     </div>
                   </motion.div>
                 )}
 
                 {/* Recent Generations History */}
                 {codeHistory.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="mt-0"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-0">
                     <button
                       onClick={() => setHistoryExpanded(!historyExpanded)}
                       className="w-full flex items-center justify-between px-5 py-3 border-t border-white/[0.06] hover:bg-white/[0.02] transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <Clock className="w-[11px] h-[11px] text-white/30" />
-                        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
+                        <Clock className="w-4 h-4 text-white/30" />
+                        <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40">
                           Recent Generations ({codeHistory.length})
                         </span>
                       </div>
                       {historyExpanded ? (
-                        <ChevronUp className="w-[11px] h-[11px] text-white/30" />
+                        <ChevronUp className="w-4 h-4 text-white/30" />
                       ) : (
-                        <ChevronDown className="w-[11px] h-[11px] text-white/30" />
+                        <ChevronDown className="w-4 h-4 text-white/30" />
                       )}
                     </button>
 
@@ -734,18 +815,15 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                         animate={{ opacity: 1, height: 'auto' }}
                         className="space-y-1 max-h-[200px] overflow-y-auto px-5 pb-3"
                       >
-                        {codeHistory.map((item, index) => (
-                          <div
-                            key={item.timestamp}
-                            className="flex items-center justify-between p-2 bg-white/[0.02] border border-white/[0.06]"
-                          >
+                        {codeHistory.map((item) => (
+                          <div key={item.timestamp} className="flex items-center justify-between p-2 bg-white/[0.02] border border-white/[0.06] rounded">
                             <div className="flex-1 min-w-0">
                               <p className="font-mono text-xs text-zinc-400 truncate">&quot;{item.prompt}&quot;</p>
                               <p className="font-mono text-[10px] text-white/25">{getRelativeTime(item.timestamp)}</p>
                             </div>
                             <button
                               onClick={() => handleUseFromHistory(item)}
-                              className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 hover:text-orange-500 ml-2 shrink-0 px-2 py-1 transition-colors"
+                              className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 ml-2 shrink-0 px-2 py-1 transition-colors"
                             >
                               Use
                             </button>
@@ -764,108 +842,169 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       {/* Output Section */}
       {(result || isRunning) && (
         <MotionWrapper delay={0.2}>
-          <div className="mt-6 border border-white/[0.06] bg-white/[0.015] relative">
-            {/* Corner accents */}
-            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-orange-500" />
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-orange-500" />
+          <div className="relative mt-6 bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden">
+            <CornerAccents />
 
             <div className="flex items-center gap-2.5 px-5 py-3 border-b border-white/[0.06]">
-              <Terminal className="w-[13px] h-[13px] text-orange-500" />
-              <span className="font-mono text-xs uppercase tracking-[0.16em] text-white/50">Output / Results</span>
+              <Terminal className="w-4 h-4 text-white/40" />
+              <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40">Output / Results</span>
             </div>
 
             <div className="p-5">
               {isRunning ? (
                 <div className="flex items-center gap-3 py-4">
-                  <Loader2 className="w-[13px] h-[13px] animate-spin text-orange-500" />
-                  <span className="font-mono text-xs uppercase tracking-[0.12em] text-white/40">Executing code...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                  <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40">Executing code...</span>
                 </div>
               ) : result && (
                 <>
-                  <CodeExecutionResultDisplay
-                    result={result}
-                    code={code}
-                    onDebugClick={() => setShowDebugSelector(true)}
-                    onSuccessAnalysisClick={() => setShowSuccessSelector(true)}
-                  />
+                  {/* Inline Result Display */}
+                  <div className={`relative p-4 rounded-lg ${
+                    result.success
+                      ? 'bg-emerald-500/[0.03] border border-emerald-500/20'
+                      : 'bg-red-500/[0.03] border border-red-500/20'
+                  }`}>
+                    <CornerAccents color={result.success ? 'bg-emerald-500' : 'bg-red-500'} />
+
+                    {/* Status header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[0.15em] uppercase ${
+                        result.success ? 'text-emerald-500' : 'text-red-500'
+                      }`}>
+                        {result.success ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        {result.success ? 'Execution Success' : 'Execution Failed'}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        {result.engine && (
+                          <span className="flex items-center gap-1 font-mono text-[10px] text-white/30">
+                            <Cpu className="h-3 w-3" />
+                            {result.engine}
+                          </span>
+                        )}
+                        {result.executionTime !== undefined && (
+                          <span className="font-mono text-[10px] text-white/30">
+                            {result.executionTime.toFixed(1)}ms
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Output */}
+                    {hasOutput && (
+                      <div className="mb-3">
+                        <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-2">Output</div>
+                        <pre className="font-mono text-sm text-emerald-400 bg-emerald-500/[0.05] border border-emerald-500/10 rounded px-4 py-3 whitespace-pre-wrap overflow-x-auto">
+                          {result.output}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* Error */}
+                    {hasError && (
+                      <div>
+                        <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40 mb-2">Error</div>
+                        <pre className="font-mono text-xs text-red-400 bg-red-500/[0.03] border border-red-500/10 rounded px-4 py-3 whitespace-pre-wrap overflow-x-auto">
+                          {result.error}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* No output */}
+                    {result.success && !hasOutput && !showInteractivePreview && (
+                      <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/40">
+                        Code executed successfully with no output.
+                      </div>
+                    )}
+
+                    {/* Interactive Preview */}
+                    {result.success && showInteractivePreview && previewCode && (
+                      <InteractivePreview code={previewCode} originalCode={code} isWrapped={isWrapped} />
+                    )}
+
+                    {/* Dev Environment Warning */}
+                    {showDevEnvironmentWarning && code && (
+                      <DevEnvironmentRequired code={code} />
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {result.success && (
+                        <button
+                          onClick={() => setShowSuccessSelector(true)}
+                          className="flex items-center gap-2 bg-transparent border border-emerald-500/30 rounded-full px-4 py-2 font-mono text-[11px] tracking-[0.1em] uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          What Worked?
+                        </button>
+                      )}
+                      {!result.success && (
+                        <button
+                          onClick={() => setShowDebugSelector(true)}
+                          className="flex items-center gap-2 bg-transparent border border-orange-500/30 rounded-full px-4 py-2 font-mono text-[11px] tracking-[0.1em] uppercase text-orange-500 hover:bg-orange-500/10 transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          AI Debug
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Debug Selector */}
-                  {showDebugSelector && !result.success && (
-                    <DebugModelSelector
-                      onSelect={handleDebugRequest}
-                      onClose={() => setShowDebugSelector(false)}
-                      customProviders={customProviders}
-                      analysisType="debug"
-                    />
-                  )}
+                  {showDebugSelector && !result.success && renderAnalysisSelector('debug')}
 
                   {/* Debug Loading */}
                   {isDebugging && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-4 p-4 border border-orange-500/15 bg-orange-500/[0.04]"
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+                      <CornerAccents />
                       <div className="flex items-center gap-3">
-                        <Loader2 className="w-[13px] h-[13px] animate-spin text-orange-500" />
-                        <span className="font-mono text-xs uppercase tracking-[0.12em] text-orange-400">AI is analyzing the error...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                        <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-orange-500">AI is analyzing the error...</span>
                       </div>
                     </motion.div>
                   )}
 
                   {/* Debug Result */}
                   {debugResult && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 border border-orange-500/15 bg-orange-500/[0.04]"
-                    >
-                      <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-orange-500/10">
-                        <Bot className="w-[11px] h-[11px] text-orange-400" />
-                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-orange-400">Forensic Analysis</span>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+                      <CornerAccents />
+                      <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-white/[0.06]">
+                        <Bot className="w-4 h-4 text-orange-500" />
+                        <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-orange-500">Forensic Analysis</span>
                       </div>
-                      <div className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-mono">
+                      <div className="text-sm text-white/60 leading-relaxed whitespace-pre-wrap font-mono">
                         {debugResult}
                       </div>
                     </motion.div>
                   )}
 
                   {/* Success Analysis Selector */}
-                  {showSuccessSelector && result.success && (
-                    <DebugModelSelector
-                      onSelect={handleSuccessAnalysisRequest}
-                      onClose={() => setShowSuccessSelector(false)}
-                      customProviders={customProviders}
-                      analysisType="success"
-                    />
-                  )}
+                  {showSuccessSelector && result.success && renderAnalysisSelector('success')}
 
                   {/* Success Analysis Loading */}
                   {isAnalyzingSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-4 p-4 border border-green-900/30 bg-green-950/30"
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+                      <CornerAccents />
                       <div className="flex items-center gap-3">
-                        <Loader2 className="w-[13px] h-[13px] animate-spin text-green-400" />
-                        <span className="font-mono text-xs uppercase tracking-[0.12em] text-green-400">AI is analyzing what worked...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                        <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-emerald-500">AI is analyzing what worked...</span>
                       </div>
                     </motion.div>
                   )}
 
                   {/* Success Analysis Result */}
                   {successAnalysisResult && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 border border-green-900/30 bg-green-950/30"
-                    >
-                      <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-green-900/20">
-                        <Target className="w-[11px] h-[11px] text-green-400" />
-                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-green-400">What Worked? Analysis</span>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative mt-4 bg-white/[0.015] border border-white/[0.06] rounded-lg p-6">
+                      <CornerAccents />
+                      <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-white/[0.06]">
+                        <Target className="w-4 h-4 text-emerald-500" />
+                        <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-emerald-500">What Worked? Analysis</span>
                       </div>
-                      <div className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-mono">
+                      <div className="text-sm text-white/60 leading-relaxed whitespace-pre-wrap font-mono">
                         {successAnalysisResult}
                       </div>
                     </motion.div>
@@ -880,18 +1019,16 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       {/* Empty State */}
       {!result && !isRunning && !pendingCode && !code && (
         <MotionWrapper delay={0.2}>
-          <div className="mt-6 border border-white/[0.06] bg-white/[0.015] relative">
-            {/* Corner accents */}
-            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-orange-500" />
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-orange-500" />
+          <div className="relative mt-6 bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden">
+            <CornerAccents />
 
             <div className="flex items-center gap-2.5 px-5 py-3 border-b border-white/[0.06]">
-              <Terminal className="w-[13px] h-[13px] text-orange-500" />
-              <span className="font-mono text-xs uppercase tracking-[0.16em] text-white/50">Output / Results</span>
+              <Terminal className="w-4 h-4 text-white/40" />
+              <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40">Output / Results</span>
             </div>
 
             <div className="flex items-center justify-center py-16">
-              <span className="font-mono text-xs uppercase tracking-[0.14em] text-white/25">
+              <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/25">
                 {mode === 'write' ? 'Write some code to get started' : 'Ask AI to generate code'}
               </span>
             </div>
@@ -900,12 +1037,12 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       )}
 
       {/* Status Bar */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/[0.06]">
+      <div className="flex items-center justify-between mt-6 px-4 py-2 border-t border-white/[0.06] bg-white/[0.01]">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500/60" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25">Lab Active</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-white/40">Lab Active</span>
         </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/25">
+        <span className="font-mono text-[10px] text-white/30">
           {LANGUAGE_DISPLAY_NAMES[language]} {lineCount > 0 ? `\u2022 ${lineCount} lines` : ''}
         </span>
       </div>
