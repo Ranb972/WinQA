@@ -342,7 +342,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.06]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-white/[0.06]">
         <div className="overflow-x-auto">
           <ModelSelector
             mode={mode}
@@ -380,7 +380,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
             className="flex items-center justify-center h-full py-24"
           >
-            <div className="text-center max-w-md px-6">
+            <div className="text-center max-w-md px-4 sm:px-6">
               {mode === 'single' ? (
                 <>
                   <div className="relative inline-block mb-8">

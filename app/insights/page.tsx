@@ -228,11 +228,11 @@ function InsightsPageContent() {
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 bg-orange-500 flex items-center justify-center shrink-0">
               <Lightbulb className="w-6 h-6 text-black" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
                 Insights
               </h1>

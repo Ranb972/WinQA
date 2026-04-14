@@ -285,12 +285,12 @@ function PromptsPageContent() {
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <div className="w-1 h-8 bg-orange-500 shrink-0" />
             <div className="w-12 h-12 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
               <Library className="w-6 h-6 text-orange-500" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="font-heading font-semibold text-2xl uppercase tracking-wide text-white">
                 Prompt Library
               </h1>

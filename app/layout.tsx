@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import {
     ClerkProvider,
@@ -35,6 +35,12 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = baseMetadata;
 
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+};
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -45,6 +51,10 @@ export default function RootLayout({
             <html lang="en" className="dark">
                 <body
                     className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-black text-slate-100 min-h-screen`}
+                    style={{
+                        paddingLeft: 'env(safe-area-inset-left)',
+                        paddingRight: 'env(safe-area-inset-right)',
+                    }}
                 >
                     {/* Ambient background — investigation theme */}
                     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">

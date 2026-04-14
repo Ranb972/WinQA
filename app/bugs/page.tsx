@@ -276,15 +276,15 @@ function BugsPageContent() {
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/[0.015] border border-white/[0.06] relative flex items-center justify-center">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-14 h-14 bg-white/[0.015] border border-white/[0.06] relative flex items-center justify-center shrink-0">
               <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 border-orange-500" />
               <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 border-orange-500" />
               <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 border-orange-500" />
               <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 border-orange-500" />
               <Bug className="text-orange-500 w-7 h-7" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="font-heading text-2xl font-bold uppercase tracking-wider text-white">
                 Bug Log
               </h1>

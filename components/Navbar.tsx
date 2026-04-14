@@ -248,7 +248,13 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Navbar */}
-      <nav className="fixed top-4 left-4 right-4 z-50 md:hidden">
+      <nav
+        className="fixed top-4 left-4 right-4 z-50 md:hidden"
+        style={{
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+        }}
+      >
         <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-2xl px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
