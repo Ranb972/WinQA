@@ -23,31 +23,31 @@ export function Footer() {
           </div>
 
           {/* Right: Legal + site link */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0">
             <Link
               href="/about"
-              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
               About
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/faq"
-              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
               FAQ
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/privacy"
-              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
               Privacy
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/terms"
-              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
               Terms
             </Link>
@@ -56,7 +56,7 @@ export function Footer() {
               href="https://winqa.ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/40 text-sm hover:text-orange-500 transition-colors font-mono"
             >
               winqa.ai
             </a>

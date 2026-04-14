@@ -227,7 +227,7 @@ function InsightsPageContent() {
     <div>
       {/* Header */}
       <MotionWrapper>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-orange-500 flex items-center justify-center">
               <Lightbulb className="w-6 h-6 text-black" />
@@ -242,7 +242,7 @@ function InsightsPageContent() {
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
+            <button onClick={openNewDialog} className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.12em] font-semibold transition-colors">
               <Plus className="w-4 h-4" />
               Record Finding
             </button>
@@ -344,7 +344,7 @@ function InsightsPageContent() {
                 : 'Document patterns and discoveries from your AI investigations.'}
             </p>
             {!hasActiveFilters && (
-              <button onClick={openNewDialog} className="px-4 py-2 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
+              <button onClick={openNewDialog} className="px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 bg-orange-500/10 border border-orange-500/30 text-sm text-orange-500 hover:bg-orange-500/20 transition-colors font-mono uppercase tracking-wider">
                 + Record First Finding
               </button>
             )}

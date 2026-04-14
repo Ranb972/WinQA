@@ -300,7 +300,7 @@ function PromptsPageContent() {
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={openNewDialog} className="flex items-center gap-2 bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 px-4 py-2 rounded text-sm font-medium tracking-wider uppercase transition-colors w-full sm:w-auto justify-center">
+            <button onClick={openNewDialog} className="flex items-center gap-2 bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 rounded text-sm font-medium tracking-wider uppercase transition-colors w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
               Archive Technique
             </button>
@@ -324,7 +324,7 @@ function PromptsPageContent() {
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-[0.12em] transition-colors shrink-0',
+              'flex items-center justify-center gap-2 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto rounded-lg font-mono text-xs uppercase tracking-[0.12em] transition-colors shrink-0',
               showFavoritesOnly
                 ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400'
                 : 'bg-white/[0.02] border border-white/[0.06] text-white/50 hover:border-white/10'
@@ -341,7 +341,7 @@ function PromptsPageContent() {
                   key={tag}
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                   className={cn(
-                    'px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase transition-colors border',
+                    'px-3 py-2 sm:px-2 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-mono tracking-wider uppercase transition-colors border',
                     selectedTag === tag
                       ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
                       : 'bg-white/[0.02] text-white/50 border-white/[0.06] hover:border-white/10'
@@ -536,7 +536,7 @@ function PromptsPageContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto relative">
+        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           {/* Dialog corner accents */}
           <div className="absolute top-0 left-0 pointer-events-none">
             <div className="absolute top-0 left-0 w-3 h-px bg-orange-500/60" />
@@ -683,7 +683,7 @@ function PromptsPageContent() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto relative">
+        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
           {/* Dialog corner accents */}
           <div className="absolute top-0 left-0 pointer-events-none">
             <div className="absolute top-0 left-0 w-3 h-px bg-orange-500/60" />

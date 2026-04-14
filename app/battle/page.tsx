@@ -743,8 +743,8 @@ export default function BattlePage() {
               onClick={() => setActiveTab(tab.id)}
               className={`${
                 activeTab === tab.id
-                  ? 'flex items-center gap-2 px-4 py-2 rounded-md text-sm bg-orange-500 text-black font-semibold'
-                  : 'flex items-center gap-2 px-4 py-2 rounded-md text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-all'
+                  ? 'flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 rounded-md text-sm bg-orange-500 text-black font-semibold'
+                  : 'flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 rounded-md text-sm text-white/50 hover:text-white hover:bg-white/[0.04] transition-all'
               }`}
             >
               {tab.icon}
@@ -816,7 +816,7 @@ export default function BattlePage() {
                       <div className="text-center mb-14">
                         <button
                           onClick={handleRandomMatchup}
-                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-white/[0.1] bg-white/[0.02] text-sm text-white/60 hover:text-white hover:border-orange-500/40 hover:bg-white/[0.04] transition-all"
+                          className="inline-flex items-center gap-2 px-5 py-3 sm:py-2.5 min-h-[44px] sm:min-h-0 rounded-md border border-white/[0.1] bg-white/[0.02] text-sm text-white/60 hover:text-white hover:border-orange-500/40 hover:bg-white/[0.04] transition-all"
                         >
                           <Shuffle className="h-4 w-4" />
                           Random Matchup

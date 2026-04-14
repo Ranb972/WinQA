@@ -196,7 +196,7 @@ export default function TestCasesPage() {
     <div>
       {/* Header */}
       <MotionWrapper>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
               <TestTube2 className="w-6 h-6 text-orange-500" />
@@ -211,7 +211,7 @@ export default function TestCasesPage() {
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={openNewDialog} className="flex items-center gap-2 px-4 py-2 bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 font-mono text-xs uppercase tracking-wider font-medium transition-colors">
+            <button onClick={openNewDialog} className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 font-mono text-xs uppercase tracking-wider font-medium transition-colors">
               <Plus className="w-4 h-4" />
               File New Case
             </button>
@@ -268,7 +268,7 @@ export default function TestCasesPage() {
                 : 'Create structured test scenarios to systematically probe AI weaknesses.'}
             </p>
             {!searchQuery && (
-              <button onClick={openNewDialog} className="px-4 py-2 bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 text-sm font-mono uppercase tracking-wider font-medium transition-colors">
+              <button onClick={openNewDialog} className="px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500/10 text-sm font-mono uppercase tracking-wider font-medium transition-colors">
                 + File New Case
               </button>
             )}
@@ -389,7 +389,7 @@ export default function TestCasesPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-zinc-950 border border-white/[0.06] max-w-2xl relative overflow-visible">
+        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           {/* Dialog corner accents */}
           <div className="absolute top-0 left-0 pointer-events-none">
             <div className="absolute top-0 left-0 w-3 h-px bg-orange-500/60" />
@@ -497,7 +497,7 @@ export default function TestCasesPage() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="bg-zinc-950 border border-white/[0.06] max-w-2xl relative overflow-visible">
+        <DialogContent className="bg-zinc-950 border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           {/* Dialog corner accents */}
           <div className="absolute top-0 left-0 pointer-events-none">
             <div className="absolute top-0 left-0 w-3 h-px bg-orange-500/60" />

@@ -103,7 +103,7 @@ export default function ModelSelector({
       <Popover>
         <PopoverTrigger asChild>
           <button
-            className="p-1 rounded hover:bg-white/[0.06] transition-colors"
+            className="p-2.5 sm:p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded hover:bg-white/[0.06] transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <Settings className="h-3 w-3 text-slate-500 hover:text-slate-300" />
@@ -174,7 +174,7 @@ export default function ModelSelector({
         <button
           onClick={() => onModeChange?.('single')}
           className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
+            'px-4 py-3 sm:px-3 sm:py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'single'
               ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30'
               : 'text-zinc-400 hover:text-slate-300'
@@ -185,7 +185,7 @@ export default function ModelSelector({
         <button
           onClick={() => onModeChange?.('multi')}
           className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
+            'px-4 py-3 sm:px-3 sm:py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
             mode === 'multi'
               ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30'
               : 'text-zinc-400 hover:text-slate-300'

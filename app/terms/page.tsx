@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
         <div className="mb-12">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-orange-500/70 hover:text-orange-500 transition-colors font-mono mb-8"
+            className="inline-flex items-center gap-2 min-h-[44px] py-2.5 text-sm text-orange-500/70 hover:text-orange-500 transition-colors font-mono mb-6 sm:mb-8"
           >
             &larr; Back to WinQA
           </Link>
@@ -220,11 +220,11 @@ export default function TermsOfServicePage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-white/[0.06] flex items-center justify-between">
-          <Link href="/" className="text-sm text-zinc-500 hover:text-orange-500 transition-colors font-mono">
+        <div className="mt-16 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center sm:justify-between gap-2">
+          <Link href="/" className="inline-flex items-center min-h-[44px] px-1 text-sm text-zinc-500 hover:text-orange-500 transition-colors font-mono">
             winqa.ai
           </Link>
-          <Link href="/privacy" className="text-sm text-zinc-500 hover:text-orange-500 transition-colors font-mono">
+          <Link href="/privacy" className="inline-flex items-center min-h-[44px] px-1 text-sm text-zinc-500 hover:text-orange-500 transition-colors font-mono">
             &larr; Privacy Policy
           </Link>
         </div>

@@ -542,7 +542,7 @@ export default function SettingsPage() {
                         href={provider.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-orange-500 text-xs font-mono uppercase tracking-[0.15em] hover:text-orange-400 transition-colors"
+                        className="inline-flex items-center gap-1 py-2.5 px-1 text-orange-500 text-xs font-mono uppercase tracking-[0.15em] hover:text-orange-400 transition-colors"
                       >
                         Acquire Key
                         <ExternalLink className="w-3 h-3" />
@@ -560,12 +560,12 @@ export default function SettingsPage() {
                             onFocus={() => handleFocus(provider.key)}
                             onBlur={() => handleBlur(provider.key)}
                             placeholder={provider.placeholder}
-                            className="pr-10 h-10 bg-black border-white/[0.08] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                            className="pr-12 h-11 bg-black border-white/[0.08] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
                           />
                           <button
                             type="button"
                             onClick={() => toggleVisibility(provider.key)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-white/40 hover:text-white/60 transition-colors"
                           >
                             {isVisible ? (
                               <EyeOff className="h-4 w-4" />

@@ -547,7 +547,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
           {/* Language Selector */}
           <Select value={language} onValueChange={(v) => setLanguage(v as SupportedLanguage)}>
-            <SelectTrigger className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg font-mono text-sm text-white/80 hover:border-white/[0.12] transition-colors">
+            <SelectTrigger className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-lg font-mono text-sm text-white/80 hover:border-white/[0.12] transition-colors">
               <Hash className="w-3 h-3 text-orange-500" />
               <SelectValue />
             </SelectTrigger>
@@ -575,7 +575,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
           <div className="flex border-b border-white/[0.06]">
             <button
               onClick={() => setMode('write')}
-              className={`flex items-center gap-2 px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
+              className={`flex items-center gap-2 px-5 py-3.5 sm:py-3 min-h-[44px] sm:min-h-0 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
                 mode === 'write'
                   ? 'text-white border-b-2 border-orange-500'
                   : 'text-white/40 hover:text-white/60 border-b-2 border-transparent'
@@ -586,7 +586,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
             </button>
             <button
               onClick={() => setMode('ask')}
-              className={`flex items-center gap-2 px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
+              className={`flex items-center gap-2 px-5 py-3.5 sm:py-3 min-h-[44px] sm:min-h-0 font-mono text-[11px] tracking-[0.15em] uppercase -mb-px transition-colors ${
                 mode === 'ask'
                   ? 'text-white border-b-2 border-orange-500'
                   : 'text-white/40 hover:text-white/60 border-b-2 border-transparent'
@@ -622,7 +622,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       setSuccessAnalysisResult(null);
                     }}
                     disabled={!code.trim()}
-                    className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors disabled:opacity-30"
+                    className="px-3 py-3 sm:py-2 min-h-[44px] sm:min-h-0 font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors disabled:opacity-30"
                   >
                     <span className="flex items-center gap-1.5">
                       <Trash2 className="w-4 h-4" />
@@ -632,7 +632,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                   <button
                     onClick={handleRunClick}
                     disabled={!code.trim() || isRunning}
-                    className="flex items-center gap-2 px-5 py-2 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-5 py-3 sm:py-2 min-h-[44px] sm:min-h-0 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isRunning ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Running...</>
@@ -768,7 +768,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                           setDebugResult(null);
                           setSuccessAnalysisResult(null);
                         }}
-                        className="font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors"
+                        className="px-3 py-3 sm:py-2 min-h-[44px] sm:min-h-0 font-mono text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white/60 transition-colors"
                       >
                         <span className="flex items-center gap-1.5">
                           <Trash2 className="w-4 h-4" /> Clear
@@ -777,7 +777,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                       <button
                         onClick={handleRunClick}
                         disabled={!code.trim() || isRunning}
-                        className="flex items-center gap-2 px-5 py-2 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-5 py-3 sm:py-2 min-h-[44px] sm:min-h-0 bg-transparent border border-orange-500 rounded text-orange-500 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isRunning ? (
                           <><Loader2 className="w-4 h-4 animate-spin" /> Running...</>

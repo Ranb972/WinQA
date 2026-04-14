@@ -294,7 +294,7 @@ function BugsPageContent() {
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={openNewDialog} className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 flex items-center gap-2 transition-colors w-full sm:w-auto justify-center">
+            <button onClick={openNewDialog} className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-3.5 sm:py-2.5 flex items-center gap-2 transition-colors w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4" />
               Log Incident
             </button>
@@ -322,7 +322,7 @@ function BugsPageContent() {
             {mounted && (
               <>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
+                  <SelectTrigger className="w-full sm:w-36 min-h-[44px] sm:min-h-0 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/[0.08]">
@@ -334,7 +334,7 @@ function BugsPageContent() {
                 </Select>
 
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-24 sm:w-32 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
+                  <SelectTrigger className="w-full sm:w-32 min-h-[44px] sm:min-h-0 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Severity" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/[0.08]">
@@ -346,7 +346,7 @@ function BugsPageContent() {
                 </Select>
 
                 <Select value={issueTypeFilter} onValueChange={setIssueTypeFilter}>
-                  <SelectTrigger className="w-28 sm:w-36 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
+                  <SelectTrigger className="w-full sm:w-36 min-h-[44px] sm:min-h-0 bg-white/[0.02] border-white/[0.1] hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.1em] text-white/80">
                     <SelectValue placeholder="Issue Type" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/[0.08]">
@@ -367,9 +367,9 @@ function BugsPageContent() {
       <div className="flex items-center gap-3 mb-6">
         <div className="w-1 h-4 bg-orange-500" />
         <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/60">Incident Reports</span>
-        <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/30">Active Investigations</span>
+        <span className="hidden sm:inline font-mono text-xs uppercase tracking-[0.15em] text-white/30">Active Investigations</span>
         <div className="flex-1 h-px bg-white/[0.06]" />
-        <span className="font-mono text-xs text-white/40">{filteredBugs.length} cases</span>
+        <span className="font-mono text-xs text-white/40 whitespace-nowrap">{filteredBugs.length} cases</span>
       </div>
 
       {/* Content */}
@@ -528,7 +528,7 @@ function BugsPageContent() {
 
       {/* Status Update Dialog */}
       <Dialog open={!!editingBug} onOpenChange={() => setEditingBug(null)}>
-        <DialogContent className="bg-black border border-white/[0.06] relative">
+        <DialogContent className="bg-black border border-white/[0.06]">
           <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-orange-500" />
           <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-orange-500" />
           <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-orange-500" />
@@ -558,13 +558,13 @@ function BugsPageContent() {
           <DialogFooter>
             <button
               onClick={() => setEditingBug(null)}
-              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-2.5 transition-colors"
+              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-3.5 sm:py-2.5 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleStatusUpdate}
-              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 transition-colors"
+              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-3.5 sm:py-2.5 transition-colors"
             >
               Update
             </button>
@@ -574,7 +574,7 @@ function BugsPageContent() {
 
       {/* Add New Bug Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-black border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto relative">
+        <DialogContent className="bg-black border border-white/[0.06] w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-orange-500" />
           <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-orange-500" />
           <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-orange-500" />
@@ -682,14 +682,14 @@ function BugsPageContent() {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <button
               onClick={() => setDialogOpen(false)}
-              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-2.5 transition-colors w-full sm:w-auto"
+              className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-3.5 sm:py-2.5 transition-colors w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               onClick={handleCreateBug}
               disabled={isSubmitting}
-              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              className="bg-orange-500 hover:bg-orange-400 text-black font-mono text-xs uppercase tracking-[0.1em] font-medium px-4 py-3.5 sm:py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isSubmitting ? 'Logging...' : 'Log Incident'}
             </button>
