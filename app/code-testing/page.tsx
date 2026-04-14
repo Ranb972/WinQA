@@ -527,7 +527,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
   };
 
   return (
-    <div>
+    <div className="px-4 sm:px-0 pt-4 sm:pt-0 pb-12 sm:pb-0">
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
