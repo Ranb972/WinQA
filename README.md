@@ -1,135 +1,95 @@
 <div align="center">
 
-# ⚔️ WinQA - AI Testing Playground
+# ⚔️ WinQA
 
-**Compare AI models. Document failures. Master prompt engineering.**
+**AI Testing Playground — compare models, run battles, catch hallucinations**
 
-[![Live Demo](https://img.shields.io/badge/Live-winqa.ai-10b981?style=for-the-badge)](https://winqa.ai)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178c6?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47a248?style=for-the-badge&logo=mongodb)](https://mongodb.com/)
-
-*An open-source platform to test, compare, and break AI systems.*
+[![Live Site](https://img.shields.io/badge/live-winqa.ai-f97316?style=for-the-badge)](https://winqa.ai)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Ranb972/WinQA?style=for-the-badge&color=facc15)](https://github.com/Ranb972/WinQA/stargazers)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=for-the-badge&logo=typescript)](https://typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06b6d4?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47a248?style=for-the-badge&logo=mongodb)](https://mongodb.com)
 
 </div>
 
+![WinQA hero](public/images/screenshots/landing-hero.jpg)
+
 ---
 
-## Why WinQA?
+## What is WinQA
 
-AI models hallucinate, refuse valid requests, fail at logic, and break in unexpected ways. WinQA gives you the tools to find, document, and learn from these failures — all in one place.
-
-No more switching between ChatGPT, Gemini, and Claude tabs. Test them all simultaneously, pit them against each other, and build a knowledge base of what works and what doesn't.
+I got tired of flipping between four browser tabs trying to figure out which model was lying to me. WinQA sends the same prompt to Cohere, Gemini, Groq, and OpenRouter at once, lets you pit them against each other in structured challenges, and gives you somewhere to keep notes when one of them breaks in an interesting way. Run it locally, or poke at the live version at [winqa.ai](https://winqa.ai).
 
 ---
 
 ## Features
 
-### 🧪 Chat Lab · Compare Mode
-Send one prompt to 4 AI models simultaneously. See who responds fastest, who hallucinates, and who gives the best answer — side by side.
+### Chat Lab & Compare Mode
 
-![Compare Mode](docs/images/readme/chat-lab.jpg)
+Fire one prompt at four models at the same time. See who answered first, who hedged, who made stuff up, and who actually got it right — all side by side.
 
-**Supported providers:** Cohere Command A · Google Gemini 2.5 Flash · Groq Llama 3.3 70B · OpenRouter (NVIDIA Nemotron)
+![Chat Lab](public/images/screenshots/chat-lab.jpg)
 
----
+### AI Battle Arena — 9 challenges
 
-### ⚔️ AI Battle Arena
-9 unique challenge types where AI models compete head-to-head:
+Two models go head to head in nine formats: Escalation, The Interrogation, Chinese Whispers, The Build-Up, Code Duel (both models run their answers live), ASCII Artist, Emoji Story, The Blindfold, and Battle Royale. Pick winners, watch a leaderboard form, revisit the matchups that surprised you.
 
-- **Mind Games** — Escalation, Interrogation, Chinese Whispers, Build-Up
-- **Spectacular** — Code Duel (live execution), ASCII Art, Emoji Story, Blindfold, Battle Royale
+![Battle Arena](public/images/screenshots/battle.jpg)
 
-Vote A/B/Tie, track results on the leaderboard, review battle history.
+### Code Testing Lab
 
-![Battle Arena](docs/images/readme/battle.jpg)
+Write JavaScript, TypeScript, or Python in the editor and hit run. Or ask an AI to write it for you and check if it actually runs. Code executes through Piston API, output lands below the editor, and there's a "what worked?" analysis when you want a second opinion.
 
----
+![Code Testing](public/images/screenshots/code-testing.jpg)
 
-### 💻 Code Testing Lab
-Write or generate code with AI, then run it live in JavaScript, Python, or TypeScript. Get instant output and AI-powered "What Worked?" analysis.
+### Bug Log & Prompt Library
 
-![Code Testing](docs/images/readme/code-testing.jpg)
+The Bug Log is where you write down the times AI failed at something real: hallucinations, lazy refusals, broken logic, weird formatting. Tag it, save the exact prompt, come back later. The Prompt Library is its twin for the things that worked — before/after rewrites so you remember why version 3 beat version 1.
 
----
+### Test Cases & Insights
 
-### 🐛 Bug Log
-Document real AI failures with severity levels, issue types (Hallucination, Logic, Refusal, Formatting), and the exact prompts that caused them. 22+ documented cases including real incidents like Air Canada's chatbot legal case and Google Bard's JWST error.
-
-![Bug Log](docs/images/readme/bugs.jpg)
-
----
-
-### 📚 More Tools
-
-- **Test Cases** — 20 ready-made test scenarios for AI systems
-- **Prompt Library** — 17 before/after prompt examples (bad vs. good)
-- **Insights** — 12 documented learnings from testing AI models
+Test Cases is a library of scenarios you keep reusing to probe models. Insights is a notebook for the stuff you figured out while testing: patterns, workarounds, and whatever surprised you enough to write down.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Next.js 16 (App Router) |
-| **Language** | TypeScript (Strict mode) |
-| **Database** | MongoDB Atlas + Mongoose |
-| **Auth** | Clerk (Google, GitHub, Email) |
-| **Styling** | Tailwind CSS + shadcn/ui |
-| **Animations** | Framer Motion |
-| **Code Execution** | Piston API + Judge0 CE |
-| **LLM Providers** | Cohere, Google Gemini, Groq, OpenRouter |
-| **Deployment** | Vercel |
-
----
-
-## Security
-
-- **AES-256-GCM** encryption for stored API keys
-- **Clerk authentication** with OAuth on all routes
-- **User data isolation** — each user sees only their own data
-- **NoSQL injection protection** with input sanitization
-- **SSRF protection** — private URL blocking, HTTPS-only
-- **CSP headers** for content security
-- **0 npm vulnerabilities**
+| Layer | Stack |
+|-------|-------|
+| Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS, Framer Motion |
+| Backend | Next.js API Routes, MongoDB Atlas, Mongoose |
+| Auth | Clerk (Google + GitHub OAuth) |
+| LLM Providers | Cohere, Google Gemini, Groq, OpenRouter |
+| Code Execution | Piston API |
+| Security | AES-256-GCM encryption for stored API keys, HSTS, CSP headers |
+| Deployment | Vercel |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas account (free tier works)
-- Clerk account (free tier works)
-
-### Installation
 ```bash
-# Clone the repo
 git clone https://github.com/Ranb972/WinQA.git
 cd WinQA
-
-# Install dependencies
 npm install
-
-# Set up environment variables
 cp .env.example .env.local
-# Fill in your MongoDB URI, Clerk keys, and (optionally) LLM API keys
-
-# Run development server
+# fill in MongoDB URI, Clerk keys, and (optionally) LLM API keys
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Environment Variables
+### Environment variables
+
 ```env
-MONGODB_URI=              # MongoDB Atlas connection string
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=  # Clerk publishable key
-CLERK_SECRET_KEY=         # Clerk secret key
-ENCRYPTION_KEY=           # 32-byte hex string for API key encryption
+MONGODB_URI=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+ENCRYPTION_KEY=               # 32-byte hex, used to encrypt stored API keys
 
-# Optional — users can provide their own keys in Settings
+# optional — users can add their own keys in Settings
 COHERE_API_KEY=
 GOOGLE_API_KEY=
 GROQ_API_KEY=
@@ -138,38 +98,14 @@ OPENROUTER_API_KEY=
 
 ---
 
-## Project Stats
+## Links
 
-| Metric | Value |
-|--------|-------|
-| Lines of code | ~17,000+ |
-| Pages | 8 |
-| API Routes | 16+ |
-| LLM Providers | 4 |
-| Battle Challenges | 9 (90+ prompts) |
-| Documented AI Bugs | 22+ |
-| Test Cases | 20 |
-| Prompt Examples | 17 |
+- **Live:** [winqa.ai](https://winqa.ai)
+- **About:** [winqa.ai/about](https://winqa.ai/about)
+- **FAQ:** [winqa.ai/faq](https://winqa.ai/faq)
 
 ---
 
 ## License
 
-This project is open source under the [MIT License](LICENSE).
-
----
-
-## Author
-
-Built by **Ran** — passionate about QA and AI.
-
-- 🌐 [winqa.ai](https://winqa.ai)
-- 💻 [GitHub](https://github.com/Ranb972)
-
----
-
-<div align="center">
-
-**If you find WinQA useful, give it a ⭐ on GitHub!**
-
-</div>
+MIT — see [LICENSE](LICENSE).
