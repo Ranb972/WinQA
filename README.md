@@ -84,16 +84,16 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Environment variables
 
 ```env
-MONGODB_URI=
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-ENCRYPTION_KEY=               # 32-byte hex, used to encrypt stored API keys
+MONGODB_URI=mongodb+srv://user:password@cluster.xxxxx.mongodb.net/winqa?retryWrites=true&w=majority
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  # 32 bytes hex, used to encrypt stored API keys — generate with `openssl rand -hex 32`
 
 # optional — users can add their own keys in Settings
-COHERE_API_KEY=
-GOOGLE_API_KEY=
-GROQ_API_KEY=
-OPENROUTER_API_KEY=
+COHERE_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GOOGLE_API_KEY=AIzaSyXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ---
