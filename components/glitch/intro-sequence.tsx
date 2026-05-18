@@ -156,7 +156,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                     <div className="border border-white/10 bg-white/[0.02] rounded-lg p-6">
                       <div className="mb-6">
                         <p className="font-mono text-white/60 text-xs mb-2 uppercase tracking-wider">Query</p>
-                        <p className="text-white text-lg sm:text-xl">
+                        <p className="text-white text-lg sm:text-xl break-words">
                           {typedQuestion}
                           {phase === 2 && typedQuestion.length < question.length && (
                             <span className="inline-block w-0.5 h-5 bg-orange-500 ml-0.5 animate-pulse" />
@@ -172,7 +172,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                             transition={{ duration: 0.3 }}
                           >
                             <p className="font-mono text-white/60 text-xs mb-2 uppercase tracking-wider">Response</p>
-                            <p className="text-white text-lg sm:text-xl">
+                            <p className="text-white text-lg sm:text-xl break-words">
                               {typedResponse.split("2 letter").map((part, i) =>
                                 i === 0 ? part : (
                                   <span key={i}>

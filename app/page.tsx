@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { SignedIn, SignedOut } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -464,13 +464,14 @@ function Dashboard() {
 
 function LandingPage() {
   const [showIntro, setShowIntro] = useState(true);
+  const handleIntroComplete = useCallback(() => setShowIntro(false), []);
 
   return (
     <div className="relative min-h-screen bg-black text-white overflow-x-hidden">
       {/* Intro sequence */}
       <AnimatePresence>
         {showIntro && (
-          <IntroSequence onComplete={() => setShowIntro(false)} />
+          <IntroSequence onComplete={handleIntroComplete} />
         )}
       </AnimatePresence>
 
