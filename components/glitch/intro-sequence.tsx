@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 interface IntroSequenceProps {
   onComplete: () => void;
@@ -18,6 +18,13 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
   const handleSkip = useCallback(() => {
     onComplete();
   }, [onComplete]);
+
+  const shouldReduceMotion = useReducedMotion();
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      onComplete();
+    }
+  }, [shouldReduceMotion, onComplete]);
 
   // Typing effect for question
   useEffect(() => {

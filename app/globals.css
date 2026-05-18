@@ -551,6 +551,20 @@ pre code {
 .wq-scroll::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.25); border-radius: 2px; }
 .wq-scroll::-webkit-scrollbar-thumb:hover { background: rgba(249, 115, 22, 0.45); }
 
+/* ========================================
+   REDUCED MOTION (WCAG 2.3.3)
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Loading dots animation */
 @keyframes dot-pulse {
   0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
