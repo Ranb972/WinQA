@@ -3,6 +3,7 @@
 import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType } from './models';
+import { isPrivateUrl } from '@/lib/security';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -244,6 +245,26 @@ export async function callCustomProvider(
       specificModel: `${provider.name}: ${provider.modelId}`,
       responseTime: 0,
       error: 'API key is required',
+    };
+  }
+
+  if (!provider.baseUrl?.startsWith('https://')) {
+    return {
+      content: '',
+      model: `custom:${provider.id}` as LLMProvider,
+      specificModel: `${provider.name}: ${provider.modelId}`,
+      responseTime: 0,
+      error: 'Custom provider baseUrl must use HTTPS',
+    };
+  }
+
+  if (isPrivateUrl(provider.baseUrl)) {
+    return {
+      content: '',
+      model: `custom:${provider.id}` as LLMProvider,
+      specificModel: `${provider.name}: ${provider.modelId}`,
+      responseTime: 0,
+      error: 'Custom provider baseUrl cannot point to private network',
     };
   }
 
