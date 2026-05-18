@@ -108,7 +108,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
               transition={{ duration: 0.5 }}
             >
               <motion.p
-                className="font-mono text-white/40 text-xs sm:text-sm tracking-[0.3em] uppercase"
+                className="font-mono text-white/60 text-xs sm:text-sm tracking-[0.3em] uppercase"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
@@ -148,7 +148,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                   >
                     <div className="border border-white/10 bg-white/[0.02] rounded-lg p-6">
                       <div className="mb-6">
-                        <p className="font-mono text-white/40 text-xs mb-2 uppercase tracking-wider">Query</p>
+                        <p className="font-mono text-white/60 text-xs mb-2 uppercase tracking-wider">Query</p>
                         <p className="text-white text-lg sm:text-xl">
                           {typedQuestion}
                           {phase === 2 && typedQuestion.length < question.length && (
@@ -164,7 +164,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.3 }}
                           >
-                            <p className="font-mono text-white/40 text-xs mb-2 uppercase tracking-wider">Response</p>
+                            <p className="font-mono text-white/60 text-xs mb-2 uppercase tracking-wider">Response</p>
                             <p className="text-white text-lg sm:text-xl">
                               {typedResponse.split("2 letter").map((part, i) =>
                                 i === 0 ? part : (
@@ -323,7 +323,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
 
         {/* Skip hint */}
         <motion.p
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-white/20 text-xs tracking-wider"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-white/50 text-xs tracking-wider"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5 }}

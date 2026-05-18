@@ -162,7 +162,7 @@ export function BattleModes() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <p className="text-white/20 font-mono text-sm">
+                  <p className="text-white/50 font-mono text-sm">
                     Select a challenge to view details
                   </p>
                 </motion.div>
@@ -181,7 +181,7 @@ export function BattleModes() {
               viewport={{ once: true }}
               transition={{ delay: categoryIndex * 0.1 }}
             >
-              <p className="font-mono text-white/30 text-xs tracking-wider uppercase mb-4">
+              <p className="font-mono text-white/60 text-xs tracking-wider uppercase mb-4">
                 {category}
               </p>
 
@@ -207,7 +207,7 @@ export function BattleModes() {
                       onClick={() => setSelectedMode(isSelected ? null : mode.id)}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className={`w-4 h-4 ${isSelected ? 'text-orange-500' : 'text-white/40'}`} />
+                        <Icon className={`w-4 h-4 ${isSelected ? 'text-orange-500' : 'text-white/60'}`} />
                         <span className={`font-medium ${isSelected ? 'text-white' : 'text-white/70'}`}>
                           {mode.name}
                         </span>

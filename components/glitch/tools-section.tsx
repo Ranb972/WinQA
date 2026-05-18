@@ -63,7 +63,7 @@ export function ToolsSection() {
           </motion.div>
 
           <motion.p
-            className="text-white/40 text-lg lg:pt-12 max-w-xl"
+            className="text-white/60 text-lg lg:pt-12 max-w-xl"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -93,7 +93,7 @@ export function ToolsSection() {
                 </div>
 
                 <h3 className="text-lg font-semibold text-white mb-2">{tool.title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{tool.description}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{tool.description}</p>
 
                 {/* Number */}
                 <span className="absolute top-4 right-4 font-mono text-xs text-white/10">

@@ -57,7 +57,7 @@ export function CTASection() {
 
           {/* Sub-text */}
           <motion.p
-            className="mt-8 text-white/30 text-sm font-mono tracking-wide"
+            className="mt-8 text-white/60 text-sm font-mono tracking-wide"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}

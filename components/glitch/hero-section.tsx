@@ -67,7 +67,7 @@ export function HeroSection() {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </motion.button>
               </SignUpButton>
-              <span className="text-white/30 font-mono text-sm">100% Free</span>
+              <span className="text-white/60 font-mono text-sm">100% Free</span>
             </div>
           </motion.div>
 
@@ -81,10 +81,10 @@ export function HeroSection() {
             <div className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden">
               {/* Header bar */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
-                <span className="font-mono text-white/40 text-xs tracking-wider uppercase">System Status</span>
+                <span className="font-mono text-white/60 text-xs tracking-wider uppercase">System Status</span>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-orange-500" />
-                  <span className="text-white/40 text-xs font-mono">ONLINE</span>
+                  <span className="text-white/60 text-xs font-mono">ONLINE</span>
                 </div>
               </div>
 
@@ -99,7 +99,7 @@ export function HeroSection() {
 
                 {/* Providers list */}
                 <div>
-                  <p className="font-mono text-white/30 text-xs mb-4 tracking-wider uppercase">Connected Providers</p>
+                  <p className="font-mono text-white/60 text-xs mb-4 tracking-wider uppercase">Connected Providers</p>
                   <div className="space-y-2">
                     {['Cohere', 'Gemini', 'Groq', 'OpenRouter'].map((provider, i) => (
                       <motion.div
@@ -122,7 +122,7 @@ export function HeroSection() {
                     <span className="px-3 py-1 bg-orange-500/10 border border-orange-500/20 rounded text-orange-500 text-xs font-mono">
                       FREE
                     </span>
-                    <span className="text-white/30 text-sm">No credit card required</span>
+                    <span className="text-white/60 text-sm">No credit card required</span>
                   </div>
                 </div>
               </div>
@@ -143,7 +143,7 @@ export function HeroSection() {
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="p-4 bg-white/[0.02] border border-white/[0.04] rounded">
-      <p className="font-mono text-white/30 text-xs mb-2 uppercase tracking-wider">{label}</p>
+      <p className="font-mono text-white/60 text-xs mb-2 uppercase tracking-wider">{label}</p>
       <p className="text-4xl font-bold text-white tracking-tight">{value}</p>
     </div>
   );
