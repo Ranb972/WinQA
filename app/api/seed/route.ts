@@ -12,6 +12,10 @@ import {
   seedBugReports,
 } from '@/lib/seedData';
 
+// Admin allowlist for destructive reseed operations.
+// Parsed once at module load; empty list means no one can call PUT (fail-closed).
+const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+
 // GET - Check seeding status (scoped to authenticated user)
 export async function GET() {
   try {
@@ -61,6 +65,13 @@ export async function PUT() {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!ADMIN_USER_IDS.includes(userId)) {
+      return NextResponse.json(
+        { error: 'Forbidden: admin access required' },
+        { status: 403 }
+      );
     }
 
     await dbConnect();
