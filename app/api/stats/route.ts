@@ -25,7 +25,7 @@ export async function GET() {
       PromptLibrary.countDocuments(visibleFilter),
       Insight.countDocuments(visibleFilter),
       BugReport.countDocuments({ ...visibleFilter, status: 'Resolved' }),
-      Battle.countDocuments({ user_id: userId }),
+      Battle.countDocuments({ odlUserId: userId }),
     ]);
 
     return NextResponse.json({
