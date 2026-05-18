@@ -26,28 +26,28 @@ export function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0">
             <Link
               href="/about"
-              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               About
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/faq"
-              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               FAQ
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/privacy"
-              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               Privacy
             </Link>
             <span className="text-white/20">|</span>
             <Link
               href="/terms"
-              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               Terms
             </Link>
@@ -56,7 +56,7 @@ export function Footer() {
               href="https://winqa.ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono"
+              className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               winqa.ai
             </a>

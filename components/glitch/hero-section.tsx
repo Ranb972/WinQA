@@ -59,7 +59,7 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center gap-6">
               <SignUpButton mode="modal">
                 <motion.button
-                  className="group inline-flex items-center gap-3 px-8 py-4 bg-orange-500 text-black font-semibold rounded-lg hover:bg-orange-400 transition-colors"
+                  className="group inline-flex items-center gap-3 px-8 py-4 bg-orange-500 text-black font-semibold rounded-lg hover:bg-orange-400 transition-colors focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

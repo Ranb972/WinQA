@@ -194,7 +194,7 @@ export function BattleModes() {
                     <motion.button
                       key={mode.id}
                       className={`
-                        relative text-left p-4 rounded-lg border transition-all duration-200
+                        relative text-left p-4 rounded-lg border transition-all duration-200 focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2
                         ${isSelected
                           ? 'bg-orange-500/10 border-orange-500/40'
                           : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03]'
