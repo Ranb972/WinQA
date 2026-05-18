@@ -26,65 +26,78 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
     }
   }, [shouldReduceMotion, onComplete]);
 
-  // Typing effect for question
+  // Typing effect for question — advances to Phase 3 on completion (with pause)
   useEffect(() => {
     if (phase === 2) {
-      let i = 0;
+      const startTime = Date.now();
+      let advanceTimer: ReturnType<typeof setTimeout> | undefined;
+      // Safety net: hard ceiling at 5s in case the interval never fires
+      const safetyTimer = setTimeout(() => setPhase(3), 5000);
       const interval = setInterval(() => {
-        if (i <= question.length) {
-          setTypedQuestion(question.slice(0, i));
-          i++;
-        } else {
+        const elapsed = Date.now() - startTime;
+        const targetLength = Math.min(question.length, Math.floor(elapsed / 20));
+        setTypedQuestion(question.slice(0, targetLength));
+        if (targetLength >= question.length) {
           clearInterval(interval);
+          clearTimeout(safetyTimer);
+          advanceTimer = setTimeout(() => setPhase(3), 600);
         }
-      }, 35);
-      return () => clearInterval(interval);
+      }, 20);
+      return () => {
+        clearInterval(interval);
+        clearTimeout(safetyTimer);
+        if (advanceTimer) clearTimeout(advanceTimer);
+      };
     }
   }, [phase]);
 
-  // Typing effect for response
+  // Typing effect for response — advances to Phase 4 on completion (with pause)
   useEffect(() => {
     if (phase === 3) {
-      let i = 0;
+      const startTime = Date.now();
+      let advanceTimer: ReturnType<typeof setTimeout> | undefined;
+      // Safety net: hard ceiling at 5s in case the interval never fires
+      const safetyTimer = setTimeout(() => setPhase(4), 5000);
       const interval = setInterval(() => {
-        if (i <= response.length) {
-          setTypedResponse(response.slice(0, i));
-          i++;
-        } else {
+        const elapsed = Date.now() - startTime;
+        const targetLength = Math.min(response.length, Math.floor(elapsed / 15));
+        setTypedResponse(response.slice(0, targetLength));
+        if (targetLength >= response.length) {
           clearInterval(interval);
+          clearTimeout(safetyTimer);
+          advanceTimer = setTimeout(() => setPhase(4), 500);
         }
-      }, 25);
-      return () => clearInterval(interval);
+      }, 15);
+      return () => {
+        clearInterval(interval);
+        clearTimeout(safetyTimer);
+        if (advanceTimer) clearTimeout(advanceTimer);
+      };
     }
   }, [phase]);
 
+  // Phase progression for non-typewriter-gated transitions.
+  // Phase 2->3 and 3->4 are advanced by the typewriter useEffects above
+  // when typing completes (plus a short pause).
   useEffect(() => {
-    const timings = [
-      2500, // Phase 0->1: "SUBJECT UNDER EXAMINATION"
-      1800, // Phase 1->2: Model name slides up
-      2200, // Phase 2->3: Question types out
-      2000, // Phase 3->4: AI responds
-      1200, // Phase 4->5: "ANALYZING RESPONSE..."
-      1800, // Phase 5->6: "WRONG" stamps down
-      2000, // Phase 6->7: WinQA reveal
-    ];
-
-    let elapsed = 0;
-
-    const timers = timings.map((delay, index) => {
-      elapsed += delay;
-      return setTimeout(() => {
-        setPhase(index + 1);
-        if (index + 1 >= 7) {
-          setTimeout(onComplete, 2500);
-        }
-      }, elapsed);
-    });
-
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (phase === 0) {
+      timer = setTimeout(() => setPhase(1), 2500);   // "SUBJECT UNDER EXAMINATION"
+    } else if (phase === 1) {
+      timer = setTimeout(() => setPhase(2), 1800);   // Model name slides up
+    } else if (phase === 4) {
+      timer = setTimeout(() => setPhase(5), 1200);   // "ANALYZING RESPONSE..."
+    } else if (phase === 5) {
+      timer = setTimeout(() => setPhase(6), 1800);   // "WRONG" stamps down
+    } else if (phase === 6) {
+      timer = setTimeout(() => setPhase(7), 2000);   // WinQA reveal
+    } else if (phase === 7) {
+      timer = setTimeout(onComplete, 2500);          // Hand off to landing
+    }
     return () => {
-      timers.forEach(clearTimeout);
+      if (timer) clearTimeout(timer);
     };
-  }, [onComplete]);
+  }, [phase, onComplete]);
 
   return (
     <AnimatePresence>
