@@ -15,7 +15,7 @@ export interface CommonProviderSuggestion {
 
 export const PROVIDER_MODELS: Record<string, ModelDefinition[]> = {
   cohere: [
-    { id: 'command-a-03-2025', name: 'Command A (Latest)', default: true },
+    { id: 'command-r-plus-08-2024', name: 'Command A (Latest)', default: true },
     { id: 'command-r-plus', name: 'Command R+' },
     { id: 'command-r', name: 'Command R' },
   ],

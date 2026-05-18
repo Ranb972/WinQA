@@ -28,7 +28,7 @@ export const crossProviderFallbackOrder: LLMProvider[] = ['groq', 'gemini', 'ope
 
 // Default model for each provider
 export const defaultModels: Record<LLMProvider, SpecificModel> = {
-  cohere: 'command-a-03-2025',
+  cohere: 'command-r-plus-08-2024',
   gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'nvidia/nemotron-3-nano-30b-a3b:free',
