@@ -15,6 +15,18 @@ export function friendlyErrorMessage(raw: string | undefined): string | undefine
     return 'This model took too long to respond. Try again.';
   }
 
+  if (lower.includes('401') || lower.includes('403') || lower.includes('invalid api key') || lower.includes('unauthorized') || lower.includes('forbidden')) {
+    return 'API key invalid or revoked. Check your provider settings.';
+  }
+
+  if (lower.includes('404') || lower.includes('model not found') || lower.includes('not found')) {
+    return 'The selected model is unavailable. Try another one.';
+  }
+
+  if (lower.includes('402') || lower.includes('quota') || lower.includes('insufficient')) {
+    return 'Provider quota exceeded. Try later or use a different provider.';
+  }
+
   if (lower.includes('503') || lower.includes('unavailable') || lower.includes('overloaded') || lower.includes('500')) {
     return 'This model is temporarily unavailable. Try a different one.';
   }
