@@ -18,6 +18,8 @@ WinQA is a free, web-based AI testing playground that lets developers and QA pro
 ## Pages
 
 - [Homepage](https://winqa.ai): Overview of all platform capabilities
+- [About](https://winqa.ai/about): AI testing playground for comparing LLM models side-by-side, running battle challenges, testing code, documenting failures, and building prompt engineering knowledge
+- [FAQ](https://winqa.ai/faq): Common questions about WinQA — what it is, how it works, pricing, supported AI models, data privacy, and how to get started
 - [Privacy Policy](https://winqa.ai/privacy): How WinQA handles your data
 - [Terms of Service](https://winqa.ai/terms): Usage terms and conditions
 - [Sitemap](https://winqa.ai/sitemap.xml): Complete page index
