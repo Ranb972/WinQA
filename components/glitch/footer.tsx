@@ -18,7 +18,7 @@ export function Footer() {
             <span className="font-heading text-lg font-bold text-white">
               Win<span className="text-orange-500">QA</span>
             </span>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20" aria-hidden="true">|</span>
             <span className="text-white/60 text-sm">AI Testing Playground</span>
           </div>
 
@@ -30,28 +30,28 @@ export function Footer() {
             >
               About
             </Link>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20" aria-hidden="true">|</span>
             <Link
               href="/faq"
               className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               FAQ
             </Link>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20" aria-hidden="true">|</span>
             <Link
               href="/privacy"
               className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               Privacy
             </Link>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20" aria-hidden="true">|</span>
             <Link
               href="/terms"
               className="inline-flex items-center min-h-[44px] px-1 text-white/60 text-sm hover:text-orange-500 transition-colors font-mono rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2"
             >
               Terms
             </Link>
-            <span className="text-white/20">·</span>
+            <span className="text-white/20" aria-hidden="true">·</span>
             <a
               href="https://winqa.ai"
               target="_blank"

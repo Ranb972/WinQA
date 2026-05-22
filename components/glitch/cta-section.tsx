@@ -32,6 +32,7 @@ export function CTASection() {
             </h2>
             <h2
               className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-[-0.03em] leading-[1.1] text-orange-500 mt-2 pointer-events-none select-none"
+              aria-hidden="true"
               style={{
                 transform: 'scaleY(-1)',
                 filter: 'blur(0.5px)',

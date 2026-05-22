@@ -193,6 +193,7 @@ export function BattleModes() {
                   return (
                     <motion.button
                       key={mode.id}
+                      aria-pressed={isSelected}
                       className={`
                         relative text-left p-4 rounded-lg border transition-all duration-200 focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2
                         ${isSelected

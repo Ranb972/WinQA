@@ -6,7 +6,7 @@ import { SignUpButton } from "@clerk/nextjs";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center px-6 py-24 overflow-hidden">
+    <section className="relative min-h-[100svh] flex items-center px-6 py-24 overflow-hidden">
       {/* Subtle grid background */}
       <div
         className="absolute inset-0 opacity-[0.03]"

@@ -106,6 +106,8 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
         onClick={handleSkip}
+        role="button"
+        aria-label="Skip intro"
       >
         {/* Film grain overlay */}
         <div
@@ -241,6 +243,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                   <motion.span
                     className="absolute text-[80px] sm:text-[140px] md:text-[180px] font-bold tracking-tighter text-red-500/70"
                     style={{ transform: 'translate(-6px, -3px)' }}
+                    aria-hidden="true"
                     initial={{ opacity: 0, scale: 1.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
@@ -250,6 +253,7 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
                   <motion.span
                     className="absolute text-[80px] sm:text-[140px] md:text-[180px] font-bold tracking-tighter text-blue-500/70"
                     style={{ transform: 'translate(6px, 3px)' }}
+                    aria-hidden="true"
                     initial={{ opacity: 0, scale: 1.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
