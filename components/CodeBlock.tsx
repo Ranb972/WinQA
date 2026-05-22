@@ -81,7 +81,7 @@ export default function CodeBlock({
 
       const data: CodeExecutionResult = await response.json();
       setResult(data);
-    } catch (error) {
+    } catch {
       setResult({
         success: false,
         error: 'Network error. Please try again.',

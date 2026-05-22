@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Trash2, ChevronDown, ChevronUp, Filter, Bug, Search, Plus, AlertTriangle, FileText } from 'lucide-react';
+import { Trash2, ChevronDown, Filter, Bug, Search, Plus, AlertTriangle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,

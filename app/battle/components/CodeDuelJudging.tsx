@@ -137,7 +137,6 @@ export default function CodeDuelJudging({
   setWinner,
   onSubmitVote,
   saveStatus,
-  challengeName,
   challengeDescription,
   prompt,
   explanation,

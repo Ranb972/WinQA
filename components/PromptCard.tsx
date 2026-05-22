@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Heart, Copy, Check, Pencil, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 

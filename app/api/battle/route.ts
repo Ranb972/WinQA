@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Process results
-    const responses = results.map((result, i) => {
+    const responses = results.map((result) => {
       if (result.status === 'fulfilled') {
         return {
           content: result.value.content,

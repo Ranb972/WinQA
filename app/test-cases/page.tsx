@@ -39,7 +39,7 @@ export default function TestCasesPage() {
     expected_outcome: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [viewingTestCase, setViewingTestCase] = useState<TestCase | null>(null);
+  const [viewingTestCase] = useState<TestCase | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 

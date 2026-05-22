@@ -9,9 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { LLMProvider, providerDisplayNames } from '@/lib/llm';
+import { LLMProvider } from '@/lib/llm';
 import { CustomProvider } from '@/lib/custom-providers';
-import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 
 export type DebugMode = 'summary' | 'detailed';
 export type AnalysisType = 'debug' | 'success';

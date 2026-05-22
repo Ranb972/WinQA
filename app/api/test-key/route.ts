@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch {
     // Never log the API key in error messages
     return NextResponse.json(
       { valid: false, error: 'Something went wrong. Please try again.' },

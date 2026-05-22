@@ -13,13 +13,9 @@ import {
   ChevronUp,
   Crown,
   Swords,
-  Eye,
   EyeOff,
   Sparkles,
   RotateCcw,
-  ArrowRight,
-  Zap,
-  Shield,
   ScrollText,
   User,
 } from 'lucide-react';
@@ -122,23 +118,6 @@ function getDisplayName(provider: string, model: string): string {
   const found = providerModels?.find((m) => m.id === model);
   return found?.name || model || modelDisplayNames[p] || provider;
 }
-
-const fetchWithTimeout = async (
-  url: string,
-  options: RequestInit,
-  timeout = 30000
-): Promise<Response> => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
-  }
-};
 
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
 
@@ -262,7 +241,7 @@ function FighterCard({
 // --- Component ---
 
 export default function BattlePage() {
-  const { user } = useUser();
+  useUser();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<ActiveTab>('battle');
@@ -348,8 +327,9 @@ export default function BattlePage() {
   const fetchSingleResponse = async (
     fighter: FighterConfig,
     prompt: string,
-    idx: number
+    _idx: number
   ): Promise<BattleResponse> => {
+    void _idx; // Param required by call sites but unused inside this function
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 

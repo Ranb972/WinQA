@@ -9,7 +9,6 @@ import {
   Loader2,
   Check,
   X,
-  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomProvider } from '@/lib/custom-providers';

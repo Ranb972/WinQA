@@ -16,7 +16,6 @@ import {
   Check,
   Plus,
   X,
-  History,
   Target,
   Hash,
   Clock,

@@ -28,6 +28,7 @@ export async function GET() {
     const cleanDoc = (doc: any) => {
       const { _id, user_id, __v, ...rest } = doc;
       void user_id; // Intentionally removed from export
+      void __v; // Intentionally removed from export
       return { id: _id?.toString(), ...rest };
     };
 

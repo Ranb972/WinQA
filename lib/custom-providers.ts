@@ -1,7 +1,7 @@
 // Custom providers storage with encryption for API keys
 // Uses the same encryption pattern as api-keys.ts
 
-import { encryptApiKey, decryptApiKey, EncryptedData, isEncryptedFormat } from './crypto';
+import { encryptApiKey, decryptApiKey, EncryptedData } from './crypto';
 
 const STORAGE_KEY = 'winqa_custom_providers';
 export const MAX_CUSTOM_PROVIDERS = 6;

@@ -2,7 +2,7 @@ import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
 import { groqChat } from './groq';
 import { openrouterChat } from './openrouter';
-import { chatWithFallback, specificModelDisplayNames, fallbackChains, defaultModels } from './fallback';
+import { chatWithFallback } from './fallback';
 import {
   ChatMessage,
   ChatResponse,

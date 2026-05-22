@@ -233,7 +233,6 @@ export default function SettingsPage() {
   };
 
   const hasChanges = JSON.stringify(keys) !== JSON.stringify(savedKeys);
-  const hasAnyKey = Object.values(savedKeys).some((k) => k && k.trim());
 
   const handleModelChange = (provider: LLMProvider, modelId: string) => {
     setModelPreference(provider, modelId);

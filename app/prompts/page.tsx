@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library, Copy, Check, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -51,7 +50,7 @@ function PromptsPageContent() {
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paramsProcessed, setParamsProcessed] = useState(false);
-  const [viewingPrompt, setViewingPrompt] = useState<Prompt | null>(null);
+  const [viewingPrompt] = useState<Prompt | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [copiedStates, setCopiedStates] = useState<Record<string, 'bad' | 'good' | null>>({});

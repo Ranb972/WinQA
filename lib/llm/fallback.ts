@@ -3,7 +3,6 @@ import {
   ChatResponse,
   LLMProvider,
   SpecificModel,
-  FallbackInfo,
   CohereModel,
   GeminiModel,
   GroqModel,
@@ -157,7 +156,7 @@ export async function chatWithFallback(
   const startModel = (specificModel as SpecificModel) || defaultModels[provider];
 
   // Build fallback sequence, starting from the specified model
-  let fallbackSequence = buildFallbackSequence(provider, enableCrossProviderFallback);
+  const fallbackSequence = buildFallbackSequence(provider, enableCrossProviderFallback);
 
   // If a specific model was requested, reorder the sequence to start with it
   if (specificModel) {
