@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, TestTube2, Play, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -46,11 +46,7 @@ export default function TestCasesPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchTestCases();
-  }, []);
-
-  const fetchTestCases = async () => {
+  const fetchTestCases = useCallback(async () => {
     try {
       const response = await fetch('/api/test-cases');
       const data = await response.json();
@@ -71,7 +67,11 @@ export default function TestCasesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchTestCases();
+  }, [fetchTestCases]);
 
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.initial_prompt.trim()) {

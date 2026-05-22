@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trash2, ChevronDown, Filter, Bug, Search, Plus, AlertTriangle, FileText } from 'lucide-react';
@@ -87,10 +87,6 @@ function BugsPageContent() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    fetchBugs();
-  }, []);
-
   // Handle URL parameters
   useEffect(() => {
     if (paramsProcessed) return;
@@ -109,7 +105,7 @@ function BugsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchBugs = async () => {
+  const fetchBugs = useCallback(async () => {
     try {
       const response = await fetch('/api/bugs');
       const data = await response.json();
@@ -130,7 +126,11 @@ function BugsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchBugs();
+  }, [fetchBugs]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this bug report?')) return;

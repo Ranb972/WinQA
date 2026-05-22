@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library, Copy, Check, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -57,10 +57,6 @@ function PromptsPageContent() {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPrompts();
-  }, []);
-
   // Handle URL parameters
   useEffect(() => {
     if (paramsProcessed) return;
@@ -79,7 +75,7 @@ function PromptsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchPrompts = async () => {
+  const fetchPrompts = useCallback(async () => {
     try {
       const response = await fetch('/api/prompts');
       const data = await response.json();
@@ -100,7 +96,11 @@ function PromptsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, [fetchPrompts]);
 
   const handleSubmit = async () => {
     if (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Lightbulb, Search, ChevronDown } from 'lucide-react';
@@ -48,10 +48,6 @@ function InsightsPageContent() {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchInsights();
-  }, []);
-
   // Handle URL parameters
   useEffect(() => {
     if (paramsProcessed) return;
@@ -65,7 +61,7 @@ function InsightsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     try {
       const response = await fetch('/api/insights');
       const data = await response.json();
@@ -86,7 +82,11 @@ function InsightsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
 
   const toggleCard = (id: string) => {
     setExpandedCards((prev) => {
