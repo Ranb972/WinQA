@@ -7,6 +7,10 @@ import {
   ChatMessage,
   ChatResponse,
   LLMProvider,
+  CohereModel,
+  GeminiModel,
+  GroqModel,
+  OpenRouterModel,
   MultiModelRequest,
   MultiModelResponse,
   CustomApiKeys,
@@ -42,13 +46,13 @@ export async function chat(
   // Direct call without fallback
   switch (model) {
     case 'cohere':
-      return cohereChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.cohere);
+      return cohereChat(messages, temperature, maxTokens, specificModel as CohereModel | undefined, customApiKeys?.cohere);
     case 'gemini':
-      return geminiChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.gemini);
+      return geminiChat(messages, temperature, maxTokens, specificModel as GeminiModel | undefined, customApiKeys?.gemini);
     case 'groq':
-      return groqChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.groq);
+      return groqChat(messages, temperature, maxTokens, specificModel as GroqModel | undefined, customApiKeys?.groq);
     case 'openrouter':
-      return openrouterChat(messages, temperature, maxTokens, specificModel as any, customApiKeys?.openrouter);
+      return openrouterChat(messages, temperature, maxTokens, specificModel as OpenRouterModel | undefined, customApiKeys?.openrouter);
     default:
       return {
         content: '',
