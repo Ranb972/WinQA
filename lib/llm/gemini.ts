@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { ChatMessage, ChatResponse, GeminiModel } from './types';
 
 // Cache clients by API key to avoid creating new instances for each request
-const clientCache = new Map<string, GoogleGenerativeAI>();
+const clientCache = new Map<string, GoogleGenAI>();
 
-function getGenAI(customApiKey?: string): GoogleGenerativeAI {
+function getGenAI(customApiKey?: string): GoogleGenAI {
   const apiKey = customApiKey || process.env.GOOGLE_GEMINI_API_KEY || '';
 
   // Return cached client if exists
@@ -13,7 +13,7 @@ function getGenAI(customApiKey?: string): GoogleGenerativeAI {
   }
 
   // Create and cache new client
-  const client = new GoogleGenerativeAI(apiKey);
+  const client = new GoogleGenAI({ apiKey });
   clientCache.set(apiKey, client);
   return client;
 }
@@ -29,32 +29,27 @@ export async function geminiChat(
   const modelToUse = modelOverride || 'gemini-2.5-flash';
 
   try {
-    const model = getGenAI(customApiKey).getGenerativeModel({
+    const ai = getGenAI(customApiKey);
+
+    // Convert messages to Gemini contents format
+    const contents = messages.map((msg) => ({
+      role: msg.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: msg.content }],
+    }));
+
+    const response = await ai.models.generateContent({
       model: modelToUse,
-      generationConfig: {
+      contents,
+      config: {
         temperature,
         maxOutputTokens: maxTokens,
       },
     });
 
-    // Convert messages to Gemini format
-    const history = messages.slice(0, -1).map((msg) => ({
-      role: msg.role === 'assistant' ? 'model' as const : 'user' as const,
-      parts: [{ text: msg.content }],
-    }));
-
-    const lastMessage = messages[messages.length - 1];
-
-    const chat = model.startChat({
-      history: history.length > 0 ? history : undefined,
-    });
-
-    const result = await chat.sendMessage(lastMessage.content);
-    const response = await result.response;
     const responseTime = Date.now() - startTime;
 
     return {
-      content: response.text(),
+      content: response.text ?? '',
       model: 'gemini',
       specificModel: modelToUse,
       responseTime,

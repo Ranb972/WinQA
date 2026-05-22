@@ -45,14 +45,13 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
  */
 async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
   try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      generationConfig: { maxOutputTokens: 1 },
+      contents: 'Hi',
+      config: { maxOutputTokens: 1 },
     });
-
-    await model.generateContent('Hi');
 
     return { valid: true };
   } catch (error) {
