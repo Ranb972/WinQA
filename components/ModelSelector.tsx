@@ -60,6 +60,86 @@ const modelDescriptions: Record<string, string> = {
   'tngtech/deepseek-r1t2-chimera:free': 'DeepSeek R1T2 (free)',
 };
 
+const ModelGearPopover = ({
+  provider,
+  modelPreferences,
+  onModelPreferenceChange,
+}: {
+  provider: LLMProvider;
+  modelPreferences: Record<LLMProvider, SpecificModel>;
+  onModelPreferenceChange?: (provider: LLMProvider, model: SpecificModel) => void;
+}) => {
+  const availableModels = fallbackChains[provider] || [];
+  const currentModel = modelPreferences[provider] || availableModels[0];
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className="p-2.5 sm:p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded hover:bg-white/[0.06] transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Settings className="h-3 w-3 text-slate-500 hover:text-slate-300" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-72 p-3 bg-white/[0.02] border-white/[0.06]"
+        align="start"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-slate-200">
+            Select {modelDisplayNames[provider]} Model
+          </div>
+          <div className="space-y-1">
+            {availableModels.map((model) => {
+              const isSelected = currentModel === model;
+              const displayName = specificModelDisplayNames[model] || model;
+              const description = modelDescriptions[model] || '';
+              const isDefault = model === availableModels[0];
+
+              return (
+                <button
+                  key={model}
+                  onClick={() => onModelPreferenceChange?.(provider, model)}
+                  className={cn(
+                    'w-full text-left px-3 py-2 rounded-lg transition-colors',
+                    isSelected
+                      ? 'bg-orange-500/20 border border-orange-500/30'
+                      : 'hover:bg-white/[0.06]'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'w-3 h-3 rounded-full border-2',
+                        isSelected
+                          ? 'border-orange-500 bg-orange-500'
+                          : 'border-slate-500'
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-slate-200 truncate">
+                        {displayName}
+                        {isDefault && (
+                          <span className="ml-2 text-xs text-slate-500">(default)</span>
+                        )}
+                      </div>
+                      {description && (
+                        <div className="text-xs text-slate-500">{description}</div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 export default function ModelSelector({
   mode,
   selectedModel = 'cohere',
@@ -93,78 +173,6 @@ export default function ModelSelector({
     } else {
       onCustomProvidersChange?.(selectedCustomProviders.filter((i) => i !== id));
     }
-  };
-
-  const ModelGearPopover = ({ provider }: { provider: LLMProvider }) => {
-    const availableModels = fallbackChains[provider] || [];
-    const currentModel = modelPreferences[provider] || availableModels[0];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            className="p-2.5 sm:p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded hover:bg-white/[0.06] transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Settings className="h-3 w-3 text-slate-500 hover:text-slate-300" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-72 p-3 bg-white/[0.02] border-white/[0.06]"
-          align="start"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-slate-200">
-              Select {modelDisplayNames[provider]} Model
-            </div>
-            <div className="space-y-1">
-              {availableModels.map((model) => {
-                const isSelected = currentModel === model;
-                const displayName = specificModelDisplayNames[model] || model;
-                const description = modelDescriptions[model] || '';
-                const isDefault = model === availableModels[0];
-
-                return (
-                  <button
-                    key={model}
-                    onClick={() => onModelPreferenceChange?.(provider, model)}
-                    className={cn(
-                      'w-full text-left px-3 py-2 rounded-lg transition-colors',
-                      isSelected
-                        ? 'bg-orange-500/20 border border-orange-500/30'
-                        : 'hover:bg-white/[0.06]'
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          'w-3 h-3 rounded-full border-2',
-                          isSelected
-                            ? 'border-orange-500 bg-orange-500'
-                            : 'border-slate-500'
-                        )}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-slate-200 truncate">
-                          {displayName}
-                          {isDefault && (
-                            <span className="ml-2 text-xs text-slate-500">(default)</span>
-                          )}
-                        </div>
-                        {description && (
-                          <div className="text-xs text-slate-500">{description}</div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
   };
 
   return (
@@ -216,7 +224,11 @@ export default function ModelSelector({
               ))}
             </SelectContent>
           </Select>
-          <ModelGearPopover provider={selectedModel} />
+          <ModelGearPopover
+            provider={selectedModel}
+            modelPreferences={modelPreferences}
+            onModelPreferenceChange={onModelPreferenceChange}
+          />
         </div>
       )}
 
@@ -243,7 +255,11 @@ export default function ModelSelector({
                   {modelDisplayNames[provider]}
                 </span>
               </label>
-              <ModelGearPopover provider={provider} />
+              <ModelGearPopover
+                provider={provider}
+                modelPreferences={modelPreferences}
+                onModelPreferenceChange={onModelPreferenceChange}
+              />
             </div>
           ))}
 

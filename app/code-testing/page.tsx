@@ -116,6 +116,13 @@ export default function CodeTestingPage() {
   const [debugSelectedModel, setDebugSelectedModel] = useState<string>('groq');
   const [debugMode, setDebugMode] = useState<DebugMode>('summary');
 
+  // Drives the "X min ago" labels in the code history (refreshes every 60s).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     async function loadData() {
       const keys = await getApiKeys(user?.id);
@@ -244,7 +251,7 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
   const handleUseFromHistory = (item: HistoryItem) => { setCode(item.code); };
 
   const getRelativeTime = (timestamp: number): string => {
-    const diff = Date.now() - timestamp;
+    const diff = now - timestamp;
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return 'just now';
     if (minutes === 1) return '1 min ago';

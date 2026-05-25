@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { LLMProvider } from '@/lib/llm/types';
@@ -49,8 +49,8 @@ function getDisplayName(provider: string, model: string): string {
 // --- Sparkle Particle ---
 
 function SparkleParticle({ delay }: { delay: number }) {
-  const x = Math.random() * 100 - 50;
-  const y = Math.random() * 60 - 30;
+  const x = useMemo(() => Math.random() * 100 - 50, []);
+  const y = useMemo(() => Math.random() * 60 - 30, []);
   return (
     <motion.div
       className="absolute"
