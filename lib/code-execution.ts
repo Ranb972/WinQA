@@ -117,6 +117,13 @@ export function requiresDevEnvironment(code: string): boolean {
 /**
  * Wrap JS code in minimal HTML for iframe preview
  * Does NOT create any elements - lets the code create what it needs
+ *
+ * Security note: user code is interpolated into a <script> block via template
+ * literal. The </script> escape vector is mitigated by InteractivePreview's
+ * strict sandbox (no allow-same-origin) — escaped scripts run in an opaque
+ * origin without access to the parent's cookies or storage. If a feature
+ * starts rendering one user's code in another user's context (e.g., shared
+ * snippets), revisit and migrate to base64-encoded injection.
  */
 export function wrapJSInHTML(code: string): string {
   return `<!DOCTYPE html>

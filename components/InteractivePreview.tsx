@@ -102,7 +102,7 @@ export default function InteractivePreview({ code, originalCode, isWrapped }: In
             key={key}
             ref={iframeRef}
             srcDoc={code}
-            sandbox="allow-scripts allow-modals allow-same-origin"
+            sandbox="allow-scripts allow-modals"
             className="w-full h-full"
             style={{ border: 'none', background: '#1e293b' }}
             title="Code Preview"
