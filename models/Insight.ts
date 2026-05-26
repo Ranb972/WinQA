@@ -51,6 +51,8 @@ InsightSchema.pre('save', function () {
   this.updated_at = new Date();
 });
 
+InsightSchema.index({ is_public: 1, updated_at: -1 });
+
 const Insight: Model<IInsight> =
   mongoose.models.Insight || mongoose.model<IInsight>('Insight', InsightSchema);
 

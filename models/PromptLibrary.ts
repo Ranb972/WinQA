@@ -52,6 +52,8 @@ const PromptLibrarySchema = new Schema<IPromptLibrary>({
   },
 });
 
+PromptLibrarySchema.index({ is_public: 1, created_at: -1 });
+
 const PromptLibrary: Model<IPromptLibrary> =
   mongoose.models.PromptLibrary ||
   mongoose.model<IPromptLibrary>('PromptLibrary', PromptLibrarySchema);

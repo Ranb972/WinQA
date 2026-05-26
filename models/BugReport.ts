@@ -63,6 +63,8 @@ const BugReportSchema = new Schema<IBugReport>({
   },
 });
 
+BugReportSchema.index({ is_public: 1, created_at: -1 });
+
 const BugReport: Model<IBugReport> =
   mongoose.models.BugReport || mongoose.model<IBugReport>('BugReport', BugReportSchema);
 

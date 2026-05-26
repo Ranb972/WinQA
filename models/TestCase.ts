@@ -50,6 +50,8 @@ const TestCaseSchema = new Schema<ITestCase>({
   },
 });
 
+TestCaseSchema.index({ is_public: 1, created_at: -1 });
+
 const TestCase: Model<ITestCase> =
   mongoose.models.TestCase || mongoose.model<ITestCase>('TestCase', TestCaseSchema);
 
