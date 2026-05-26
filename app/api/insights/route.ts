@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import Insight from '@/models/Insight';
-import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
+import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
 
 const ALLOWED_PUT_FIELDS = ['title', 'content', 'tags', 'category'];
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, unknown> = {
       $or: [{ user_id: userId }, { is_public: true }],
     };
-    if (tag) filter.tags = sanitizeQueryParam(tag);
+    if (tag) filter.tags = stripMongoOperators(tag);
 
     const insights = await Insight.find(filter).sort({ updated_at: -1 });
 

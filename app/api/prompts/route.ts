@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import PromptLibrary from '@/models/PromptLibrary';
 import UserFavorite from '@/models/UserFavorite';
-import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
+import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
 
 const ALLOWED_PUT_FIELDS = ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags'];
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, unknown> = {
       $or: [{ user_id: userId }, { is_public: true }],
     };
-    if (tag) filter.tags = sanitizeQueryParam(tag);
+    if (tag) filter.tags = stripMongoOperators(tag);
 
     // If filtering by favorites, restrict to user's favorited prompt IDs
     if (favorite === 'true') {

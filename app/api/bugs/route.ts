@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import BugReport from '@/models/BugReport';
-import { sanitizeQueryParam, pickAllowedFields } from '@/lib/security';
+import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
 
 const ALLOWED_PUT_FIELDS = ['prompt_context', 'model_response', 'issue_type', 'severity', 'user_notes', 'status'];
 
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
     // Show user's own content + all public content
     const ownershipFilter = { $or: [{ user_id: userId }, { is_public: true }] };
     const filter: Record<string, unknown> = { ...ownershipFilter };
-    if (status) filter.status = sanitizeQueryParam(status);
-    if (model) filter.model_used = sanitizeQueryParam(model);
-    if (issueType) filter.issue_type = sanitizeQueryParam(issueType);
+    if (status) filter.status = stripMongoOperators(status);
+    if (model) filter.model_used = stripMongoOperators(model);
+    if (issueType) filter.issue_type = stripMongoOperators(issueType);
 
     const bugs = await BugReport.find(filter).sort({ created_at: -1 });
 

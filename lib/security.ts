@@ -2,8 +2,16 @@
  * Shared security utilities for API routes.
  */
 
-/** Sanitize a query param to prevent NoSQL injection (strip $ and . prefixes). */
-export function sanitizeQueryParam(value: string): string {
+/**
+ * Strip Mongo operator-syntax characters ($ prefix and any . in the string)
+ * from a query-param value before placing it into a filter object.
+ *
+ * This is NOT a complete NoSQL-injection defense — the real protection is
+ * Mongoose schema coercion, which casts incoming values to the field's
+ * declared type. This helper just removes the cheapest injection vectors
+ * (leading $ to switch operators, . to traverse subdocuments).
+ */
+export function stripMongoOperators(value: string): string {
   return value.replace(/^\$/, '').replace(/\./g, '');
 }
 
