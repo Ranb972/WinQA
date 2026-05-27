@@ -1,21 +1,12 @@
 import { CohereClient } from 'cohere-ai';
 import { ChatMessage, ChatResponse, CohereModel } from './types';
 
-// Cache clients by API key to avoid creating new instances for each request
-const clientCache = new Map<string, CohereClient>();
-
 function getCohereClient(customApiKey?: string): CohereClient {
   const apiKey = customApiKey || process.env.COHERE_API_KEY || '';
-
-  // Return cached client if exists
-  if (clientCache.has(apiKey)) {
-    return clientCache.get(apiKey)!;
-  }
-
-  // Create and cache new client
-  const client = new CohereClient({ token: apiKey });
-  clientCache.set(apiKey, client);
-  return client;
+  // Construct fresh per call. CohereClient's constructor is cheap (just stores
+  // the token); the real cost is the network round-trip in chat() below.
+  // Avoids unbounded module-level cache growth on long-lived serverless instances.
+  return new CohereClient({ token: apiKey });
 }
 
 export async function cohereChat(
