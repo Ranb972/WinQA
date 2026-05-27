@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Allowed fields per model (allowlist approach)
     const allowedFields: Record<string, string[]> = {
       bugs: ['prompt_context', 'model_response', 'model_used', 'issue_type', 'severity', 'user_notes', 'status'],
-      prompts: ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags', 'is_favorite'],
+      prompts: ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags'],
       testCases: ['title', 'description', 'initial_prompt', 'expected_outcome', 'category', 'difficulty'],
       insights: ['title', 'content', 'category', 'tags'],
     };

@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
       good_prompt_example: body.good_prompt_example,
       explanation: body.explanation,
       tags: body.tags || [],
-      is_favorite: body.is_favorite || false,
     });
 
     return NextResponse.json(prompt, { status: 201 });
