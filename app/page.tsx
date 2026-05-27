@@ -45,6 +45,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Glitch landing page components
 import { IntroSequence } from '@/components/glitch/intro-sequence';
@@ -419,7 +420,28 @@ function Dashboard() {
                   <StatIcon className="w-5 h-5 text-orange-500" />
                 </div>
                 <div className="text-2xl font-semibold text-white">
-                  {isLoading ? <span className="inline-block w-8 h-6 bg-white/[0.04] rounded animate-pulse" /> : s.value}
+                  <AnimatePresence mode="wait" initial={false}>
+                    {isLoading ? (
+                      <motion.div
+                        key="skeleton"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Skeleton className="h-8 w-12" />
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        key="value"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {s.value}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <div className="text-zinc-500 text-sm mt-1">{s.label}</div>
               </div>
