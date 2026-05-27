@@ -48,7 +48,7 @@ export function ToolsSection() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '-10%', amount: 0.2 }}
           >
             <div className="flex items-center gap-3 mb-6">
               <span className="w-8 h-px bg-orange-500" />
@@ -66,7 +66,7 @@ export function ToolsSection() {
             className="text-white/60 text-lg lg:pt-12 max-w-xl"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '-10%', amount: 0.2 }}
             transition={{ delay: 0.1 }}
           >
             WinQA gives you the tools to not just test AI, but to document,
@@ -84,7 +84,7 @@ export function ToolsSection() {
                 className="group relative p-6 bg-white/[0.015] border border-white/[0.06] rounded-lg hover:border-orange-500/30 hover:bg-orange-500/[0.02] transition-all duration-300"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: '-10%', amount: 0.2 }}
                 transition={{ delay: index * 0.05 }}
               >
                 {/* Icon */}

@@ -11,7 +11,7 @@ export function Footer() {
           className="flex flex-col sm:flex-row items-center justify-between gap-4"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: '-10%', amount: 0.2 }}
         >
           {/* Left: Logo */}
           <div className="flex items-center gap-3">
