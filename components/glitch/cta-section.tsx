@@ -14,7 +14,7 @@ export function CTASection() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+          viewport={{ once: true, margin: '-10%', amount: 0.3 }}
         >
           {/* Eyebrow */}
           <div className="flex items-center justify-center gap-3 mb-8">
@@ -61,7 +61,7 @@ export function CTASection() {
             className="mt-8 text-white/60 text-sm font-mono tracking-wide"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+            viewport={{ once: true, margin: '-10%', amount: 0.3 }}
             transition={{ delay: 0.2 }}
           >
             No signup &middot; Free forever &middot; Open to all

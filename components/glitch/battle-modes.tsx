@@ -108,7 +108,7 @@ export function BattleModes() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+            viewport={{ once: true, margin: '-10%', amount: 0.3 }}
           >
             <div className="flex items-center gap-3 mb-6">
               <span className="w-8 h-px bg-orange-500" />
@@ -127,7 +127,7 @@ export function BattleModes() {
             className="relative"
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+            viewport={{ once: true, margin: '-10%', amount: 0.3 }}
           >
             <AnimatePresence mode="wait">
               {activeMode ? (
@@ -178,7 +178,7 @@ export function BattleModes() {
               key={category}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+              viewport={{ once: true, margin: '-10%', amount: 0.3 }}
               transition={{ delay: categoryIndex * 0.1 }}
             >
               <p className="font-mono text-white/60 text-xs tracking-wider uppercase mb-4">
@@ -203,7 +203,7 @@ export function BattleModes() {
                       `}
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+                      viewport={{ once: true, margin: '-10%', amount: 0.3 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => setSelectedMode(isSelected ? null : mode.id)}
                     >

@@ -265,7 +265,7 @@ function FeatureShowcaseSection({
                   key={idx}
                   initial={{ opacity: 0, x: -10 }}
                   whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+                  viewport={{ once: true, margin: '-10%', amount: 0.3 }}
                   transition={{ delay: idx * 0.05 }}
                   className="flex items-start gap-3 text-sm text-zinc-400"
                 >

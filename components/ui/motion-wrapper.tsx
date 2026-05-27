@@ -29,7 +29,7 @@ export function MotionWrapper({
     <motion.div
       initial={{ opacity: 0, ...directions[direction] }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+      viewport={{ once: true, margin: '-10%', amount: 0.3 }}
       transition={{ duration, delay, ease: [0.25, 0.1, 0.25, 1] }}
       className={className}
     >
@@ -52,7 +52,7 @@ export function StaggerContainer({
     <motion.div
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: '-10%', amount: 0.2 }}
+      viewport={{ once: true, margin: '-10%', amount: 0.3 }}
       variants={{
         visible: {
           transition: {
