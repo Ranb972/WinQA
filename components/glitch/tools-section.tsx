@@ -49,6 +49,7 @@ export function ToolsSection() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-10%', amount: 0.3 }}
+            style={{ backfaceVisibility: 'hidden' }}
           >
             <div className="flex items-center gap-3 mb-6">
               <span className="w-8 h-px bg-orange-500" />
@@ -67,6 +68,7 @@ export function ToolsSection() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-10%', amount: 0.3 }}
+            style={{ backfaceVisibility: 'hidden' }}
             transition={{ delay: 0.1 }}
           >
             WinQA gives you the tools to not just test AI, but to document,
@@ -85,6 +87,7 @@ export function ToolsSection() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-10%', amount: 0.3 }}
+                style={{ backfaceVisibility: 'hidden' }}
                 transition={{ delay: index * 0.05 }}
               >
                 {/* Icon */}
