@@ -78,12 +78,18 @@ function getDisplayName(provider: string, model: string): string {
 }
 
 function extractCodeBlock(content: string): string | null {
-  // Try javascript/js tagged blocks first
-  const jsMatch = content.match(/```(?:javascript|js)\s*\n([\s\S]*?)```/);
-  if (jsMatch) return jsMatch[1].trim();
-  // Try any code block
-  const genericMatch = content.match(/```\s*\n([\s\S]*?)```/);
-  if (genericMatch) return genericMatch[1].trim();
+  // Models fence code with varying language tags (javascript, JS, typescript, none…),
+  // so accept any tag, case-insensitively, and tolerate CRLF after the opening fence.
+  const fenced = [...content.matchAll(/```[ \t]*([A-Za-z0-9+#.-]*)[ \t]*\r?\n([\s\S]*?)```/g)];
+  if (fenced.length > 0) {
+    const js = fenced.find((m) => /^(javascript|js|jsx|ts|tsx|typescript)$/i.test(m[1]));
+    if (js) return js[2].trim();
+    // No JS-tagged block — take the longest block (skips tiny usage/output snippets).
+    return fenced.reduce((a, b) => (b[2].length > a[2].length ? b : a))[2].trim();
+  }
+  // Truncated response (e.g. cut off at max tokens): unterminated final fence.
+  const open = content.match(/```[ \t]*[A-Za-z0-9+#.-]*[ \t]*\r?\n([\s\S]+)$/);
+  if (open) return open[1].trim();
   return null;
 }
 

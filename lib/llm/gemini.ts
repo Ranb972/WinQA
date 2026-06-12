@@ -43,6 +43,11 @@ export async function geminiChat(
       config: {
         temperature,
         maxOutputTokens: maxTokens,
+        // Gemini 2.5 thinking tokens count against maxOutputTokens. Unbounded thinking
+        // starved Code Duel answers to ~160 output tokens (harness 2026-06-12: 6/6
+        // finished MAX_TOKENS with ~3,900 thought tokens). Cap thinking so at least
+        // half the budget reaches the visible response.
+        thinkingConfig: { thinkingBudget: Math.min(1024, Math.floor(maxTokens / 2)) },
       },
     });
 
