@@ -64,14 +64,22 @@ export async function chat(
 }
 
 export async function multiModelChat(
-  request: MultiModelRequest & { customApiKeys?: CustomApiKeys }
+  request: MultiModelRequest & {
+    customApiKeys?: CustomApiKeys;
+    fallbackOverrides?: {
+      enableCrossProviderFallback?: boolean;
+      maxAttempts?: number;
+      delayBetweenAttempts?: number;
+      providerTimeout?: number;
+    };
+  }
 ): Promise<MultiModelResponse> {
-  const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys } = request;
+  const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys, fallbackOverrides } = request;
 
   const responses = await Promise.all(
     models.map((model) => {
       const specificModel = modelPreferences?.[model];
-      return chat(messages, model, temperature, maxTokens, true, specificModel, customApiKeys);
+      return chat(messages, model, temperature, maxTokens, true, specificModel, customApiKeys, fallbackOverrides);
     })
   );
 

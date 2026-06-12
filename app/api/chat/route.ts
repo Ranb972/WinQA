@@ -42,6 +42,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build fallback overrides once; honored by both the multi-model and single-model paths
+    const fallbackOverrides = crossProviderFallback !== undefined || maxFallbackAttempts || fallbackDelay
+      ? {
+          enableCrossProviderFallback: crossProviderFallback,
+          maxAttempts: maxFallbackAttempts,
+          delayBetweenAttempts: fallbackDelay,
+        }
+      : undefined;
+
     // Handle custom provider request
     if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {
       const response = await callCustomProvider(customProvider, messages, temperature, maxTokens);
@@ -67,6 +76,7 @@ export async function POST(request: NextRequest) {
         maxTokens,
         modelPreferences,
         customApiKeys,
+        fallbackOverrides,
       });
       // Sanitize error messages in multi-model responses
       const sanitized = {
@@ -81,13 +91,6 @@ export async function POST(request: NextRequest) {
 
     // Handle single built-in model
     const specificModel = modelPreferences?.[models as LLMProvider];
-    const fallbackOverrides = crossProviderFallback !== undefined || maxFallbackAttempts || fallbackDelay
-      ? {
-          enableCrossProviderFallback: crossProviderFallback,
-          maxAttempts: maxFallbackAttempts,
-          delayBetweenAttempts: fallbackDelay,
-        }
-      : undefined;
     const response = await chat(messages, models as LLMProvider, temperature, maxTokens, true, specificModel, customApiKeys, fallbackOverrides);
     return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
   } catch (error) {
