@@ -4,6 +4,7 @@ import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomAp
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Worst case ≈ 2 provider timeouts (30s each) under the client's 2-attempt config;
 // also bounds the custom-provider path, whose fetch has no timeout of its own.
@@ -54,6 +55,11 @@ export async function POST(request: NextRequest) {
         { error: 'Model(s) are required' },
         { status: 400 }
       );
+    }
+
+    const { allowed } = await consumeDailyAllowance(userId);
+    if (!allowed) {
+      return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
     }
 
     // Build fallback overrides once; honored by both the multi-model and single-model paths

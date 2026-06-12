@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, CustomApiKeys } from '@/lib/llm';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Single provider call with providerTimeout 20s / 1 attempt → ~20s + overhead.
 export const maxDuration = 30;
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
 
     if (prompt.length > 5000) {
       return NextResponse.json({ error: 'Prompt too long' }, { status: 400 });
+    }
+
+    const { allowed } = await consumeDailyAllowance(userId);
+    if (!allowed) {
+      return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
     }
 
     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];

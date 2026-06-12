@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
 import { getChallengeById } from '@/lib/battle-challenges';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Contenders run in parallel with providerTimeout 20s / 1 attempt → ~20s + DB overhead.
 export const maxDuration = 30;
@@ -51,6 +52,11 @@ export async function POST(request: NextRequest) {
       challengeName = 'Custom Challenge';
     } else {
       return NextResponse.json({ error: 'Challenge or custom prompt required' }, { status: 400 });
+    }
+
+    const { allowed } = await consumeDailyAllowance(userId);
+    if (!allowed) {
+      return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
     }
 
     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];

@@ -7,6 +7,11 @@ export function friendlyErrorMessage(raw: string | undefined): string | undefine
 
   const lower = raw.toLowerCase();
 
+  // Must precede the quota branch — 'daily limit reached' also contains 'limit reached'.
+  if (lower.includes('daily limit')) {
+    return "You've reached today's free usage limit — it resets at midnight UTC.";
+  }
+
   if (lower.includes('redirect')) {
     return 'This provider attempted a redirect, which WinQA blocks for security. Check the provider URL.';
   }
