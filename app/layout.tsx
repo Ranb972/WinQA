@@ -1,13 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk, JetBrains_Mono } from "next/font/google";
-import {
-    ClerkProvider,
-    SignedIn,
-    SignedOut,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
-import Navbar from "@/components/Navbar";
 import { baseMetadata } from "@/lib/metadata";
 import "./globals.css";
 
@@ -63,15 +58,9 @@ export default function RootLayout({
                         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:64px_64px]" />
                     </div>
 
-                    <SignedIn>
-                        <Navbar />
-                        <main className="pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 pb-6 sm:pb-8 max-w-7xl mx-auto relative">
-                            {children}
-                        </main>
-                    </SignedIn>
-                    <SignedOut>
-                        {children}
-                    </SignedOut>
+                    {/* Server-side SignedIn/SignedOut live in app/(app)/layout.tsx — keeping
+                        them out of the root layout lets the (public) pages prerender static. */}
+                    {children}
                     <Toaster />
                     <Analytics />
                     <script
