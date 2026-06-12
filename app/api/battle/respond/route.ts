@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, CustomApiKeys } from '@/lib/llm';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
+// Single provider call with providerTimeout 20s / 1 attempt → ~20s + overhead.
+export const maxDuration = 30;
+
 interface RespondRequestBody {
   provider: LLMProvider;
   model?: string;

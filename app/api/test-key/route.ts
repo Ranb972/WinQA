@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
+// Key-validation fetches have no abort timeout of their own; a check needs seconds.
+export const maxDuration = 15;
+
 interface TestKeyRequest {
   provider: LLMProvider;
   apiKey: string;

@@ -5,6 +5,10 @@ import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
+// Worst case ≈ 2 provider timeouts (30s each) under the client's 2-attempt config;
+// also bounds the custom-provider path, whose fetch has no timeout of its own.
+export const maxDuration = 60;
+
 interface RequestBody {
   messages: ChatMessage[];
   models: string | string[]; // Can be LLMProvider or 'custom:id'

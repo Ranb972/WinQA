@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { isPrivateUrl } from '@/lib/security';
 
+// Sends a real test message to a user's custom endpoint (no fetch timeout);
+// slow self-hosted models can legitimately take 10-20s.
+export const maxDuration = 30;
+
 interface TestCustomProviderRequest {
   baseUrl: string;
   apiKey: string;

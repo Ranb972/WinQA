@@ -4,6 +4,9 @@ import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/
 import { getChallengeById } from '@/lib/battle-challenges';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
+// Contenders run in parallel with providerTimeout 20s / 1 attempt → ~20s + DB overhead.
+export const maxDuration = 30;
+
 interface BattleRequestBody {
   modelA: { provider: LLMProvider; model?: string };
   modelB: { provider: LLMProvider; model?: string };
