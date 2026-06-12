@@ -14,6 +14,10 @@ const JUDGE0_CE_URL = 'https://ce.judge0.com';
 // Timeout for code execution (10 seconds)
 const EXECUTION_TIMEOUT = 10000;
 
+// Three execution services tried sequentially (Judge0 CE → Piston → Judge0 RapidAPI),
+// each bounded by EXECUTION_TIMEOUT → worst case ≈ 3×10s + submission overhead.
+export const maxDuration = 60;
+
 interface PistonResponse {
   run?: {
     stdout: string;
