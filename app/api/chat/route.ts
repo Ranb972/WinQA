@@ -32,6 +32,16 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as RequestBody;
     const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys, customProvider, crossProviderFallback, maxFallbackAttempts, fallbackDelay } = body;
 
+    // Clamp client-supplied generation params silently (no 400s): temperature to a
+    // range every provider accepts; maxTokens to 4096 — the app's largest sanctioned
+    // budget (battle/respond) — so no client can request more than the product grants.
+    const safeTemperature = typeof temperature === 'number' && Number.isFinite(temperature)
+      ? Math.min(Math.max(temperature, 0), 2)
+      : undefined;
+    const safeMaxTokens = typeof maxTokens === 'number' && Number.isFinite(maxTokens)
+      ? Math.min(Math.max(Math.floor(maxTokens), 1), 4096)
+      : undefined;
+
     if (!messages || messages.length === 0) {
       return NextResponse.json(
         { error: 'Messages are required' },
@@ -57,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Handle custom provider request
     if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {
-      const response = await callCustomProvider(customProvider, messages, temperature, maxTokens);
+      const response = await callCustomProvider(customProvider, messages, safeTemperature, safeMaxTokens);
       return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
     }
 
@@ -76,8 +86,8 @@ export async function POST(request: NextRequest) {
       const response = await multiModelChat({
         messages,
         models: builtInModels,
-        temperature,
-        maxTokens,
+        temperature: safeTemperature,
+        maxTokens: safeMaxTokens,
         modelPreferences,
         customApiKeys,
         fallbackOverrides,
@@ -95,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Handle single built-in model
     const specificModel = modelPreferences?.[models as LLMProvider];
-    const response = await chat(messages, models as LLMProvider, temperature, maxTokens, true, specificModel, customApiKeys, fallbackOverrides);
+    const response = await chat(messages, models as LLMProvider, safeTemperature, safeMaxTokens, true, specificModel, customApiKeys, fallbackOverrides);
     return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
   } catch (error) {
     // Log error message only, never log full error object which could contain API keys
