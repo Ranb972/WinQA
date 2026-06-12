@@ -7,6 +7,10 @@ export function friendlyErrorMessage(raw: string | undefined): string | undefine
 
   const lower = raw.toLowerCase();
 
+  if (lower.includes('redirect')) {
+    return 'This provider attempted a redirect, which WinQA blocks for security. Check the provider URL.';
+  }
+
   if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('429')) {
     return 'This model is busy right now. Please try again in a moment.';
   }

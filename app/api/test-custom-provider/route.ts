@@ -75,7 +75,13 @@ async function testConnection(
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
           max_tokens: 10,
         }),
+        // isPrivateUrl validates only the original URL — never follow redirects.
+        redirect: 'manual',
       });
+
+      if (response.status >= 300 && response.status < 400) {
+        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.' };
+      }
 
       if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key' };
@@ -104,7 +110,13 @@ async function testConnection(
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
           max_tokens: 10,
         }),
+        // isPrivateUrl validates only the original URL — never follow redirects.
+        redirect: 'manual',
       });
+
+      if (response.status >= 300 && response.status < 400) {
+        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.' };
+      }
 
       if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key' };

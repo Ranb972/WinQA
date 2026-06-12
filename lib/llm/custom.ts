@@ -142,7 +142,14 @@ async function callAnthropicApi(
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
+      // isPrivateUrl validates only the original URL — never follow redirects,
+      // or a public host could 302 the server into a private/metadata address.
+      redirect: 'manual',
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Provider attempted an HTTP redirect (blocked for security)');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -201,7 +208,14 @@ async function callOpenAIApi(
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
+      // isPrivateUrl validates only the original URL — never follow redirects,
+      // or a public host could 302 the server into a private/metadata address.
+      redirect: 'manual',
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Provider attempted an HTTP redirect (blocked for security)');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
