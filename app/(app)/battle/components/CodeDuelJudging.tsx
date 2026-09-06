@@ -22,6 +22,7 @@ import {
   specificModelDisplayNames,
 } from '@/lib/llm';
 import { PROVIDER_MODELS } from '@/lib/llm/models';
+import { extractCodeBlock, type ExtractedBlock } from '@/lib/code-extraction';
 
 // --- Types ---
 
@@ -75,22 +76,6 @@ function getDisplayName(provider: string, model: string): string {
   const providerModels = PROVIDER_MODELS[provider as LLMProvider];
   const found = providerModels?.find((m) => m.id === model);
   return found?.name || model || provider;
-}
-
-function extractCodeBlock(content: string): string | null {
-  // Models fence code with varying language tags (javascript, JS, typescript, none…),
-  // so accept any tag, case-insensitively, and tolerate CRLF after the opening fence.
-  const fenced = [...content.matchAll(/```[ \t]*([A-Za-z0-9+#.-]*)[ \t]*\r?\n([\s\S]*?)```/g)];
-  if (fenced.length > 0) {
-    const js = fenced.find((m) => /^(javascript|js|jsx|ts|tsx|typescript)$/i.test(m[1]));
-    if (js) return js[2].trim();
-    // No JS-tagged block — take the longest block (skips tiny usage/output snippets).
-    return fenced.reduce((a, b) => (b[2].length > a[2].length ? b : a))[2].trim();
-  }
-  // Truncated response (e.g. cut off at max tokens): unterminated final fence.
-  const open = content.match(/```[ \t]*[A-Za-z0-9+#.-]*[ \t]*\r?\n([\s\S]+)$/);
-  if (open) return open[1].trim();
-  return null;
 }
 
 // --- Sub-components ---
@@ -147,7 +132,7 @@ export default function CodeDuelJudging({
   prompt,
   explanation,
 }: CodeDuelJudgingProps) {
-  const [extractedCodes, setExtractedCodes] = useState<(string | null)[]>([null, null]);
+  const [extractedCodes, setExtractedCodes] = useState<(ExtractedBlock | null)[]>([null, null]);
   const [codeOutputs, setCodeOutputs] = useState<(CodeExecutionResult | null)[]>([null, null]);
   const [runningCode, setRunningCode] = useState<boolean[]>([false, false]);
 
@@ -162,8 +147,8 @@ export default function CodeDuelJudging({
 
   const runCode = useCallback(
     async (idx: number) => {
-      const code = extractedCodes[idx];
-      if (!code) return;
+      const block = extractedCodes[idx];
+      if (!block) return;
 
       setRunningCode((prev) => {
         const next = [...prev];
@@ -180,7 +165,7 @@ export default function CodeDuelJudging({
         const res = await fetch('/api/execute-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, language: 'javascript' }),
+          body: JSON.stringify({ code: block.code, language: block.language }),
         });
         const result: CodeExecutionResult = await res.json();
         setCodeOutputs((prev) => {
