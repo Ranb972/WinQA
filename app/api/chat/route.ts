@@ -23,6 +23,13 @@ interface RequestBody {
   fallbackDelay?: number;
 }
 
+// Membership test for client-supplied model keys. A Set, not `key in PROVIDER_MODELS`:
+// `in` walks the prototype chain, so 'toString' / 'constructor' / 'valueOf' /
+// '__proto__' all pass and then reach `for (const m of fallbackChains[provider])`
+// (lib/llm/fallback.ts:106) holding a Function — an uncaught TypeError surfacing as a
+// 500. PROVIDER_MODELS is a UI catalogue, not an authorization list.
+const VALID_PROVIDERS = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'openrouter']);
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -43,6 +50,26 @@ export async function POST(request: NextRequest) {
       ? Math.min(Math.max(Math.floor(maxTokens), 1), 4096)
       : undefined;
 
+    // Same silent-clamp philosophy for the fallback-tuning params.
+    // maxAttempts: the longest reachable sequence is 10 models (lib/llm/fallback.ts:18-23
+    // — cohere 4 + gemini 2 + groq 2 + openrouter 2), so anything above 10 is a no-op.
+    // The floor of 1 matters too: maxAttempts 0 breaks out of the loop on the first
+    // iteration (fallback.ts:178) and returns the "All fallback attempts exhausted"
+    // 200 (fallback.ts:244-256) after a daily unit has already been charged.
+    const safeMaxFallbackAttempts = typeof maxFallbackAttempts === 'number' && Number.isFinite(maxFallbackAttempts)
+      ? Math.min(Math.max(Math.floor(maxFallbackAttempts), 1), 10)
+      : undefined;
+    // delayBetweenAttempts: default 500, Compare mode sends 200. The 2s cap bounds the
+    // total added sleep at ~18s worst case (9 inter-attempt delays), ending the
+    // client-controlled sleep amplification vector.
+    const safeFallbackDelay = typeof fallbackDelay === 'number' && Number.isFinite(fallbackDelay)
+      ? Math.min(Math.max(Math.floor(fallbackDelay), 0), 2000)
+      : undefined;
+    // Non-boolean junk no longer flows into the fallback engine.
+    const safeCrossProviderFallback = typeof crossProviderFallback === 'boolean'
+      ? crossProviderFallback
+      : undefined;
+
     if (!messages || messages.length === 0) {
       return NextResponse.json(
         { error: 'Messages are required' },
@@ -57,17 +84,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize/validate the requested model(s) BEFORE consumeDailyAllowance so an
+    // invalid request 400s without burning a unit. Filter -> dedupe -> explicit cap
+    // (only 4 distinct providers exist, so the slice documents the bound rather than
+    // enforcing a new one).
+    const builtInModels: LLMProvider[] = Array.isArray(models)
+      ? Array.from(
+          new Set(
+            models.filter((m): m is LLMProvider =>
+              typeof m === 'string' && VALID_PROVIDERS.has(m as LLMProvider)
+            )
+          )
+        ).slice(0, 4)
+      : [];
+
+    if (Array.isArray(models)) {
+      // Custom-provider IDs, unknown strings and non-strings are all dropped above.
+      if (builtInModels.length === 0) {
+        return NextResponse.json(
+          { error: 'No valid built-in models specified' },
+          { status: 400 }
+        );
+      }
+    } else if (
+      typeof models !== 'string' ||
+      !((models.startsWith('custom:') && customProvider) || VALID_PROVIDERS.has(models as LLMProvider))
+    ) {
+      // Previously these reached chat() and returned 200-with-error (or a 500 from an
+      // unhandled TypeError) after the charge. Behavior change: they now 400 up front.
+      return NextResponse.json(
+        { error: 'Invalid model specified' },
+        { status: 400 }
+      );
+    }
+
     const { allowed } = await consumeDailyAllowance(userId);
     if (!allowed) {
       return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
     }
 
-    // Build fallback overrides once; honored by both the multi-model and single-model paths
-    const fallbackOverrides = crossProviderFallback !== undefined || maxFallbackAttempts || fallbackDelay
+    // Build fallback overrides once; honored by both the multi-model and single-model paths.
+    // Checking each clamped value for undefined keeps an explicit 0 behaving identically
+    // whether it is sent alone or alongside other fields.
+    const fallbackOverrides = [safeCrossProviderFallback, safeMaxFallbackAttempts, safeFallbackDelay].some((v) => v !== undefined)
       ? {
-          enableCrossProviderFallback: crossProviderFallback,
-          maxAttempts: maxFallbackAttempts,
-          delayBetweenAttempts: fallbackDelay,
+          enableCrossProviderFallback: safeCrossProviderFallback,
+          maxAttempts: safeMaxFallbackAttempts,
+          delayBetweenAttempts: safeFallbackDelay,
         }
       : undefined;
 
@@ -77,18 +140,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
     }
 
-    // Handle multi-model comparison (built-in providers only)
+    // Handle multi-model comparison (built-in providers only; validated above)
     if (Array.isArray(models)) {
-      // Filter out any custom provider IDs (they should be handled separately by the client)
-      const builtInModels = models.filter((m) => !m.startsWith('custom:')) as LLMProvider[];
-
-      if (builtInModels.length === 0) {
-        return NextResponse.json(
-          { error: 'No valid built-in models specified' },
-          { status: 400 }
-        );
-      }
-
       const response = await multiModelChat({
         messages,
         models: builtInModels,
