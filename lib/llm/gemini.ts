@@ -47,7 +47,12 @@ export async function geminiChat(
         // starved Code Duel answers to ~160 output tokens (harness 2026-06-12: 6/6
         // finished MAX_TOKENS with ~3,900 thought tokens). Cap thinking so at least
         // half the budget reaches the visible response.
-        thinkingConfig: { thinkingBudget: Math.min(1024, Math.floor(maxTokens / 2)) },
+        // flash-lite: thinking is off by default upstream and its only legal explicit
+        // budgets are 0 or 512-24576 — values 1-511 are a guaranteed 400. Keep it off.
+        // flash: 0-24576 all legal; keep the starvation cap (half the budget, max 1024).
+        thinkingConfig: {
+          thinkingBudget: modelToUse === 'gemini-2.5-flash-lite' ? 0 : Math.min(1024, Math.floor(maxTokens / 2)),
+        },
       },
     });
 
