@@ -19,21 +19,24 @@ export async function consumeDailyAllowance(userId: string): Promise<{ allowed: 
   try {
     await dbConnect();
     const date = new Date().toISOString().slice(0, 10);
+    const inc = () =>
+      DailyUsage.findOneAndUpdate(
+        { userId, date },
+        { $inc: { count: 1 } },
+        { upsert: true, new: true }
+      ).lean();
+
     let usage;
     try {
-      usage = await DailyUsage.findOneAndUpdate(
-        { userId, date },
-        { $inc: { count: 1 } },
-        { upsert: true, new: true }
-      ).lean();
-    } catch {
+      usage = await inc();
+    } catch (e) {
       // Two concurrent first requests of the day can race the upsert (E11000);
       // the document exists after the loser's failure, so one retry settles it.
-      usage = await DailyUsage.findOneAndUpdate(
-        { userId, date },
-        { $inc: { count: 1 } },
-        { upsert: true, new: true }
-      ).lean();
+      // Anything else (server-selection timeout, auth, network) must NOT be
+      // blindly retried: rethrow so the outer fail-open answers immediately
+      // instead of burning a second server-selection window.
+      if ((e as { code?: number })?.code !== 11000) throw e;
+      usage = await inc();
     }
     return { allowed: (usage?.count ?? 0) <= dailyLimit() };
   } catch (error) {

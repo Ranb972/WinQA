@@ -1,14 +1,7 @@
 import mongoose from 'mongoose';
 import { autoSeed } from './autoSeed';
 
-const MONGODB_URI = process.env.MONGODB_URI;
 let seeded = false;
-
-if (!MONGODB_URI) {
-  throw new Error(
-    'Please define the MONGODB_URI environment variable inside .env.local'
-  );
-}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -32,11 +25,23 @@ async function dbConnect(): Promise<typeof mongoose> {
   }
 
   if (!cached.promise) {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error(
+        'Please define the MONGODB_URI environment variable inside .env.local'
+      );
+    }
+
     const opts = {
       bufferCommands: false,
+      // Bound server selection. The driver default is 30s, which outlives the
+      // battle routes' maxDuration=30, so their fail-open path could never run.
+      // M0 cold connects (TLS + SRV discovery) take 1-3s, so 5s is comfortably
+      // above a healthy cold start without risking a false fail-open.
+      serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
       return mongoose;
     });
   }
