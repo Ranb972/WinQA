@@ -6,7 +6,7 @@ import {
   JUDGE0_LANGUAGE_IDS,
   CodeExecutionResult,
 } from '@/lib/code-execution';
-import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     const { allowed } = await consumeDailyAllowance(userId);
     if (!allowed) {
       return NextResponse.json(
-        { success: false, error: friendlyErrorMessage('daily limit reached') },
+        { success: false, error: friendlyErrorMessage(DAILY_LIMIT_ERROR) },
         { status: 429 }
       );
     }

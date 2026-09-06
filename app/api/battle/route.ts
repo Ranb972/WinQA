@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
 import { getChallengeById } from '@/lib/battle-challenges';
-import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Contenders run in parallel with providerTimeout 20s / 1 attempt → ~20s + DB overhead.
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const { allowed } = await consumeDailyAllowance(userId);
     if (!allowed) {
-      return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
+      return NextResponse.json({ error: friendlyErrorMessage(DAILY_LIMIT_ERROR) }, { status: 429 });
     }
 
     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];

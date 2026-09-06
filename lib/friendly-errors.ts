@@ -1,3 +1,6 @@
+export const DAILY_LIMIT_ERROR = 'daily limit reached';
+export const REDIRECT_BLOCKED_ERROR = 'Provider attempted an HTTP redirect (blocked for security)';
+
 /**
  * Converts raw LLM provider error messages into user-friendly messages.
  * Falls back to a generic message if no pattern matches.
@@ -5,16 +8,19 @@
 export function friendlyErrorMessage(raw: string | undefined): string | undefined {
   if (!raw) return raw;
 
-  const lower = raw.toLowerCase();
-
-  // Must precede the quota branch — 'daily limit reached' also contains 'limit reached'.
-  if (lower.includes('daily limit')) {
+  // WinQA-constructed sentinels: exact match on the raw string, before lowercasing.
+  // These MUST stay above the substring chain — neither sentinel matches any branch
+  // below, so moving them down would drop both to the generic fallback (silently
+  // degrading the 429 body on every metered route).
+  if (raw === DAILY_LIMIT_ERROR) {
     return "You've reached today's free usage limit — it resets at midnight UTC.";
   }
 
-  if (lower.includes('redirect')) {
+  if (raw === REDIRECT_BLOCKED_ERROR) {
     return 'This provider attempted a redirect, which WinQA blocks for security. Check the provider URL.';
   }
+
+  const lower = raw.toLowerCase();
 
   if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('429')) {
     return 'This model is busy right now. Please try again in a moment.';

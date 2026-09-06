@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
-import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Worst case ≈ 2 provider timeouts (30s each) under the client's 2-attempt config;
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     const { allowed } = await consumeDailyAllowance(userId);
     if (!allowed) {
-      return NextResponse.json({ error: friendlyErrorMessage('daily limit reached') }, { status: 429 });
+      return NextResponse.json({ error: friendlyErrorMessage(DAILY_LIMIT_ERROR) }, { status: 429 });
     }
 
     // Build fallback overrides once; honored by both the multi-model and single-model paths.

@@ -4,6 +4,7 @@ import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType } from './models';
 import { isPrivateUrl } from '@/lib/security';
+import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -148,7 +149,7 @@ async function callAnthropicApi(
     });
 
     if (response.status >= 300 && response.status < 400) {
-      throw new Error('Provider attempted an HTTP redirect (blocked for security)');
+      throw new Error(REDIRECT_BLOCKED_ERROR);
     }
 
     if (!response.ok) {
@@ -214,7 +215,7 @@ async function callOpenAIApi(
     });
 
     if (response.status >= 300 && response.status < 400) {
-      throw new Error('Provider attempted an HTTP redirect (blocked for security)');
+      throw new Error(REDIRECT_BLOCKED_ERROR);
     }
 
     if (!response.ok) {
