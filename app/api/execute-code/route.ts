@@ -6,6 +6,8 @@ import {
   JUDGE0_LANGUAGE_IDS,
   CodeExecutionResult,
 } from '@/lib/code-execution';
+import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com';
@@ -14,8 +16,11 @@ const JUDGE0_CE_URL = 'https://ce.judge0.com';
 // Timeout for code execution (10 seconds)
 const EXECUTION_TIMEOUT = 10000;
 
-// Three execution services tried sequentially (Judge0 CE → Piston → Judge0 RapidAPI),
-// each bounded by EXECUTION_TIMEOUT → worst case ≈ 3×10s + submission overhead.
+// Daily-allowance check runs first (≤ ~10s worst-case DB stall: 5s server
+// selection to connect + 5s for the upsert, per lib/mongodb.ts's
+// serverSelectionTimeoutMS), then three execution services tried sequentially
+// (Judge0 CE → Piston → Judge0 RapidAPI), each bounded by EXECUTION_TIMEOUT →
+// worst case ≈ 10s + 3×10s + submission overhead; still fits maxDuration=60.
 export const maxDuration = 60;
 
 interface PistonResponse {
@@ -253,6 +258,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Code is too long (max 50,000 characters)' },
         { status: 400 }
+      );
+    }
+
+    const { allowed } = await consumeDailyAllowance(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: friendlyErrorMessage('daily limit reached') },
+        { status: 429 }
       );
     }
 
