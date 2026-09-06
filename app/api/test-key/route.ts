@@ -3,7 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
-// Key-validation fetches have no abort timeout of their own; a check needs seconds.
+// Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
+// leaving ~5s headroom under maxDuration = 15.
 export const maxDuration = 15;
 
 interface TestKeyRequest {
@@ -16,22 +17,42 @@ interface TestKeyResponse {
   error?: string;
 }
 
+const PROVIDER_TIMEOUT_MS = 10_000;
+const TIMEOUT_ERROR = 'Provider took too long to respond. Try again.';
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'AbortError' || /abort/i.test(error.message));
+}
+
 /**
  * Test a Cohere API key
  */
 async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
   try {
     const { CohereClient } = await import('cohere-ai');
     const client = new CohereClient({ token: apiKey });
 
-    await client.chat({
-      model: 'command-r-08-2024',
-      message: 'Hi',
-      maxTokens: 1,
-    });
+    await client.chat(
+      {
+        model: 'command-r-08-2024',
+        message: 'Hi',
+        maxTokens: 1,
+      },
+      {
+        abortSignal: controller.signal,
+        timeoutInSeconds: PROVIDER_TIMEOUT_MS / 1000,
+        maxRetries: 0,
+      }
+    );
 
     return { valid: true };
   } catch (error) {
+    if (isAbortError(error)) {
+      return { valid: false, error: TIMEOUT_ERROR };
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     if (message.includes('401') || message.includes('invalid') || message.includes('unauthorized')) {
       return { valid: false, error: 'Invalid API key' };
@@ -40,6 +61,8 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
       return { valid: true }; // Key is valid but rate limited
     }
     return { valid: false, error: friendlyErrorMessage(message) };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -47,17 +70,23 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
  * Test a Google Gemini API key
  */
 async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
     await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: 'Hi',
-      config: { maxOutputTokens: 1 },
+      config: { maxOutputTokens: 1, abortSignal: controller.signal },
     });
 
     return { valid: true };
   } catch (error) {
+    if (isAbortError(error)) {
+      return { valid: false, error: TIMEOUT_ERROR };
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     if (message.includes('API_KEY_INVALID') || message.includes('401') || message.includes('invalid')) {
       return { valid: false, error: 'Invalid API key' };
@@ -66,6 +95,8 @@ async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
       return { valid: true }; // Key is valid but rate limited
     }
     return { valid: false, error: friendlyErrorMessage(message) };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -73,18 +104,31 @@ async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
  * Test a Groq API key
  */
 async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
   try {
     const Groq = (await import('groq-sdk')).default;
     const client = new Groq({ apiKey });
 
-    await client.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: 'Hi' }],
-      max_tokens: 1,
-    });
+    await client.chat.completions.create(
+      {
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 1,
+      },
+      {
+        signal: controller.signal,
+        timeout: PROVIDER_TIMEOUT_MS,
+        maxRetries: 0,
+      }
+    );
 
     return { valid: true };
   } catch (error) {
+    if (isAbortError(error)) {
+      return { valid: false, error: TIMEOUT_ERROR };
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     if (message.includes('401') || message.includes('invalid') || message.includes('Unauthorized')) {
       return { valid: false, error: 'Invalid API key' };
@@ -93,6 +137,8 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
       return { valid: true }; // Key is valid but rate limited
     }
     return { valid: false, error: friendlyErrorMessage(message) };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -100,6 +146,9 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
  * Test an OpenRouter API key
  */
 async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -114,6 +163,7 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 1,
       }),
+      signal: controller.signal,
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -131,8 +181,13 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
 
     return { valid: true };
   } catch (error) {
+    if (isAbortError(error)) {
+      return { valid: false, error: TIMEOUT_ERROR };
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { valid: false, error: friendlyErrorMessage(message) };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
