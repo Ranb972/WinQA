@@ -1,5 +1,8 @@
 // Model definitions for built-in providers and common custom provider suggestions
 
+import type { LLMProvider } from './types';
+import { REGISTRY_PROVIDERS, registryEntries, getRegisteredModel } from './registry';
+
 export interface ModelDefinition {
   id: string;
   name: string;
@@ -13,26 +16,20 @@ export interface CommonProviderSuggestion {
   headerType?: 'bearer' | 'x-api-key'; // Default is 'bearer'
 }
 
-export const PROVIDER_MODELS: Record<string, ModelDefinition[]> = {
-  cohere: [
-    { id: 'command-r-plus-08-2024', name: 'Command A (Latest)', default: true },
-    { id: 'command-r-plus', name: 'Command R+' },
-    { id: 'command-r', name: 'Command R' },
-  ],
-  gemini: [
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', default: true },
-    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
-  ],
-  groq: [
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', default: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
-    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
-  ],
-  openrouter: [
-    { id: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 30B (Free)', default: true },
-    { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'Nemotron 9B (Free)' },
-  ],
-};
+/**
+ * UI catalogue of built-in models, derived from lib/llm/registry.ts: same ids, same
+ * order, first entry flagged as the default. Never edit this; edit the registry.
+ */
+export const PROVIDER_MODELS: Record<LLMProvider, ModelDefinition[]> = Object.fromEntries(
+  REGISTRY_PROVIDERS.map((provider) => [
+    provider,
+    registryEntries(provider).map((m, index) => ({
+      id: m.id,
+      name: m.name,
+      ...(index === 0 && { default: true }),
+    })),
+  ])
+) as Record<LLMProvider, ModelDefinition[]>;
 
 export const COMMON_CUSTOM_PROVIDERS: CommonProviderSuggestion[] = [
   {
@@ -69,28 +66,17 @@ export const COMMON_CUSTOM_PROVIDERS: CommonProviderSuggestion[] = [
 ];
 
 /**
- * Get the default model ID for a provider
+ * Get the default model ID for a provider (the head of its registry chain)
  */
 export function getDefaultModel(provider: string): string | undefined {
-  const models = PROVIDER_MODELS[provider];
-  return models?.find((m) => m.default)?.id || models?.[0]?.id;
+  return (PROVIDER_MODELS as Record<string, ModelDefinition[] | undefined>)[provider]?.[0]?.id;
 }
 
 /**
  * Get the display name for a model ID
  */
 export function getModelDisplayName(provider: string, modelId: string): string {
-  const models = PROVIDER_MODELS[provider];
-  const model = models?.find((m) => m.id === modelId);
-  return model?.name || modelId;
-}
-
-/**
- * Check if a model ID is valid for a provider
- */
-export function isValidModel(provider: string, modelId: string): boolean {
-  const models = PROVIDER_MODELS[provider];
-  return models?.some((m) => m.id === modelId) ?? false;
+  return getRegisteredModel(provider, modelId)?.name || modelId;
 }
 
 /**

@@ -13,39 +13,14 @@ import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
 import { groqChat } from './groq';
 import { openrouterChat } from './openrouter';
+import { fallbackChains, defaultModels } from './registry';
 
-// Fallback chains: ordered from preferred to least preferred
-export const fallbackChains: Record<LLMProvider, SpecificModel[]> = {
-  gemini: ['gemini-2.5-flash', 'gemini-2.5-flash-lite'],
-  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-  cohere: ['command-a-03-2025', 'command-r-plus-08-2024', 'command-r-08-2024', 'command-r7b-12-2024'],
-  openrouter: ['nvidia/nemotron-3-nano-30b-a3b:free', 'nvidia/nemotron-nano-9b-v2:free'],
-};
+// The chains, defaults and display names live in the registry (lib/llm/registry.ts);
+// they are re-exported here for existing importers.
+export { fallbackChains, defaultModels, specificModelDisplayNames } from './registry';
 
 // Cross-provider fallback order when all models in a provider fail
 export const crossProviderFallbackOrder: LLMProvider[] = ['groq', 'gemini', 'openrouter', 'cohere'];
-
-// Default model for each provider
-export const defaultModels: Record<LLMProvider, SpecificModel> = {
-  cohere: 'command-r-plus-08-2024',
-  gemini: 'gemini-2.5-flash',
-  groq: 'llama-3.3-70b-versatile',
-  openrouter: 'nvidia/nemotron-3-nano-30b-a3b:free',
-};
-
-// Display names for specific models (for UI)
-export const specificModelDisplayNames: Record<SpecificModel, string> = {
-  'command-a-03-2025': 'Command A',
-  'command-r-plus-08-2024': 'Command A',
-  'command-r-08-2024': 'Command R',
-  'command-r7b-12-2024': 'Command R 7B',
-  'gemini-2.5-flash': 'Gemini 2.5 Flash',
-  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
-  'llama-3.3-70b-versatile': 'Llama 3.3 70B',
-  'llama-3.1-8b-instant': 'Llama 3.1 8B',
-  'nvidia/nemotron-3-nano-30b-a3b:free': 'Nemotron 30B',
-  'nvidia/nemotron-nano-9b-v2:free': 'Nemotron 9B',
-};
 
 // Detect if an error is a rate limit or quota error
 function isRateLimitError(error: unknown): { isRateLimit: boolean; reason: 'rate_limit' | 'quota_exceeded' | 'error' } {

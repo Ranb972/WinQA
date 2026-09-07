@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
-import { LLMProvider, SpecificModel, modelDisplayNames, fallbackChains, specificModelDisplayNames } from '@/lib/llm';
+import { LLMProvider, SpecificModel, modelDisplayNames, fallbackChains, specificModelDisplayNames, modelDescriptions } from '@/lib/llm';
 import { CustomProvider } from '@/lib/custom-providers';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -40,24 +40,6 @@ const modelBadgeColors: Record<LLMProvider, string> = {
   gemini: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
   groq: 'bg-orange-600/20 text-orange-400 border-orange-600/30',
   openrouter: 'bg-green-600/20 text-green-400 border-green-600/30',
-};
-
-const modelDescriptions: Record<string, string> = {
-  // Cohere
-  'command-a-03-2025': 'Newest, strongest',
-  'command-r-plus-08-2024': 'Very capable',
-  'command-r-08-2024': 'Balanced',
-  'command-r7b-12-2024': 'Smallest, fastest',
-  // Gemini
-  'gemini-2.5-flash': 'Latest, most capable',
-  'gemini-2.5-flash-lite': 'Lightweight',
-  // Groq
-  'llama-3.3-70b-versatile': 'Most capable',
-  'llama-3.1-8b-instant': 'Faster, smaller',
-  // OpenRouter
-  'deepseek/deepseek-r1-0528:free': 'DeepSeek R1 (free)',
-  'tngtech/deepseek-r1t-chimera:free': 'DeepSeek R1T (free)',
-  'tngtech/deepseek-r1t2-chimera:free': 'DeepSeek R1T2 (free)',
 };
 
 const ModelGearPopover = ({

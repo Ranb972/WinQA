@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
+import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, REGISTRY_MODEL_COUNT } from '@/lib/llm';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
@@ -51,13 +51,13 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     // Same silent-clamp philosophy for the fallback-tuning params.
-    // maxAttempts: the longest reachable sequence is 10 models (lib/llm/fallback.ts:18-23
-    // — cohere 4 + gemini 2 + groq 2 + openrouter 2), so anything above 10 is a no-op.
+    // maxAttempts: the longest reachable sequence is every registered model once
+    // (REGISTRY_MODEL_COUNT, lib/llm/registry.ts), so anything above it is a no-op.
     // The floor of 1 matters too: maxAttempts 0 breaks out of the loop on the first
-    // iteration (fallback.ts:178) and returns the "All fallback attempts exhausted"
-    // 200 (fallback.ts:244-256) after a daily unit has already been charged.
+    // iteration (fallback.ts) and returns the "All fallback attempts exhausted"
+    // 200 after a daily unit has already been charged.
     const safeMaxFallbackAttempts = typeof maxFallbackAttempts === 'number' && Number.isFinite(maxFallbackAttempts)
-      ? Math.min(Math.max(Math.floor(maxFallbackAttempts), 1), 10)
+      ? Math.min(Math.max(Math.floor(maxFallbackAttempts), 1), REGISTRY_MODEL_COUNT)
       : undefined;
     // delayBetweenAttempts: default 500, Compare mode sends 200. The 2s cap bounds the
     // total added sleep at ~18s worst case (9 inter-attempt delays), ending the

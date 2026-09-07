@@ -17,7 +17,18 @@ import {
 } from './types';
 
 export * from './types';
-export { specificModelDisplayNames, fallbackChains, defaultModels } from './fallback';
+export {
+  MODEL_REGISTRY,
+  REGISTRY_MODEL_COUNT,
+  specificModelDisplayNames,
+  modelDescriptions,
+  fallbackChains,
+  defaultModels,
+  getRegisteredModel,
+  isRegisteredModel,
+  sanitizeModelPreferences,
+} from './registry';
+export type { ModelEntry } from './registry';
 
 export async function chat(
   messages: ChatMessage[],
