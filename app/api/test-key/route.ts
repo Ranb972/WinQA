@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
+// Every probe targets the provider's registry default, so a key check never names a
+// model outside the lineup (audit V05: the OpenRouter probe used deepseek-r1, in no
+// list; the Groq probe used llama-3.1-8b-instant, shut down 2026-08-16).
+import { defaultModels } from '@/lib/llm/registry';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
 
 // Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
@@ -37,7 +41,7 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
 
     await client.chat(
       {
-        model: 'command-r-08-2024',
+        model: defaultModels.cohere,
         message: 'Hi',
         maxTokens: 1,
       },
@@ -77,7 +81,7 @@ async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
     await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: defaultModels.gemini,
       contents: 'Hi',
       config: { maxOutputTokens: 1, abortSignal: controller.signal },
     });
@@ -113,7 +117,7 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
 
     await client.chat.completions.create(
       {
-        model: 'llama-3.1-8b-instant',
+        model: defaultModels.groq,
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 1,
       },
@@ -159,7 +163,7 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
         'X-Title': 'WinQA',
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-r1-0528:free',
+        model: defaultModels.openrouter,
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 1,
       }),
