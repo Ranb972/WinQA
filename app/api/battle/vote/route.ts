@@ -58,6 +58,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Record each slot under the model that actually produced its response. The
+    // respond route reports the executed id in responseX.specificModel; the picked id
+    // is only a fallback when a response carries none (audit C01: the leaderboard
+    // used to be keyed on the pick, which could differ from what ran).
+    const modelKeys = ['modelA', 'modelB', 'modelC', 'modelD'] as const;
+    const responseKeyFor = { modelA: 'responseA', modelB: 'responseB', modelC: 'responseC', modelD: 'responseD' } as const;
+    const executed = (key: (typeof modelKeys)[number]) => {
+      const picked = body[key];
+      if (!picked) return undefined;
+      return { provider: picked.provider, model: body[responseKeyFor[key]]?.specificModel || picked.model };
+    };
+
     // Save the battle
     const battle = await Battle.create({
       odlUserId: userId,
@@ -65,10 +77,10 @@ export async function POST(request: NextRequest) {
       challengeName: body.challengeName,
       prompt: body.prompt,
       battleType: body.battleType,
-      modelA: body.modelA,
-      modelB: body.modelB,
-      modelC: body.modelC,
-      modelD: body.modelD,
+      modelA: executed('modelA'),
+      modelB: executed('modelB'),
+      modelC: executed('modelC'),
+      modelD: executed('modelD'),
       responseA: body.responseA,
       responseB: body.responseB,
       responseC: body.responseC,
@@ -78,14 +90,13 @@ export async function POST(request: NextRequest) {
       rankings: body.rankings,
     });
 
-    // Update leaderboard for each model
-    const modelKeys = ['modelA', 'modelB', 'modelC', 'modelD'] as const;
+    // Update leaderboard for each model, keyed on the executed id
     const models = modelKeys
       .filter((key) => body[key])
       .map((key) => ({
         key,
-        provider: body[key]!.provider,
-        model: body[key]!.model,
+        provider: executed(key)!.provider,
+        model: executed(key)!.model,
         ratings: body.ratings[key]!,
       }));
 

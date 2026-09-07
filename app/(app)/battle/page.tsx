@@ -119,6 +119,15 @@ function getDisplayName(provider: string, model: string): string {
   return found?.name || model || modelDisplayNames[p] || provider;
 }
 
+/**
+ * The fighter as it actually ran. The respond route reports the executed id in
+ * `specificModel`; every card label, the saved battle and the leaderboard key use it,
+ * so a result is never recorded under a model that did not produce it (audit C01).
+ */
+function executedFighter(fighter: FighterConfig, response: BattleResponse | null | undefined): FighterConfig {
+  return response?.specificModel ? { ...fighter, model: response.specificModel } : fighter;
+}
+
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
 
 // --- Markdown renderer for battle responses ---
@@ -494,8 +503,8 @@ export default function BattlePage() {
       challengeName: challenge?.name || 'Custom Challenge',
       prompt: battlePrompt,
       battleType,
-      modelA: { provider: fighterA.provider, model: fighterA.model },
-      modelB: { provider: fighterB.provider, model: fighterB.model },
+      modelA: { provider: fighterA.provider, model: executedFighter(fighterA, responses[0]).model },
+      modelB: { provider: fighterB.provider, model: executedFighter(fighterB, responses[1]).model },
       responseA: sanitizeResponse(responses[0]),
       responseB: sanitizeResponse(responses[1]),
       ratings: {
@@ -551,7 +560,8 @@ export default function BattlePage() {
 
     // Map rankings to model keys
     const modelKeys = ['modelA', 'modelB', 'modelC', 'modelD'] as const;
-    const allFighters = providers.map((p) => ({ provider: p, model: defaultModels[p] }));
+    // Same executed-id mapping the arena was given, so rankings and keys line up.
+    const allFighters = providers.map((p, i) => executedFighter({ provider: p, model: defaultModels[p] }, responses[i]));
 
     // Find which model key the champion corresponds to
     const championIdx = allFighters.findIndex(
@@ -1009,7 +1019,8 @@ export default function BattlePage() {
                     {(isRoyale ? [0, 1, 2, 3] : [0, 1]).map((idx) => {
                       const fighter = idx === 0 ? fighterA : idx === 1 ? fighterB : { provider: providers[idx] as LLMProvider, model: defaultModels[providers[idx]] };
                       const response = responses[idx];
-                      const label = isBlindfold ? `Mystery ${String.fromCharCode(65 + idx)}` : getDisplayName(fighter.provider, fighter.model);
+                      const ran = executedFighter(fighter, response);
+                      const label = isBlindfold ? `Mystery ${String.fromCharCode(65 + idx)}` : getDisplayName(ran.provider, ran.model);
 
                       return (
                         <motion.div
@@ -1098,8 +1109,8 @@ export default function BattlePage() {
                   {isCodeDuel ? (
                     <CodeDuelJudging
                       responses={responses}
-                      fighterA={fighterA}
-                      fighterB={fighterB}
+                      fighterA={executedFighter(fighterA, responses[0])}
+                      fighterB={executedFighter(fighterB, responses[1])}
                       winner={winner}
                       setWinner={setWinner}
                       onSubmitVote={submitVote}
@@ -1113,7 +1124,7 @@ export default function BattlePage() {
                     /* Battle Royale: multi-round elimination */
                     <BattleRoyaleArena
                       responses={responses}
-                      fighters={providers.map((p) => ({ provider: p, model: defaultModels[p] }))}
+                      fighters={providers.map((p, i) => executedFighter({ provider: p, model: defaultModels[p] }, responses[i]))}
                       prompts={royalePrompts.length > 0 ? royalePrompts : [{ prompt: battlePrompt, explanation: battleExplanation }]}
                       challengeDescription={selectedChallenge?.userDescription}
                       fetchNextRound={fetchRoundResponses}
@@ -1167,9 +1178,10 @@ export default function BattlePage() {
                           const key = keys[idx];
                           const fighter = idx === 0 ? fighterA : fighterB;
                           const response = responses[idx];
+                          const ran = executedFighter(fighter, response);
                           const showName = !isBlindfold || blindfoldRevealed;
                           const label = showName
-                            ? getDisplayName(fighter.provider, fighter.model)
+                            ? getDisplayName(ran.provider, ran.model)
                             : `Mystery ${key}`;
 
                           return (
@@ -1222,7 +1234,7 @@ export default function BattlePage() {
                       <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
                         {(['modelA', 'modelB'] as const).map((key) => {
                           const idx = key === 'modelA' ? 0 : 1;
-                          const fighter = idx === 0 ? fighterA : fighterB;
+                          const fighter = executedFighter(idx === 0 ? fighterA : fighterB, responses[idx]);
                           const label =
                             isBlindfold && !blindfoldRevealed
                               ? `Mystery ${String.fromCharCode(65 + idx)} Wins`
@@ -1300,8 +1312,8 @@ export default function BattlePage() {
                   {/* Blindfold Reveal Overlay */}
                   {showBlindfoldReveal && (
                     <BlindfoldReveal
-                      fighterA={fighterA}
-                      fighterB={fighterB}
+                      fighterA={executedFighter(fighterA, responses[0])}
+                      fighterB={executedFighter(fighterB, responses[1])}
                       winner={winner!}
                       onComplete={() => {
                         setShowBlindfoldReveal(false);
