@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { ChatMessage, ChatResponse, GroqModel } from './types';
+import { defaultModels } from './registry';
 
 // Cache clients by API key to avoid creating new instances for each request
 const clientCache = new Map<string, Groq>();
@@ -26,7 +27,7 @@ export async function groqChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'llama-3.3-70b-versatile';
+  const modelToUse = modelOverride || defaultModels.groq;
 
   try {
     const response = await getGroqClient(customApiKey).chat.completions.create({

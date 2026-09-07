@@ -1,4 +1,5 @@
 import { ChatMessage, ChatResponse, OpenRouterModel } from './types';
+import { defaultModels } from './registry';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -10,12 +11,13 @@ export async function openrouterChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'nvidia/nemotron-3-nano-30b-a3b:free';
+  const modelToUse = modelOverride || defaultModels.openrouter;
 
-  // NVIDIA Nemotron models are thinking/reasoning models that use tokens for
-  // internal reasoning before generating content. With low max_tokens the
-  // reasoning consumes all tokens and content is empty. Minimum 4096 ensures
-  // enough room for both reasoning and the actual response.
+  // The free OpenRouter models in the registry (MiniMax M3 / M2.7, like the Nemotron
+  // models before them) are thinking/reasoning models that spend tokens on internal
+  // reasoning before generating content. With low max_tokens the reasoning consumes
+  // all tokens and content is empty. Minimum 4096 ensures enough room for both
+  // reasoning and the actual response.
   const effectiveMaxTokens = Math.max(maxTokens, 4096);
 
   try {

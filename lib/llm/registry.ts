@@ -6,13 +6,18 @@
 // (PROVIDER_MODELS), the runtime chain (fallbackChains), display names and the id
 // types are all derived from it, so the lineup cannot drift between them.
 //
+// Lineup rule (owner decision, 2026-09-07): one model family per provider, up to
+// three entries from that family, never a mix of families under one provider, and
+// never filled from another family when the catalogue has fewer than three.
+//
 // Provenance: each entry records the official page it was verified against and the
 // date. Documentation is a lagging signal. On 2026-09-06 the docs check recorded
 // Groq's llama-3.3-70b-versatile and llama-3.1-8b-instant as live; on 2026-09-07 a
 // live call to llama-3.3-70b-versatile returned 404 model_not_found, and Groq's
 // deprecations page dates their shutdown to 2026-08-16. Live probes, not
 // documentation pages, are the source of truth for whether an id answers; the
-// model-radar feature (E2) exists to run them on a schedule.
+// model-radar feature (E2) exists to run them on a schedule. Every id below answered
+// a live probe on its verifiedOn date, through this repository's own adapters.
 import type { LLMProvider } from './types';
 
 export interface ModelEntry {
@@ -29,82 +34,101 @@ export interface ModelEntry {
 }
 
 export const MODEL_REGISTRY = {
+  // Command family. Trial keys: 20 req/min, 1,000 calls/month (docs.cohere.com/docs/rate-limits).
+  // command-a-plus-05-2026 is live on docs.cohere.com but the 2026-09-07 probe returned
+  // 400 "this model is not supported with '/v1/chat', please use '/v2/chat'": it needs
+  // the Cohere v2 client (cohere-ai CohereClientV2), which this codebase does not use.
   cohere: [
     {
       id: 'command-a-03-2025',
       name: 'Command A',
       description: 'Newest, strongest',
       source: 'https://docs.cohere.com/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
     {
       id: 'command-r-plus-08-2024',
       name: 'Command R+',
-      description: 'Very capable',
+      description: 'Previous generation',
       source: 'https://docs.cohere.com/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
     {
       id: 'command-r-08-2024',
       name: 'Command R',
-      description: 'Balanced',
+      description: 'Previous generation, smaller',
       source: 'https://docs.cohere.com/docs/models',
-      verifiedOn: '2026-09-06',
-    },
-    {
-      id: 'command-r7b-12-2024',
-      name: 'Command R7B',
-      description: 'Smallest, fastest',
-      source: 'https://docs.cohere.com/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
   ],
+  // Gemini Flash family, two generations. All four are "free of charge" on the free
+  // tier (ai.google.dev/gemini-api/docs/pricing); numeric limits live in AI Studio.
   gemini: [
+    {
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      description: 'Newest Flash',
+      source: 'https://ai.google.dev/gemini-api/docs/models',
+      verifiedOn: '2026-09-07',
+    },
+    {
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash Lite',
+      description: 'Lightweight, fast',
+      source: 'https://ai.google.dev/gemini-api/docs/models',
+      verifiedOn: '2026-09-07',
+    },
     {
       id: 'gemini-2.5-flash',
       name: 'Gemini 2.5 Flash',
-      description: 'Latest, most capable',
+      description: 'Previous generation',
       source: 'https://ai.google.dev/gemini-api/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
     {
       id: 'gemini-2.5-flash-lite',
       name: 'Gemini 2.5 Flash Lite',
-      description: 'Lightweight',
+      description: 'Previous generation, lightweight',
       source: 'https://ai.google.dev/gemini-api/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
   ],
+  // GPT-OSS family: Groq's only production family with more than one chat model on
+  // a developer key. Free tier per model: 30 RPM, 1K RPD, 8K TPM, 200K TPD
+  // (console.groq.com/docs/rate-limits). Two entries; the catalogue has no third.
   groq: [
     {
-      id: 'llama-3.3-70b-versatile',
-      name: 'Llama 3.3 70B',
+      id: 'openai/gpt-oss-120b',
+      name: 'GPT-OSS 120B',
       description: 'Most capable',
       source: 'https://console.groq.com/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
     {
-      id: 'llama-3.1-8b-instant',
-      name: 'Llama 3.1 8B',
+      id: 'openai/gpt-oss-20b',
+      name: 'GPT-OSS 20B',
       description: 'Faster, smaller',
       source: 'https://console.groq.com/docs/models',
-      verifiedOn: '2026-09-06',
+      verifiedOn: '2026-09-07',
     },
   ],
+  // MiniMax family: the only lab with more than one :free chat model in OpenRouter's
+  // live catalogue on 2026-09-07 (Qwen and DeepSeek had none). Free variants: 20 RPM,
+  // 50 RPD, 1,000 RPD with $10 lifetime credit (openrouter.ai/docs/api-reference/limits).
   openrouter: [
     {
-      id: 'nvidia/nemotron-3-nano-30b-a3b:free',
-      name: 'Nemotron 3 Nano 30B',
-      description: 'Free tier',
-      source: 'https://openrouter.ai/nvidia/nemotron-3-nano-30b-a3b:free',
-      verifiedOn: '2026-09-06',
+      id: 'minimax/minimax-m3:free',
+      name: 'MiniMax M3',
+      description: 'Free tier, 1M context',
+      source: 'https://openrouter.ai/minimax/minimax-m3:free',
+      verifiedOn: '2026-09-07',
     },
     {
-      id: 'nvidia/nemotron-nano-9b-v2:free',
-      name: 'Nemotron Nano 9B',
-      description: 'Free tier, smaller',
-      source: 'https://openrouter.ai/nvidia/nemotron-nano-9b-v2:free',
-      verifiedOn: '2026-09-06',
+      id: 'minimax/minimax-m2.7:free',
+      name: 'MiniMax M2.7',
+      description: 'Free tier, previous generation',
+      source: 'https://openrouter.ai/minimax/minimax-m2.7:free',
+      verifiedOn: '2026-09-07',
     },
   ],
 } as const satisfies Record<LLMProvider, readonly ModelEntry[]>;

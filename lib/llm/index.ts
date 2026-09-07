@@ -100,7 +100,7 @@ export async function multiModelChat(
 export const modelDisplayNames: Record<LLMProvider, string> = {
   cohere: 'Cohere Command',
   gemini: 'Google Gemini',
-  groq: 'Groq (Llama)',
+  groq: 'Groq',
   openrouter: 'OpenRouter',
 };
 

@@ -1,5 +1,6 @@
 import { CohereClient } from 'cohere-ai';
 import { ChatMessage, ChatResponse, CohereModel } from './types';
+import { defaultModels } from './registry';
 
 function getCohereClient(customApiKey?: string): CohereClient {
   const apiKey = customApiKey || process.env.COHERE_API_KEY || '';
@@ -17,7 +18,7 @@ export async function cohereChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'command-r-plus-08-2024';
+  const modelToUse = modelOverride || defaultModels.cohere;
 
   try {
     // Convert messages to Cohere format

@@ -1,5 +1,6 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { ChatMessage, ChatResponse, GeminiModel } from './types';
+import { defaultModels } from './registry';
 
 // Cache clients by API key to avoid creating new instances for each request
 const clientCache = new Map<string, GoogleGenAI>();
@@ -26,7 +27,7 @@ export async function geminiChat(
   customApiKey?: string
 ): Promise<ChatResponse> {
   const startTime = Date.now();
-  const modelToUse = modelOverride || 'gemini-2.5-flash';
+  const modelToUse = modelOverride || defaultModels.gemini;
 
   try {
     const ai = getGenAI(customApiKey);
@@ -50,9 +51,12 @@ export async function geminiChat(
         // flash-lite: thinking is off by default upstream and its only legal explicit
         // budgets are 0 or 512-24576 — values 1-511 are a guaranteed 400. Keep it off.
         // flash: 0-24576 all legal; keep the starvation cap (half the budget, max 1024).
-        thinkingConfig: {
-          thinkingBudget: modelToUse === 'gemini-2.5-flash-lite' ? 0 : Math.min(1024, Math.floor(maxTokens / 2)),
-        },
+        // Gemini 3.x documents only thinking_level (ai.google.dev/gemini-api/docs/thinking,
+        // checked 2026-09-07); LOW keeps the same "most of the budget reaches the
+        // answer" intent without a numeric budget the 3.x API may reject.
+        thinkingConfig: modelToUse.startsWith('gemini-2.5')
+          ? { thinkingBudget: modelToUse === 'gemini-2.5-flash-lite' ? 0 : Math.min(1024, Math.floor(maxTokens / 2)) }
+          : { thinkingLevel: ThinkingLevel.LOW },
       },
     });
 
