@@ -45,4 +45,16 @@ describe('POST /api/battle/respond — validation branches (auth mocked, no LLM)
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'Prompt too long' });
   });
+
+  it('400 for a model id the registry does not know (no silent chain-head run)', async () => {
+    const res = await POST(makeRequest({ provider: 'groq', model: 'mixtral-8x7b-32768', prompt: 'hello' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Unknown model 'mixtral-8x7b-32768' for provider 'groq'" });
+  });
+
+  it('400 for a live id sent under the wrong provider', async () => {
+    const res = await POST(makeRequest({ provider: 'cohere', model: 'gemini-2.5-flash', prompt: 'hello' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Unknown model 'gemini-2.5-flash' for provider 'cohere'" });
+  });
 });

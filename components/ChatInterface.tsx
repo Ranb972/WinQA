@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ModelSelector from '@/components/ModelSelector';
 import ChatMessage from '@/components/ChatMessage';
 import BugReportModal from '@/components/BugReportModal';
-import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames } from '@/lib/llm';
+import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames, sanitizeModelPreferences } from '@/lib/llm';
 import { cn } from '@/lib/utils';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import { getModelPreferences, setModelPreference } from '@/lib/model-preferences';
@@ -96,11 +96,11 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
     if (Object.keys(prefs).length > 0) {
       setModelPreferences((prev) => ({ ...prev, ...prefs } as Record<LLMProvider, SpecificModel>));
     }
-    // Also check legacy storage
+    // Also check legacy storage (filtered against the registry like the new store)
     const legacy = localStorage.getItem('modelPreferences');
     if (legacy) {
       try {
-        const parsed = JSON.parse(legacy);
+        const parsed = sanitizeModelPreferences(JSON.parse(legacy));
         setModelPreferences((prev) => ({ ...prev, ...parsed }));
       } catch {
         // Invalid JSON, ignore

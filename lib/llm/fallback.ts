@@ -13,7 +13,7 @@ import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
 import { groqChat } from './groq';
 import { openrouterChat } from './openrouter';
-import { fallbackChains, defaultModels } from './registry';
+import { fallbackChains, defaultModels, isRegisteredModel } from './registry';
 
 // The chains, defaults and display names live in the registry (lib/llm/registry.ts);
 // they are re-exported here for existing importers.
@@ -127,22 +127,34 @@ export async function chatWithFallback(
     customApiKeys,
   } = options;
 
+  // A requested model must be a registered model of this provider. Previously an
+  // unknown id left the sequence untouched and the chain head ran in its place,
+  // silently, with no fallback badge (audit C01). The routes reject unknown ids with
+  // a 400 before charging the allowance; this is the engine's own guard.
+  if (specificModel !== undefined && !isRegisteredModel(provider, specificModel)) {
+    return {
+      content: '',
+      model: provider,
+      specificModel,
+      responseTime: 0,
+      error: `Unknown model '${specificModel}' for provider '${provider}'`,
+    };
+  }
+
   // Use user-specified model or fall back to default
-  const startModel = (specificModel as SpecificModel) || defaultModels[provider];
+  const startModel: SpecificModel = specificModel ?? defaultModels[provider];
 
   // Build fallback sequence, starting from the specified model
   const fallbackSequence = buildFallbackSequence(provider, enableCrossProviderFallback);
 
-  // If a specific model was requested, reorder the sequence to start with it
-  if (specificModel) {
-    const modelIndex = fallbackSequence.findIndex(
-      (item) => item.model === specificModel && item.provider === provider
-    );
-    if (modelIndex > 0) {
-      // Move the specified model to the front of its provider's models
-      const [selectedItem] = fallbackSequence.splice(modelIndex, 1);
-      fallbackSequence.unshift(selectedItem);
-    }
+  // Reorder the sequence so the requested model runs first. It is always present
+  // (validated above), so this only ever moves it forward.
+  const modelIndex = fallbackSequence.findIndex(
+    (item) => item.model === startModel && item.provider === provider
+  );
+  if (modelIndex > 0) {
+    const [selectedItem] = fallbackSequence.splice(modelIndex, 1);
+    fallbackSequence.unshift(selectedItem);
   }
 
   let attemptCount = 0;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, LLMProvider, ChatMessage, CustomApiKeys } from '@/lib/llm';
+import { chat, LLMProvider, ChatMessage, CustomApiKeys, isRegisteredModel } from '@/lib/llm';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
@@ -35,6 +35,15 @@ export async function POST(request: NextRequest) {
 
     if (prompt.length > 5000) {
       return NextResponse.json({ error: 'Prompt too long' }, { status: 400 });
+    }
+
+    // An id outside the registry is a 400, never a silent run of the chain head
+    // (audit C01: the Battle dropdown used to offer three such ids).
+    if (model !== undefined && !isRegisteredModel(provider, model)) {
+      return NextResponse.json(
+        { error: `Unknown model '${String(model)}' for provider '${provider}'` },
+        { status: 400 }
+      );
     }
 
     const { allowed } = await consumeDailyAllowance(userId);

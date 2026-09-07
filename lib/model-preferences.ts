@@ -1,6 +1,8 @@
 // Model preferences storage (localStorage)
 // Model preferences don't need encryption - they're not sensitive
 
+import { sanitizeModelPreferences } from '@/lib/llm/registry';
+
 const STORAGE_KEY = 'winqa_model_preferences';
 
 export interface ModelPreferences {
@@ -8,7 +10,11 @@ export interface ModelPreferences {
 }
 
 /**
- * Get all model preferences from localStorage
+ * Get all model preferences from localStorage.
+ *
+ * Stored preferences outlive lineups: a user who saved an id that has since left
+ * the registry would otherwise send it on every request and get a 400. Anything
+ * not in the registry is dropped here, so callers only ever see live ids.
  */
 export function getModelPreferences(): ModelPreferences {
   if (typeof window === 'undefined') {
@@ -20,7 +26,7 @@ export function getModelPreferences(): ModelPreferences {
     if (!stored) {
       return {};
     }
-    return JSON.parse(stored) as ModelPreferences;
+    return sanitizeModelPreferences(JSON.parse(stored));
   } catch {
     return {};
   }

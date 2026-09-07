@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, REGISTRY_MODEL_COUNT } from '@/lib/llm';
+import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, REGISTRY_MODEL_COUNT, isRegisteredModel } from '@/lib/llm';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
@@ -29,6 +29,23 @@ interface RequestBody {
 // (lib/llm/fallback.ts:106) holding a Function — an uncaught TypeError surfacing as a
 // 500. PROVIDER_MODELS is a UI catalogue, not an authorization list.
 const VALID_PROVIDERS = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'openrouter']);
+
+/**
+ * The first (provider, id) preference that names a model the registry does not know,
+ * checked only for the providers this request will actually call. A stale preference
+ * for an unselected provider must not fail the request.
+ */
+function findUnregisteredPreference(
+  providers: LLMProvider[],
+  prefs: unknown
+): { provider: LLMProvider; id: unknown } | null {
+  if (!prefs || typeof prefs !== 'object') return null;
+  for (const provider of providers) {
+    const id = (prefs as Record<string, unknown>)[provider];
+    if (id !== undefined && !isRegisteredModel(provider, id)) return { provider, id };
+  }
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,6 +131,21 @@ export async function POST(request: NextRequest) {
       // unhandled TypeError) after the charge. Behavior change: they now 400 up front.
       return NextResponse.json(
         { error: 'Invalid model specified' },
+        { status: 400 }
+      );
+    }
+
+    // A model preference outside the registry is a 400, never a silent run of the
+    // chain head (audit C01). Checked before the allowance charge like the rest.
+    const calledProviders: LLMProvider[] = Array.isArray(models)
+      ? builtInModels
+      : VALID_PROVIDERS.has(models as LLMProvider)
+        ? [models as LLMProvider]
+        : [];
+    const unregistered = findUnregisteredPreference(calledProviders, modelPreferences);
+    if (unregistered) {
+      return NextResponse.json(
+        { error: `Unknown model '${String(unregistered.id)}' for provider '${unregistered.provider}'` },
         { status: 400 }
       );
     }
