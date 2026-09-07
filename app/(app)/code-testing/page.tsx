@@ -42,7 +42,7 @@ import {
   requiresDevEnvironment,
   wrapJSInHTML,
 } from '@/lib/code-execution';
-import { LLMProvider, ChatResponse } from '@/lib/llm';
+import { LLMProvider, ChatResponse, providerDisplayNames, specificModelDisplayNames, defaultModels } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import { getEnabledCustomProviders, CustomProvider } from '@/lib/custom-providers';
 import { getModelPreferences } from '@/lib/model-preferences';
@@ -55,12 +55,22 @@ const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
   { value: 'typescript', label: 'TypeScript' },
 ];
 
-const MODEL_OPTIONS: { value: LLMProvider | string; label: string; description: string }[] = [
-  { value: 'groq', label: 'Groq - Llama 3.3 70B', description: 'Fast inference (Recommended)' },
-  { value: 'gemini', label: 'Gemini 2.0 Flash', description: 'Google AI' },
-  { value: 'cohere', label: 'Cohere Command A', description: 'Latest Cohere model' },
-  { value: 'openrouter', label: 'OpenRouter - DeepSeek R1', description: 'Free tier' },
-];
+// Labels derive from the registry so the picker cannot name a model the runtime
+// does not call (three of the four hand-written labels here were wrong; audit C05).
+const MODEL_OPTION_DESCRIPTIONS: Record<LLMProvider, string> = {
+  groq: 'Fast inference (Recommended)',
+  gemini: 'Google AI',
+  cohere: 'Cohere',
+  openrouter: 'Free tier',
+};
+
+const MODEL_OPTIONS: { value: LLMProvider | string; label: string; description: string }[] = (
+  ['groq', 'gemini', 'cohere', 'openrouter'] as LLMProvider[]
+).map((provider) => ({
+  value: provider,
+  label: `${providerDisplayNames[provider]} - ${specificModelDisplayNames[defaultModels[provider]]}`,
+  description: MODEL_OPTION_DESCRIPTIONS[provider],
+}));
 
 interface HistoryItem {
   code: string;

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { LLMProvider } from '@/lib/llm';
+import { LLMProvider, providerDisplayNames, specificModelDisplayNames, defaultModels } from '@/lib/llm';
 import { CustomProvider } from '@/lib/custom-providers';
 
 export type DebugMode = 'summary' | 'detailed';
@@ -22,29 +22,22 @@ interface DebugModelSelectorProps {
   analysisType?: AnalysisType;
 }
 
-// Built-in providers with their default models for display
-const BUILT_IN_OPTIONS: { value: LLMProvider; label: string; description: string }[] = [
-  {
-    value: 'groq',
-    label: 'Groq - Llama 3.3 70B',
-    description: 'Fast inference (Recommended)',
-  },
-  {
-    value: 'gemini',
-    label: 'Gemini 2.0 Flash',
-    description: 'Google AI',
-  },
-  {
-    value: 'cohere',
-    label: 'Cohere Command A',
-    description: 'Latest Cohere model',
-  },
-  {
-    value: 'openrouter',
-    label: 'OpenRouter - DeepSeek R1',
-    description: 'Free tier',
-  },
-];
+// Built-in providers with their default models for display. Labels derive from the
+// registry so they cannot name a model the runtime does not call.
+const BUILT_IN_DESCRIPTIONS: Record<LLMProvider, string> = {
+  groq: 'Fast inference (Recommended)',
+  gemini: 'Google AI',
+  cohere: 'Cohere',
+  openrouter: 'Free tier',
+};
+
+const BUILT_IN_OPTIONS: { value: LLMProvider; label: string; description: string }[] = (
+  ['groq', 'gemini', 'cohere', 'openrouter'] as LLMProvider[]
+).map((provider) => ({
+  value: provider,
+  label: `${providerDisplayNames[provider]} - ${specificModelDisplayNames[defaultModels[provider]]}`,
+  description: BUILT_IN_DESCRIPTIONS[provider],
+}));
 
 export default function DebugModelSelector({
   onSelect,

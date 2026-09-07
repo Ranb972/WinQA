@@ -44,6 +44,7 @@ import {
 import { getApiKeys, setApiKeys, maskApiKey, ApiKeys } from '@/lib/api-keys';
 import { LLMProvider } from '@/lib/llm/types';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
+import { specificModelDisplayNames, defaultModels } from '@/lib/llm/registry';
 import { getModelPreferences, setModelPreference, ModelPreferences } from '@/lib/model-preferences';
 import {
   CustomProvider,
@@ -70,28 +71,28 @@ const providers: ProviderConfig[] = [
   {
     key: 'cohere',
     name: 'Cohere',
-    description: 'Access Command R+ and other Cohere models',
+    description: `Access ${specificModelDisplayNames[defaultModels.cohere]} and other Cohere models`,
     placeholder: 'Enter your Cohere API key',
     docsUrl: 'https://dashboard.cohere.com/api-keys',
   },
   {
     key: 'gemini',
     name: 'Google Gemini',
-    description: 'Access Gemini 2.5 Flash and other Google models',
+    description: `Access ${specificModelDisplayNames[defaultModels.gemini]} and other Google models`,
     placeholder: 'Enter your Google AI API key',
     docsUrl: 'https://aistudio.google.com/apikey',
   },
   {
     key: 'groq',
     name: 'Groq',
-    description: 'Access Llama 3.3 70B and other fast models',
+    description: `Access ${specificModelDisplayNames[defaultModels.groq]} and other fast models`,
     placeholder: 'Enter your Groq API key',
     docsUrl: 'https://console.groq.com/keys',
   },
   {
     key: 'openrouter',
     name: 'OpenRouter',
-    description: 'Access DeepSeek R1 and many other models',
+    description: `Access ${specificModelDisplayNames[defaultModels.openrouter]} and other free models`,
     placeholder: 'Enter your OpenRouter API key',
     docsUrl: 'https://openrouter.ai/keys',
   },

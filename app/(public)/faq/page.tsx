@@ -1,5 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { registryEntries } from '@/lib/llm/registry';
+import type { LLMProvider } from '@/lib/llm/types';
+
+// Model names come from the registry so this answer (also emitted as FAQPage
+// JSON-LD) cannot drift from the lineup.
+const modelNames = (provider: LLMProvider) =>
+  registryEntries(provider)
+    .map((m) => m.name)
+    .join(', ');
 
 export const metadata: Metadata = {
   title: 'FAQ - Frequently Asked Questions',
@@ -32,7 +41,7 @@ const faqs = [
   {
     question: 'What AI models can I test on WinQA?',
     answer:
-      'WinQA connects to four providers: Cohere (Command R, Command R+), Google Gemini (Pro, Flash), Groq (Llama, Mixtral with fast inference), and OpenRouter (100+ models through one API). You pick which ones to use and can swap between them anytime.',
+      `WinQA connects to four providers: Cohere (${modelNames('cohere')}), Google Gemini (${modelNames('gemini')}), Groq (${modelNames('groq')}, fast inference), and OpenRouter (${modelNames('openrouter')}, free tier). You pick which ones to use and can swap between them anytime.`,
   },
   {
     question: 'Do I need my own API keys?',

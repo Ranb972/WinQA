@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { registryEntries } from '@/lib/llm/registry';
+import type { LLMProvider } from '@/lib/llm/types';
 import {
   FlaskConical,
   Swords,
@@ -67,14 +69,17 @@ const features = [
   },
 ];
 
+// Model names come from the registry so this copy cannot drift from the lineup.
+const modelNames = (provider: LLMProvider) =>
+  registryEntries(provider)
+    .map((m) => m.name)
+    .join(', ');
+
 const providers = [
-  { name: 'Cohere', description: 'Command R and Command R+ models' },
-  { name: 'Google Gemini', description: 'Gemini Pro and Gemini Flash' },
-  { name: 'Groq', description: 'Fast inference — Llama and Mixtral' },
-  {
-    name: 'OpenRouter',
-    description: '100+ models, one API',
-  },
+  { name: 'Cohere', description: modelNames('cohere') },
+  { name: 'Google Gemini', description: modelNames('gemini') },
+  { name: 'Groq', description: `Fast inference — ${modelNames('groq')}` },
+  { name: 'OpenRouter', description: `${modelNames('openrouter')} on the free tier` },
 ];
 
 export default function AboutPage() {
