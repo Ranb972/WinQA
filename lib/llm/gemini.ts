@@ -2,21 +2,13 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { ChatMessage, ChatResponse, GeminiModel } from './types';
 import { defaultModels } from './registry';
 
-// Cache clients by API key to avoid creating new instances for each request
-const clientCache = new Map<string, GoogleGenAI>();
-
 function getGenAI(customApiKey?: string): GoogleGenAI {
   const apiKey = customApiKey || process.env.GOOGLE_GEMINI_API_KEY || '';
-
-  // Return cached client if exists
-  if (clientCache.has(apiKey)) {
-    return clientCache.get(apiKey)!;
-  }
-
-  // Create and cache new client
-  const client = new GoogleGenAI({ apiKey });
-  clientCache.set(apiKey, client);
-  return client;
+  // Construct fresh per call, as cohere.ts does. The constructor only stores the
+  // key; the real cost is the network round-trip in generateContent() below. A
+  // module-level Map keyed by user API keys grew without bound on long-lived
+  // serverless instances and retained every key ever seen (audit V18).
+  return new GoogleGenAI({ apiKey });
 }
 
 export async function geminiChat(

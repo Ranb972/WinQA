@@ -2,21 +2,13 @@ import Groq from 'groq-sdk';
 import { ChatMessage, ChatResponse, GroqModel } from './types';
 import { defaultModels } from './registry';
 
-// Cache clients by API key to avoid creating new instances for each request
-const clientCache = new Map<string, Groq>();
-
 function getGroqClient(customApiKey?: string): Groq {
   const apiKey = customApiKey || process.env.GROQ_API_KEY || '';
-
-  // Return cached client if exists
-  if (clientCache.has(apiKey)) {
-    return clientCache.get(apiKey)!;
-  }
-
-  // Create and cache new client
-  const client = new Groq({ apiKey });
-  clientCache.set(apiKey, client);
-  return client;
+  // Construct fresh per call, as cohere.ts does. The constructor only stores the
+  // key; the real cost is the network round-trip in chat.completions.create()
+  // below. A module-level Map keyed by user API keys grew without bound on
+  // long-lived serverless instances and retained every key ever seen (audit V18).
+  return new Groq({ apiKey });
 }
 
 export async function groqChat(
