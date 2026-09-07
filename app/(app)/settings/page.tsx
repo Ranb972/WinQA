@@ -53,8 +53,8 @@ import {
   removeCustomProvider,
   toggleCustomProvider,
   MAX_CUSTOM_PROVIDERS,
+  testCustomProviderConnection,
 } from '@/lib/custom-providers';
-import { testCustomProviderConnection } from '@/lib/llm/custom';
 import CustomProviderCard from '@/components/CustomProviderCard';
 import CustomProviderModal from '@/components/CustomProviderModal';
 import { useToast } from '@/hooks/use-toast';

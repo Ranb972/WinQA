@@ -31,37 +31,46 @@ export const PROVIDER_MODELS: Record<LLMProvider, ModelDefinition[]> = Object.fr
   ])
 ) as Record<LLMProvider, ModelDefinition[]>;
 
+// Preset ids verified 2026-09-07 against each vendor's official model page; the first
+// id is what quick-fill selects. Perplexity was dropped: its Sonar chat-completions
+// endpoint is supported only until 2026-09-27 (docs.perplexity.ai).
 export const COMMON_CUSTOM_PROVIDERS: CommonProviderSuggestion[] = [
   {
+    // developers.openai.com/api/docs/models; gpt-4-turbo and gpt-3.5-turbo shut down 2026-10-23.
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+    models: ['gpt-5.6-terra', 'gpt-5.6-sol', 'gpt-5.6-luna', 'gpt-6-astra'],
   },
   {
+    // platform.claude.com/docs/en/about-claude/models/overview; all Claude 3 ids are retired.
     name: 'Anthropic (Claude)',
     baseUrl: 'https://api.anthropic.com/v1',
-    models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229'],
+    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
     headerType: 'x-api-key',
   },
   {
+    // docs.mistral.ai model cards; the "-latest" aliases are no longer documented.
     name: 'Mistral',
     baseUrl: 'https://api.mistral.ai/v1',
-    models: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest'],
+    models: ['mistral-medium-3-5', 'mistral-small-2603'],
   },
   {
+    // docs.together.ai/docs/serverless-models; the Llama 3 ids left serverless in 2024.
     name: 'Together AI',
     baseUrl: 'https://api.together.xyz/v1',
-    models: ['meta-llama/Llama-3-70b-chat-hf', 'meta-llama/Llama-3-8b-chat-hf'],
+    models: ['meta-llama/Llama-3.3-70B-Instruct-Turbo', 'openai/gpt-oss-120b', 'Qwen/Qwen3.7-Plus'],
   },
   {
+    // fireworks.ai/models/fireworks/gpt-oss-120b ("Available Serverless"); llama-v3-70b-instruct is gone.
     name: 'Fireworks AI',
     baseUrl: 'https://api.fireworks.ai/inference/v1',
-    models: ['accounts/fireworks/models/llama-v3-70b-instruct'],
+    models: ['accounts/fireworks/models/gpt-oss-120b'],
   },
   {
-    name: 'Perplexity',
-    baseUrl: 'https://api.perplexity.ai',
-    models: ['llama-3.1-sonar-small-128k-online', 'llama-3.1-sonar-large-128k-online'],
+    // api-docs.deepseek.com/quick_start/pricing; OpenAI-format base URL takes no /v1.
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   },
 ];
 
@@ -104,4 +113,12 @@ export function getHeaderType(baseUrl: string): 'bearer' | 'x-api-key' {
  */
 export function normalizeBaseUrl(url: string): string {
   return url.toLowerCase().replace(/\/+$/, '');
+}
+
+/**
+ * Detect if a provider uses the Anthropic Messages API format, based on base URL.
+ * Shared by the chat path and the test-connection route.
+ */
+export function isAnthropicProvider(baseUrl: string): boolean {
+  return normalizeBaseUrl(baseUrl).includes('anthropic.com');
 }

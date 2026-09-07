@@ -233,6 +233,38 @@ export async function getEnabledCustomProviders(userId?: string): Promise<Custom
 }
 
 /**
+ * Test a custom provider through the server route. The check used to run in the
+ * browser, where CORS blocks most providers and Anthropic cannot be reached at all
+ * (audit V04); the route speaks both API formats and applies the SSRF guard.
+ */
+export async function testCustomProviderConnection(
+  provider: Pick<CustomProvider, 'baseUrl' | 'apiKey' | 'modelId' | 'headerType'>
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/test-custom-provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+        modelId: provider.modelId,
+        headerType: provider.headerType,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { valid?: boolean; error?: string };
+    if (data.valid) {
+      return { valid: true };
+    }
+    return { valid: false, error: data.error || `HTTP ${res.status}` };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
+}
+
+/**
  * Clear all custom providers
  */
 export function clearCustomProviders(): void {

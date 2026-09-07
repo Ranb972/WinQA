@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPrivateUrl } from '@/lib/security';
+import { isPrivateUrl, checkProviderUrl } from '@/lib/security';
 
 describe('isPrivateUrl (SSRF guard)', () => {
   // Contract: true = private/internal (blocked), false = public (allowed).
@@ -24,5 +24,25 @@ describe('isPrivateUrl (SSRF guard)', () => {
 
   it('blocks an invalid / unparseable URL (fails closed)', () => {
     expect(isPrivateUrl('not a url')).toBe(true);
+  });
+});
+
+describe('checkProviderUrl (custom-provider base URL guard)', () => {
+  // Contract: null = acceptable; otherwise the user-facing reason.
+  it('accepts a public https URL', () => {
+    expect(checkProviderUrl('https://api.openai.com/v1')).toBeNull();
+  });
+
+  it.each(['http://api.openai.com/v1', 'ftp://x', '', undefined, 42])(
+    'requires https and a string: %s',
+    (value) => {
+      expect(checkProviderUrl(value)).toBe('Base URL must use HTTPS');
+    }
+  );
+
+  it('rejects a private address even over https', () => {
+    expect(checkProviderUrl('https://10.0.0.1/v1')).toBe(
+      'Base URL must not point to a private/internal address'
+    );
   });
 });

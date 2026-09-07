@@ -2,8 +2,8 @@
 
 import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
-import { normalizeBaseUrl, getHeaderType } from './models';
-import { isPrivateUrl } from '@/lib/security';
+import { normalizeBaseUrl, getHeaderType, isAnthropicProvider } from './models';
+import { checkProviderUrl } from '@/lib/security';
 import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
 
 interface OpenAIMessage {
@@ -58,14 +58,6 @@ interface AnthropicChatResponse {
     input_tokens: number;
     output_tokens: number;
   };
-}
-
-/**
- * Detect if a provider uses Anthropic API format based on base URL
- */
-function isAnthropicProvider(baseUrl: string): boolean {
-  const normalized = normalizeBaseUrl(baseUrl);
-  return normalized.includes('anthropic.com');
 }
 
 /**
@@ -130,11 +122,14 @@ async function callAnthropicApi(
   const baseUrl = normalizeBaseUrl(provider.baseUrl);
   const endpoint = `${baseUrl}/messages`;
 
+  // temperature is deliberately not sent: Claude 4.7 and later return 400 for any
+  // non-default value (platform.claude.com model-deprecations, checked 2026-09-07),
+  // which would make every current Anthropic preset fail on a temperature-bearing call.
+  void temperature;
   const body: AnthropicChatRequest = {
     model: provider.modelId,
     messages: anthropicMessages,
     max_tokens: maxTokens || 4096,
-    ...(temperature !== undefined && { temperature }),
     ...(system && { system }),
   };
 
@@ -263,23 +258,15 @@ export async function callCustomProvider(
     };
   }
 
-  if (!provider.baseUrl?.startsWith('https://')) {
+  // SSRF guard shared with /api/test-custom-provider (lib/security.ts).
+  const urlError = checkProviderUrl(provider.baseUrl);
+  if (urlError) {
     return {
       content: '',
       model: `custom:${provider.id}` as LLMProvider,
       specificModel: `${provider.name}: ${provider.modelId}`,
       responseTime: 0,
-      error: 'Custom provider baseUrl must use HTTPS',
-    };
-  }
-
-  if (isPrivateUrl(provider.baseUrl)) {
-    return {
-      content: '',
-      model: `custom:${provider.id}` as LLMProvider,
-      specificModel: `${provider.name}: ${provider.modelId}`,
-      responseTime: 0,
-      error: 'Custom provider baseUrl cannot point to private network',
+      error: urlError,
     };
   }
 
@@ -288,30 +275,4 @@ export async function callCustomProvider(
   }
 
   return callOpenAIApi(provider, messages, temperature, maxTokens);
-}
-
-/**
- * Test a custom provider's API key with a simple request
- */
-export async function testCustomProviderConnection(
-  provider: CustomProvider
-): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const testMessages: ChatMessage[] = [
-      { role: 'user', content: 'Say "OK" and nothing else.' },
-    ];
-
-    const response = await callCustomProvider(provider, testMessages, 0, 10);
-
-    if (response.error) {
-      return { valid: false, error: response.error };
-    }
-
-    return { valid: true };
-  } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : 'Connection failed',
-    };
-  }
 }

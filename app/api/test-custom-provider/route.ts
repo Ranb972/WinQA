@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { isPrivateUrl } from '@/lib/security';
+import { checkProviderUrl } from '@/lib/security';
+import { isAnthropicProvider, normalizeBaseUrl } from '@/lib/llm/models';
 
 // Sends a real test message to a user's custom endpoint (no fetch timeout);
 // slow self-hosted models can legitimately take 10-20s.
@@ -16,14 +17,6 @@ interface TestCustomProviderRequest {
 interface TestCustomProviderResponse {
   valid: boolean;
   error?: string;
-}
-
-/**
- * Detect if a provider uses Anthropic API format based on base URL
- */
-function isAnthropicProvider(baseUrl: string): boolean {
-  const normalized = baseUrl.toLowerCase().replace(/\/+$/, '');
-  return normalized.includes('anthropic.com');
 }
 
 /**
@@ -61,7 +54,7 @@ async function testConnection(
   modelId: string,
   headerType?: 'bearer' | 'x-api-key'
 ): Promise<TestCustomProviderResponse> {
-  const normalizedUrl = baseUrl.replace(/\/+$/, '');
+  const normalizedUrl = normalizeBaseUrl(baseUrl);
   const headers = buildHeaders(apiKey, baseUrl, headerType);
 
   try {
@@ -159,19 +152,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SSRF protection: require https and block private IPs
-    if (!baseUrl.startsWith('https://')) {
-      return NextResponse.json(
-        { valid: false, error: 'Base URL must use HTTPS' },
-        { status: 400 }
-      );
-    }
-
-    if (isPrivateUrl(baseUrl)) {
-      return NextResponse.json(
-        { valid: false, error: 'Base URL must not point to a private/internal address' },
-        { status: 400 }
-      );
+    // SSRF protection shared with the chat path (lib/security.ts): https only, no
+    // private/internal addresses.
+    const urlError = checkProviderUrl(baseUrl);
+    if (urlError) {
+      return NextResponse.json({ valid: false, error: urlError }, { status: 400 });
     }
 
     const result = await testConnection(baseUrl, apiKey, modelId, headerType);

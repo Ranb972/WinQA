@@ -19,14 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff, Loader2, FlaskConical, Check, X } from 'lucide-react';
-import { CustomProvider } from '@/lib/custom-providers';
+import { CustomProvider, testCustomProviderConnection } from '@/lib/custom-providers';
 import {
   COMMON_CUSTOM_PROVIDERS,
   getSuggestedModels,
   getHeaderType,
   normalizeBaseUrl,
 } from '@/lib/llm/models';
-import { testCustomProviderConnection } from '@/lib/llm/custom';
+
+// Sentinel value of the model <Select> that reveals the free-text input.
+const CUSTOM_MODEL = '__custom__';
 
 interface CustomProviderModalProps {
   open: boolean;
@@ -47,6 +49,8 @@ export default function CustomProviderModal({
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [modelId, setModelId] = useState('');
+  // The id typed into "Enter custom model" when the <Select> is on the sentinel.
+  const [customModelId, setCustomModelId] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState('');
@@ -61,17 +65,26 @@ export default function CustomProviderModal({
   useEffect(() => {
     if (open) {
       if (provider) {
-        // Edit mode
+        // Edit mode. A saved id that is not one of the base URL's suggestions is a
+        // custom one: show it in the free-text input instead of an empty <Select>.
         setName(provider.name);
         setBaseUrl(provider.baseUrl);
         setApiKey(provider.apiKey);
-        setModelId(provider.modelId);
+        const suggestions = getSuggestedModels(provider.baseUrl);
+        if (suggestions.length > 0 && !suggestions.includes(provider.modelId)) {
+          setModelId(CUSTOM_MODEL);
+          setCustomModelId(provider.modelId);
+        } else {
+          setModelId(provider.modelId);
+          setCustomModelId('');
+        }
       } else {
         // Add mode
         setName('');
         setBaseUrl('');
         setApiKey('');
         setModelId('');
+        setCustomModelId('');
       }
       setShowApiKey(false);
       setTestStatus('idle');
@@ -98,8 +111,12 @@ export default function CustomProviderModal({
     }
   };
 
+  // The id that will be tested and saved: the typed one when the <Select> is on the
+  // sentinel, otherwise the selected or typed id.
+  const effectiveModelId = modelId === CUSTOM_MODEL ? customModelId.trim() : modelId;
+
   const handleTest = async () => {
-    if (!baseUrl || !apiKey || !modelId) {
+    if (!baseUrl || !apiKey || !effectiveModelId) {
       setTestError('Please fill in all required fields');
       setTestStatus('invalid');
       return;
@@ -113,7 +130,7 @@ export default function CustomProviderModal({
       name: name || 'Test',
       baseUrl,
       apiKey,
-      modelId,
+      modelId: effectiveModelId,
       enabled: true,
       headerType: getHeaderType(baseUrl),
     };
@@ -129,7 +146,7 @@ export default function CustomProviderModal({
   };
 
   const handleSave = () => {
-    if (!name || !baseUrl || !apiKey || !modelId) {
+    if (!name || !baseUrl || !apiKey || !effectiveModelId) {
       return;
     }
 
@@ -138,7 +155,7 @@ export default function CustomProviderModal({
       name,
       baseUrl: normalizeBaseUrl(baseUrl),
       apiKey,
-      modelId,
+      modelId: effectiveModelId,
       enabled: provider?.enabled ?? true,
       headerType: getHeaderType(baseUrl),
     });
@@ -146,7 +163,7 @@ export default function CustomProviderModal({
     onOpenChange(false);
   };
 
-  const isValid = name && baseUrl && apiKey && modelId;
+  const isValid = name && baseUrl && apiKey && effectiveModelId;
   const isEditMode = !!provider;
 
   return (
@@ -171,7 +188,7 @@ export default function CustomProviderModal({
                 Quick fill from common providers
               </label>
               <div className="flex flex-wrap gap-2">
-                {COMMON_CUSTOM_PROVIDERS.slice(0, 4).map((p) => (
+                {COMMON_CUSTOM_PROVIDERS.map((p) => (
                   <button
                     key={p.name}
                     type="button"
@@ -265,7 +282,7 @@ export default function CustomProviderModal({
                     </SelectItem>
                   ))}
                   <SelectItem
-                    value="__custom__"
+                    value={CUSTOM_MODEL}
                     className="text-slate-400 focus:bg-slate-800"
                   >
                     Enter custom model...
@@ -276,14 +293,14 @@ export default function CustomProviderModal({
               <Input
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
-                placeholder="e.g., gpt-4-turbo, claude-3-opus-20240229"
+                placeholder="e.g., gpt-5.6-terra, claude-sonnet-5"
                 className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
               />
             )}
-            {modelId === '__custom__' && (
+            {modelId === CUSTOM_MODEL && (
               <Input
-                value=""
-                onChange={(e) => setModelId(e.target.value)}
+                value={customModelId}
+                onChange={(e) => setCustomModelId(e.target.value)}
                 placeholder="Enter custom model ID"
                 className="mt-2 bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
                 autoFocus

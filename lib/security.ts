@@ -39,6 +39,22 @@ export function validateEnum(value: unknown, allowed: readonly string[]): boolea
   return typeof value === 'string' && allowed.includes(value);
 }
 
+/**
+ * Validate a custom-provider base URL the way every server-side caller must:
+ * HTTPS only, and never a private/internal address. Returns the message to show
+ * the user, or null when the URL is acceptable. One helper shared by the chat path
+ * and the test-connection route so the two guards cannot drift (audit CR-14).
+ */
+export function checkProviderUrl(baseUrl: unknown): string | null {
+  if (typeof baseUrl !== 'string' || !baseUrl.startsWith('https://')) {
+    return 'Base URL must use HTTPS';
+  }
+  if (isPrivateUrl(baseUrl)) {
+    return 'Base URL must not point to a private/internal address';
+  }
+  return null;
+}
+
 /** Check if a URL points to a private/internal IP address. */
 export function isPrivateUrl(urlString: string): boolean {
   try {
