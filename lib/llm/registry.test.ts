@@ -14,7 +14,8 @@ import {
 import { PROVIDER_MODELS, COMMON_CUSTOM_PROVIDERS, getDefaultModel, getModelDisplayName } from '@/lib/llm/models';
 
 // Ids retired by their providers: AUDIT_2026-09.md section 3.3 plus what the
-// 2026-09-07 live probe found. None may reappear in the registry or the presets.
+// 2026-09-07 and 2026-09-08 live probes found. None may reappear in the registry or
+// the presets.
 const RETIRED_IDS = [
   // Cohere aliases deprecated 2025-09-15
   'command-r-plus',
@@ -27,6 +28,9 @@ const RETIRED_IDS = [
   'nvidia/nemotron-3-nano-30b-a3b:free',
   'nvidia/nemotron-nano-9b-v2:free',
   'deepseek/deepseek-r1-0528:free',
+  // OpenRouter: free slugs withdrawn 2026-09-08 (404 "unavailable for free")
+  'minimax/minimax-m3:free',
+  'minimax/minimax-m2.7:free',
   // Custom-provider presets
   'claude-3-5-sonnet-20241022',
   'claude-3-opus-20240229',
@@ -46,7 +50,7 @@ const FAMILY_PREFIX = {
   cohere: 'command-',
   gemini: 'gemini-',
   groq: 'openai/gpt-oss-',
-  openrouter: 'minimax/',
+  openrouter: 'nvidia/nemotron-',
 } as const;
 
 const allEntries = REGISTRY_PROVIDERS.flatMap((p) => registryEntries(p));

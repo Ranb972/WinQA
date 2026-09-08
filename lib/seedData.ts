@@ -1,7 +1,7 @@
 // Seed data for WinQA - Real documented AI testing scenarios
 // All content is based on published research, documented incidents, and real model behavior
 // Providers (lineup as of 2026-09-07, see lib/llm/registry.ts): Cohere (Command A / R+ / R),
-// Google Gemini (3.8 and 2.5 Flash), Groq (GPT-OSS), OpenRouter (MiniMax).
+// Google Gemini (3.5 Flash Lite, 3.8 and 2.5 Flash), Groq (GPT-OSS), OpenRouter (NVIDIA Nemotron).
 // The example content below records observed behaviour of the models each entry names.
 // Some of those (Llama 3.3 70B, Nemotron 70B, Gemini 2.0 Flash) have since been retired
 // by their providers; the entries are history, not a description of the current lineup.

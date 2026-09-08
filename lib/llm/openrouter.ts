@@ -14,11 +14,11 @@ export async function openrouterChat(
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.openrouter;
 
-  // The free OpenRouter models in the registry (MiniMax M3 / M2.7, like the Nemotron
-  // models before them) are thinking/reasoning models that spend tokens on internal
-  // reasoning before generating content. With low max_tokens the reasoning consumes
-  // all tokens and content is empty. Minimum 4096 ensures enough room for both
-  // reasoning and the actual response.
+  // The free OpenRouter models in the registry (NVIDIA Nemotron, as before E1; the
+  // MiniMax pair in between too) are thinking/reasoning models that spend tokens on
+  // internal reasoning before generating content. With low max_tokens the reasoning
+  // consumes all tokens and content is empty. Minimum 4096 ensures enough room for
+  // both reasoning and the actual response.
   const effectiveMaxTokens = Math.max(maxTokens, 4096);
 
   try {

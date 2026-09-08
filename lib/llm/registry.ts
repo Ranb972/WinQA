@@ -63,20 +63,25 @@ export const MODEL_REGISTRY = {
   ],
   // Gemini Flash family, two generations. All four are "free of charge" on the free
   // tier (ai.google.dev/gemini-api/docs/pricing); numeric limits live in AI Studio.
+  // 3.5 Flash Lite heads the chain (owner decision 2026-09-08): 3.8 Flash passed a
+  // one-word probe on 2026-09-07 but on a Code Duel-sized prompt the next day
+  // answered 503 UNAVAILABLE "high demand" after 5s and then took 47s to complete,
+  // over the battle route's 20s attempt budget. It stays second until the radar
+  // shows it stable.
   gemini: [
-    {
-      id: 'gemini-3.8-flash',
-      name: 'Gemini 3.8 Flash',
-      description: 'Newest Flash',
-      source: 'https://ai.google.dev/gemini-api/docs/models',
-      verifiedOn: '2026-09-07',
-    },
     {
       id: 'gemini-3.5-flash-lite',
       name: 'Gemini 3.5 Flash Lite',
       description: 'Lightweight, fast',
       source: 'https://ai.google.dev/gemini-api/docs/models',
       verifiedOn: '2026-09-07',
+    },
+    {
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      description: 'Newest Flash',
+      source: 'https://ai.google.dev/gemini-api/docs/models',
+      verifiedOn: '2026-09-08',
     },
     {
       id: 'gemini-2.5-flash',
@@ -112,23 +117,28 @@ export const MODEL_REGISTRY = {
       verifiedOn: '2026-09-07',
     },
   ],
-  // MiniMax family: the only lab with more than one :free chat model in OpenRouter's
-  // live catalogue on 2026-09-07 (Qwen and DeepSeek had none). Free variants: 20 RPM,
-  // 50 RPD, 1,000 RPD with $10 lifetime credit (openrouter.ai/docs/api-reference/limits).
+  // NVIDIA Nemotron family, the largest set of :free chat models in OpenRouter's live
+  // catalogue on 2026-09-08 (16 free models; MiniMax, the 2026-09-07 pick, had none
+  // left: both its free slugs were withdrawn within a day, the API answering 404
+  // "This model is unavailable for free"). Free variants: 20 RPM, 50 RPD, 1,000 RPD
+  // with $10 lifetime credit (openrouter.ai/docs/api-reference/limits).
+  // nvidia/nemotron-3-ultra-550b-a55b:free belongs to the family but answered two
+  // probes on 2026-09-08 with 502 "Upstream error from Nvidia: Service temporarily
+  // overloaded" (inside an HTTP 200 body); add it when the radar sees it answer.
   openrouter: [
     {
-      id: 'minimax/minimax-m3:free',
-      name: 'MiniMax M3',
+      id: 'nvidia/nemotron-3.5-lightning:free',
+      name: 'Nemotron 3.5 Lightning',
       description: 'Free tier, 1M context',
-      source: 'https://openrouter.ai/minimax/minimax-m3:free',
-      verifiedOn: '2026-09-07',
+      source: 'https://openrouter.ai/nvidia/nemotron-3.5-lightning:free',
+      verifiedOn: '2026-09-08',
     },
     {
-      id: 'minimax/minimax-m2.7:free',
-      name: 'MiniMax M2.7',
-      description: 'Free tier, previous generation',
-      source: 'https://openrouter.ai/minimax/minimax-m2.7:free',
-      verifiedOn: '2026-09-07',
+      id: 'nvidia/nemotron-3-super-120b-a12b:free',
+      name: 'Nemotron 3 Super',
+      description: 'Free tier, 120B hybrid MoE',
+      source: 'https://openrouter.ai/nvidia/nemotron-3-super-120b-a12b:free',
+      verifiedOn: '2026-09-08',
     },
   ],
 } as const satisfies Record<LLMProvider, readonly ModelEntry[]>;
