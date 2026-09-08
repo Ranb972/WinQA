@@ -1,6 +1,7 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { ChatMessage, ChatResponse, GeminiModel } from './types';
 import { defaultModels } from './registry';
+import { reportProviderError } from './provider-error';
 
 function getGenAI(customApiKey?: string): GoogleGenAI {
   const apiKey = customApiKey || process.env.GOOGLE_GEMINI_API_KEY || '';
@@ -67,7 +68,7 @@ export async function geminiChat(
       model: 'gemini',
       specificModel: modelToUse,
       responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: reportProviderError('gemini', modelToUse, error),
     };
   }
 }

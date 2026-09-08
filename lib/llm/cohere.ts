@@ -1,6 +1,7 @@
 import { CohereClient } from 'cohere-ai';
 import { ChatMessage, ChatResponse, CohereModel } from './types';
 import { defaultModels } from './registry';
+import { reportProviderError } from './provider-error';
 
 function getCohereClient(customApiKey?: string): CohereClient {
   const apiKey = customApiKey || process.env.COHERE_API_KEY || '';
@@ -52,7 +53,7 @@ export async function cohereChat(
       model: 'cohere',
       specificModel: modelToUse,
       responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: reportProviderError('cohere', modelToUse, error),
     };
   }
 }

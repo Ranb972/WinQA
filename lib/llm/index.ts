@@ -43,6 +43,7 @@ export async function chat(
     maxAttempts?: number;
     delayBetweenAttempts?: number;
     providerTimeout?: number;
+    totalTimeout?: number;
   }
 ): Promise<ChatResponse> {
   // Use fallback-enabled chat by default
@@ -82,6 +83,7 @@ export async function multiModelChat(
       maxAttempts?: number;
       delayBetweenAttempts?: number;
       providerTimeout?: number;
+      totalTimeout?: number;
     };
   }
 ): Promise<MultiModelResponse> {

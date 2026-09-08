@@ -4,8 +4,14 @@ import { chat, LLMProvider, ChatMessage, CustomApiKeys, isRegisteredModel } from
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
-// Single provider call with providerTimeout 20s / 1 attempt → ~20s + overhead.
+// Up to two same-provider attempts (a withdrawn or overloaded head falls through to
+// the next model of its family) inside a 24s total budget: the second attempt only
+// gets what the first left, so the route stays under its 30s cap and the battle
+// page's 25s abort. Gemini 3.8 Flash answered a Code Duel prompt with a 503 after
+// 5s in the 2026-09-08 smoke; one attempt made that the whole result.
 export const maxDuration = 30;
+const PROVIDER_TIMEOUT_MS = 20000;
+const TOTAL_TIMEOUT_MS = 24000;
 
 interface RespondRequestBody {
   provider: LLMProvider;
@@ -63,9 +69,10 @@ export async function POST(request: NextRequest) {
       customApiKeys,
       {
         enableCrossProviderFallback: false,
-        maxAttempts: 1,
+        maxAttempts: 2,
         delayBetweenAttempts: 100,
-        providerTimeout: 20000,
+        providerTimeout: PROVIDER_TIMEOUT_MS,
+        totalTimeout: TOTAL_TIMEOUT_MS,
       }
     );
 

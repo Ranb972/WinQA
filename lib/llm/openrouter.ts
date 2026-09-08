@@ -1,5 +1,6 @@
 import { ChatMessage, ChatResponse, OpenRouterModel } from './types';
 import { defaultModels } from './registry';
+import { reportProviderError } from './provider-error';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -54,6 +55,16 @@ export async function openrouterChat(
 
     const data = await response.json();
 
+    // OpenRouter reports upstream failures inside an HTTP 200 body with no
+    // `choices`: {"error":{"message":"Upstream error from Nvidia: Service
+    // temporarily overloaded","code":502}} (probe 2026-09-08). Reading choices[0]
+    // from that body returned an empty answer with no error at all.
+    if (data.error) {
+      const error = new Error(data.error.message || 'Provider returned an error') as Error & { status?: number };
+      if (typeof data.error.code === 'number') error.status = data.error.code;
+      throw error;
+    }
+
     // Thinking models put chain-of-thought in `reasoning` and the answer in `content`.
     // If content is empty (reasoning consumed all tokens), fall back to reasoning text.
     const message = data.choices[0]?.message;
@@ -72,7 +83,7 @@ export async function openrouterChat(
       model: 'openrouter',
       specificModel: modelToUse,
       responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: reportProviderError('openrouter', modelToUse, error),
     };
   }
 }

@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 import { ChatMessage, ChatResponse, GroqModel } from './types';
 import { defaultModels } from './registry';
+import { reportProviderError } from './provider-error';
 
 function getGroqClient(customApiKey?: string): Groq {
   const apiKey = customApiKey || process.env.GROQ_API_KEY || '';
@@ -47,7 +48,7 @@ export async function groqChat(
       model: 'groq',
       specificModel: modelToUse,
       responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: reportProviderError('groq', modelToUse, error),
     };
   }
 }
