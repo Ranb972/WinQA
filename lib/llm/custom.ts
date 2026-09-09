@@ -20,13 +20,20 @@ interface OpenAIChatRequest {
 
 interface OpenAIChatResponse {
   id: string;
-  choices: Array<{
+  choices?: Array<{
     message: {
       role: string;
       content: string;
     };
     finish_reason: string;
   }>;
+  // OpenRouter reports upstream failures inside an HTTP 200 body with no choices:
+  // {"error":{"message":"Upstream error from Nvidia: Service temporarily
+  // overloaded","code":502}} (probe 2026-09-08).
+  error?: {
+    message?: string;
+    code?: number;
+  };
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -219,7 +226,11 @@ async function callOpenAIApi(
     }
 
     const data: OpenAIChatResponse = await response.json();
-    const content = data.choices[0]?.message?.content || '';
+    if (data.error) {
+      const code = typeof data.error.code === 'number' ? ` (${data.error.code})` : '';
+      throw new Error(`API error${code}: ${data.error.message || 'Provider returned an error'}`);
+    }
+    const content = data.choices?.[0]?.message?.content || '';
 
     return {
       content,

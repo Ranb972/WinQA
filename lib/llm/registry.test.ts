@@ -31,11 +31,6 @@ const RETIRED_IDS = [
   // OpenRouter: free slugs withdrawn 2026-09-08 (404 "unavailable for free")
   'minimax/minimax-m3:free',
   'minimax/minimax-m2.7:free',
-  // OpenRouter left the built-in lineup 2026-09-09 (Batch E3); its ids live only in
-  // the custom-provider preset, never in the registry
-  'nvidia/nemotron-3.5-lightning:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
   // Mistral: previous versions with announced retirement dates (docs.mistral.ai), the
   // Medium id a docs-page read got wrong (400 Invalid model, 2026-09-09), and Large 3,
   // which the Free plan refuses (403). Medium 3.5 and Small 4 are not retired, only

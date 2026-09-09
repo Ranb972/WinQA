@@ -72,6 +72,15 @@ export const COMMON_CUSTOM_PROVIDERS: CommonProviderSuggestion[] = [
     baseUrl: 'https://api.deepseek.com',
     models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   },
+  {
+    // OpenRouter left the built-in lineup in Batch E3 (2026-09-09) and lives on here
+    // for anyone with their own key. Free Nemotron ids that answered the 2026-09-08
+    // probes (openrouter.ai/api/v1/models); OpenRouter reports upstream failures
+    // inside an HTTP 200 body, which lib/llm/custom.ts now treats as an error.
+    name: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    models: ['nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3-super-120b-a12b:free'],
+  },
 ];
 
 /**
