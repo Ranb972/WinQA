@@ -166,6 +166,10 @@ export async function POST(request: NextRequest) {
       maxAttempts: safeMaxFallbackAttempts,
       delayBetweenAttempts: safeFallbackDelay,
       totalTimeout: TOTAL_TIMEOUT_MS,
+      // Compare and Code Testing want the answer, not the deliberation: the lowest
+      // reasoning effort on providers that expose one (Groq gpt-oss, Mistral).
+      // Battle sends nothing and gets each provider's default.
+      reasoningEffort: 'lowest' as const,
     };
 
     // Handle custom provider request

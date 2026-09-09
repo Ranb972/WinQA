@@ -162,6 +162,31 @@ describe('chatWithFallback: falling through the chain', () => {
   });
 });
 
+describe('chatWithFallback: reasoning effort', () => {
+  it('hands reasoningEffort to Groq when set, nothing when not, and never to Mistral', async () => {
+    script('groq', [(m) => ok('groq', m)]);
+    await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 1,
+      reasoningEffort: 'lowest',
+    });
+    expect(adapters.groq.mock.calls[0][5]).toEqual({ reasoningEffort: 'lowest' });
+
+    script('groq', [(m) => ok('groq', m)]);
+    await chatWithFallback(messages, 'groq', 0.7, 1024, { enableCrossProviderFallback: false, maxAttempts: 1 });
+    expect(adapters.groq.mock.calls[1][5]).toBeUndefined();
+
+    // Ministral 3 rejects reasoning_effort with a 400, so the adapter takes no options.
+    script('mistral', [(m) => ok('mistral', m)]);
+    await chatWithFallback(messages, 'mistral', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 1,
+      reasoningEffort: 'lowest',
+    });
+    expect(adapters.mistral.mock.calls[0].length).toBeLessThanOrEqual(5);
+  });
+});
+
 describe('chatWithFallback: time budget', () => {
   const never = () => new Promise<ChatResponse>(() => {});
 

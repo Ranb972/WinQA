@@ -8,6 +8,8 @@ import {
   GroqModel,
   MistralModel,
   CustomApiKeys,
+  AdapterOptions,
+  ReasoningEffort,
 } from './types';
 import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
@@ -102,7 +104,8 @@ async function callProvider(
   messages: ChatMessage[],
   temperature: number,
   maxTokens: number,
-  customApiKeys?: CustomApiKeys
+  customApiKeys?: CustomApiKeys,
+  options?: AdapterOptions
 ): Promise<ChatResponse> {
   switch (provider) {
     case 'cohere':
@@ -110,7 +113,7 @@ async function callProvider(
     case 'gemini':
       return geminiChat(messages, temperature, maxTokens, model as GeminiModel, customApiKeys?.gemini);
     case 'groq':
-      return groqChat(messages, temperature, maxTokens, model as GroqModel, customApiKeys?.groq);
+      return groqChat(messages, temperature, maxTokens, model as GroqModel, customApiKeys?.groq, options);
     case 'mistral':
       return mistralChat(messages, temperature, maxTokens, model as MistralModel, customApiKeys?.mistral);
     default:
@@ -157,6 +160,8 @@ export interface FallbackOptions {
    * attempts can stay inside its own maxDuration and the client's abort.
    */
   totalTimeout?: number;
+  /** Passed to adapters that expose a reasoning control; see ReasoningEffort. */
+  reasoningEffort?: ReasoningEffort;
   specificModel?: string;
   customApiKeys?: CustomApiKeys;
 }
@@ -179,9 +184,12 @@ export async function chatWithFallback(
     delayBetweenAttempts = 500,
     providerTimeout = DEFAULT_PROVIDER_TIMEOUT_MS,
     totalTimeout,
+    reasoningEffort,
     specificModel,
     customApiKeys,
   } = options;
+
+  const adapterOptions: AdapterOptions | undefined = reasoningEffort ? { reasoningEffort } : undefined;
 
   // A requested model must be a registered model of this provider. Previously an
   // unknown id left the sequence untouched and the chain head ran in its place,
@@ -245,7 +253,8 @@ export async function chatWithFallback(
         messages,
         temperature,
         maxTokens,
-        customApiKeys
+        customApiKeys,
+        adapterOptions
       ),
       sleep(attemptBudget).then(() => timedOut),
     ]);

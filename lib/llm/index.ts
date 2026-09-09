@@ -14,6 +14,7 @@ import {
   MultiModelRequest,
   MultiModelResponse,
   CustomApiKeys,
+  ReasoningEffort,
 } from './types';
 
 export * from './types';
@@ -44,6 +45,7 @@ export async function chat(
     delayBetweenAttempts?: number;
     providerTimeout?: number;
     totalTimeout?: number;
+    reasoningEffort?: ReasoningEffort;
   }
 ): Promise<ChatResponse> {
   // Use fallback-enabled chat by default
@@ -62,7 +64,7 @@ export async function chat(
     case 'gemini':
       return geminiChat(messages, temperature, maxTokens, specificModel as GeminiModel | undefined, customApiKeys?.gemini);
     case 'groq':
-      return groqChat(messages, temperature, maxTokens, specificModel as GroqModel | undefined, customApiKeys?.groq);
+      return groqChat(messages, temperature, maxTokens, specificModel as GroqModel | undefined, customApiKeys?.groq, fallbackOverrides?.reasoningEffort ? { reasoningEffort: fallbackOverrides.reasoningEffort } : undefined);
     case 'mistral':
       return mistralChat(messages, temperature, maxTokens, specificModel as MistralModel | undefined, customApiKeys?.mistral);
     default:
@@ -84,6 +86,7 @@ export async function multiModelChat(
       delayBetweenAttempts?: number;
       providerTimeout?: number;
       totalTimeout?: number;
+      reasoningEffort?: ReasoningEffort;
     };
   }
 ): Promise<MultiModelResponse> {

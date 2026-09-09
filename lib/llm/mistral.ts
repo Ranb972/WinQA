@@ -80,6 +80,10 @@ export async function mistralChat(
         })),
         temperature,
         max_tokens: maxTokens,
+        // No reasoning_effort: the Ministral 3 family has no reasoning control and
+        // answers 400 "reasoning_effort is not enabled for this model" when one is
+        // sent (Compare run 2026-09-09). Mistral Medium 3.5 / Small 4 accept it, but
+        // they are not in the registry (zero request limit on the app's Free plan).
       }),
     });
 

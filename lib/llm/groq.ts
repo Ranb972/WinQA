@@ -1,5 +1,5 @@
 import Groq from 'groq-sdk';
-import { ChatMessage, ChatResponse, GroqModel } from './types';
+import { AdapterOptions, ChatMessage, ChatResponse, GroqModel } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
 
@@ -17,7 +17,8 @@ export async function groqChat(
   temperature: number = 0.7,
   maxTokens: number = 1024,
   modelOverride?: GroqModel,
-  customApiKey?: string
+  customApiKey?: string,
+  options?: AdapterOptions
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.groq;
@@ -31,6 +32,9 @@ export async function groqChat(
       })),
       temperature,
       max_tokens: maxTokens,
+      // gpt-oss reasons before answering; 'low' is its smallest documented effort
+      // (console.groq.com/docs/reasoning). Sent only when the caller asks.
+      ...(options?.reasoningEffort === 'lowest' && { reasoning_effort: 'low' as const }),
     });
 
     const responseTime = Date.now() - startTime;

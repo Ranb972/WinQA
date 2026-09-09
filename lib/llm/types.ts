@@ -14,6 +14,20 @@ export interface FallbackInfo {
   reason: 'rate_limit' | 'quota_exceeded' | 'error';
 }
 
+/**
+ * Provider-agnostic reasoning control. 'lowest' maps to each provider's smallest
+ * setting where one exists (Groq gpt-oss: reasoning_effort low); providers without
+ * a control never see it (Cohere, Gemini's caps are fixed, and Ministral 3 answers
+ * 400 "reasoning_effort is not enabled for this model", Compare run 2026-09-09).
+ * Omit it for the provider default. The chat route (Compare, Code Testing) sends
+ * 'lowest'; Battle sends nothing (owner decision, Batch E3).
+ */
+export type ReasoningEffort = 'lowest';
+
+export interface AdapterOptions {
+  reasoningEffort?: ReasoningEffort;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
