@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, REGISTRY_MODEL_COUNT, isRegisteredModel } from '@/lib/llm';
+import { chat, multiModelChat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, REGISTRY_MODEL_COUNT, isRegisteredModel, providerDisplayNames } from '@/lib/llm';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
@@ -175,7 +175,11 @@ export async function POST(request: NextRequest) {
     // Handle custom provider request
     if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {
       const response = await callCustomProvider(customProvider, messages, safeTemperature, safeMaxTokens);
-      return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
+      // A custom provider's key is always the user's own.
+      return NextResponse.json({
+        ...response,
+        error: friendlyErrorMessage(response.error, { keySource: 'user', providerName: customProvider.name }),
+      });
     }
 
     // Handle multi-model comparison (built-in providers only; validated above)
@@ -194,7 +198,11 @@ export async function POST(request: NextRequest) {
         ...response,
         responses: response.responses.map((r) => ({
           ...r,
-          error: friendlyErrorMessage(r.error),
+          error: friendlyErrorMessage(r.error, {
+            keySource: r.keySource,
+            userKeyRejected: r.userKeyRejected,
+            providerName: providerDisplayNames[r.model],
+          }),
         })),
       };
       return NextResponse.json(sanitized);
@@ -203,7 +211,14 @@ export async function POST(request: NextRequest) {
     // Handle single built-in model
     const specificModel = modelPreferences?.[models as LLMProvider];
     const response = await chat(messages, models as LLMProvider, safeTemperature, safeMaxTokens, true, specificModel, customApiKeys, fallbackOverrides);
-    return NextResponse.json({ ...response, error: friendlyErrorMessage(response.error) });
+    return NextResponse.json({
+      ...response,
+      error: friendlyErrorMessage(response.error, {
+        keySource: response.keySource,
+        userKeyRejected: response.userKeyRejected,
+        providerName: providerDisplayNames[models as LLMProvider],
+      }),
+    });
   } catch (error) {
     // Log error message only, never log full error object which could contain API keys
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

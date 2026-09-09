@@ -23,6 +23,10 @@ interface TestKeyResponse {
 
 const PROVIDER_TIMEOUT_MS = 10_000;
 const TIMEOUT_ERROR = 'Provider took too long to respond. Try again.';
+// Every key this route checks was typed by the user, so a rejection is theirs.
+// Names match providerDisplayNames in lib/llm/index.ts, which is not imported
+// here to keep the SDKs on their dynamic imports.
+const USER_KEY = { keySource: 'user' as const };
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && (error.name === 'AbortError' || /abort/i.test(error.message));
@@ -64,7 +68,7 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: friendlyErrorMessage(message) };
+    return { valid: false, error: friendlyErrorMessage(message, { ...USER_KEY, providerName: 'Cohere' }) };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -98,7 +102,7 @@ async function testGeminiKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('quota') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: friendlyErrorMessage(message) };
+    return { valid: false, error: friendlyErrorMessage(message, { ...USER_KEY, providerName: 'Google' }) };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -140,7 +144,7 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
     if (message.includes('429') || message.includes('rate')) {
       return { valid: true }; // Key is valid but rate limited
     }
-    return { valid: false, error: friendlyErrorMessage(message) };
+    return { valid: false, error: friendlyErrorMessage(message, { ...USER_KEY, providerName: 'Groq' }) };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -180,7 +184,7 @@ async function testMistralKey(apiKey: string): Promise<TestKeyResponse> {
     if (!response.ok) {
       // Mistral error bodies carry {message} or {error:{message}}.
       const data = await response.json().catch(() => ({}));
-      return { valid: false, error: friendlyErrorMessage(`${response.status}: ${data.message || data.error?.message || response.statusText}`) };
+      return { valid: false, error: friendlyErrorMessage(`${response.status}: ${data.message || data.error?.message || response.statusText}`, { ...USER_KEY, providerName: 'Mistral' }) };
     }
 
     return { valid: true };
@@ -189,7 +193,7 @@ async function testMistralKey(apiKey: string): Promise<TestKeyResponse> {
       return { valid: false, error: TIMEOUT_ERROR };
     }
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return { valid: false, error: friendlyErrorMessage(message) };
+    return { valid: false, error: friendlyErrorMessage(message, { ...USER_KEY, providerName: 'Mistral' }) };
   } finally {
     clearTimeout(timeoutId);
   }

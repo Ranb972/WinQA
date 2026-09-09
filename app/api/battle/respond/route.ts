@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, LLMProvider, ChatMessage, CustomApiKeys, isRegisteredModel } from '@/lib/llm';
+import { chat, LLMProvider, ChatMessage, CustomApiKeys, isRegisteredModel, providerDisplayNames } from '@/lib/llm';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
@@ -80,7 +80,12 @@ export async function POST(request: NextRequest) {
       content: response.content,
       responseTime: response.responseTime,
       specificModel: response.specificModel,
-      error: friendlyErrorMessage(response.error),
+      // Battle sends no user keys, so a rejected key here is always the app's.
+      error: friendlyErrorMessage(response.error, {
+        keySource: response.keySource,
+        userKeyRejected: response.userKeyRejected,
+        providerName: providerDisplayNames[provider],
+      }),
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

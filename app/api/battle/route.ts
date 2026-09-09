@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys } from '@/lib/llm';
+import { chat, LLMProvider, ChatMessage, SpecificModel, CustomApiKeys, providerDisplayNames } from '@/lib/llm';
 import { getChallengeById } from '@/lib/battle-challenges';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
@@ -92,19 +92,24 @@ export async function POST(request: NextRequest) {
     );
 
     // Process results
-    const responses = results.map((result) => {
+    const responses = results.map((result, index) => {
+      const providerName = providerDisplayNames[contenders[index].provider];
       if (result.status === 'fulfilled') {
         return {
           content: result.value.content,
           responseTime: result.value.responseTime,
           specificModel: result.value.specificModel,
-          error: friendlyErrorMessage(result.value.error),
+          error: friendlyErrorMessage(result.value.error, {
+            keySource: result.value.keySource,
+            userKeyRejected: result.value.userKeyRejected,
+            providerName,
+          }),
         };
       }
       return {
         content: '',
         responseTime: 0,
-        error: friendlyErrorMessage(result.reason?.message || 'Request failed'),
+        error: friendlyErrorMessage(result.reason?.message || 'Request failed', { providerName }),
       };
     });
 

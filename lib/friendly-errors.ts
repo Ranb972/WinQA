@@ -1,11 +1,44 @@
+import type { KeySource } from './llm/types';
+
 export const DAILY_LIMIT_ERROR = 'daily limit reached';
 export const REDIRECT_BLOCKED_ERROR = 'Provider attempted an HTTP redirect (blocked for security)';
+
+/**
+ * What the route knows about a failed call and the raw message does not: which
+ * key was sent, whether a saved user key had already been rejected on the way,
+ * and the provider's display name. Only the 401/403 text reads it; every other
+ * message is the same with or without it.
+ */
+export interface ErrorContext {
+  keySource?: KeySource;
+  userKeyRejected?: boolean;
+  providerName?: string;
+}
+
+/**
+ * The 401/403 text names the key that was rejected. Before Batch E3.1 every bad
+ * key read "check your provider settings", which sent the user to Settings even
+ * when it was the app's own key that had been rejected (2026-09-09 smoke).
+ * Without a context the old generic text stays, for callers that know nothing.
+ */
+function rejectedKeyMessage(context?: ErrorContext): string {
+  const name = context?.providerName ? `${context.providerName} ` : '';
+  if (context?.keySource === 'user') {
+    return `Your saved ${name}API key was rejected. Check it in Settings.`;
+  }
+  if (context?.keySource === 'app') {
+    return context.userKeyRejected
+      ? `Your saved ${name}key and the app's key were both rejected. Try another provider.`
+      : `The app's ${name}key was rejected. Try another provider.`;
+  }
+  return 'API key invalid or revoked. Check your provider settings.';
+}
 
 /**
  * Converts raw LLM provider error messages into user-friendly messages.
  * Falls back to a generic message if no pattern matches.
  */
-export function friendlyErrorMessage(raw: string | undefined): string | undefined {
+export function friendlyErrorMessage(raw: string | undefined, context?: ErrorContext): string | undefined {
   if (!raw) return raw;
 
   // WinQA-constructed sentinels: exact match on the raw string, before lowercasing.
@@ -31,7 +64,7 @@ export function friendlyErrorMessage(raw: string | undefined): string | undefine
   }
 
   if (lower.includes('401') || lower.includes('403') || lower.includes('invalid api key') || lower.includes('unauthorized') || lower.includes('forbidden')) {
-    return 'API key invalid or revoked. Check your provider settings.';
+    return rejectedKeyMessage(context);
   }
 
   if (lower.includes('404') || lower.includes('model not found') || lower.includes('not found')) {

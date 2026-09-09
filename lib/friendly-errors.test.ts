@@ -26,6 +26,28 @@ describe('friendlyErrorMessage', () => {
     expect(friendlyErrorMessage('401: No auth credentials found')).toBe('API key invalid or revoked. Check your provider settings.');
   });
 
+  it('names the rejected key when the route says which one it was', () => {
+    expect(friendlyErrorMessage('401: Invalid API Key', { keySource: 'user', providerName: 'Mistral' }))
+      .toBe('Your saved Mistral API key was rejected. Check it in Settings.');
+    expect(friendlyErrorMessage('401: Invalid API Key', { keySource: 'app', providerName: 'Mistral' }))
+      .toBe("The app's Mistral key was rejected. Try another provider.");
+    expect(friendlyErrorMessage('401: Invalid API Key', { keySource: 'app', userKeyRejected: true, providerName: 'Mistral' }))
+      .toBe("Your saved Mistral key and the app's key were both rejected. Try another provider.");
+    // A 403 is the same story with a different status.
+    expect(friendlyErrorMessage('403: This model is not available in your subscription tier', { keySource: 'user', providerName: 'Mistral' }))
+      .toBe('Your saved Mistral API key was rejected. Check it in Settings.');
+    // Without a provider name the sentence still reads.
+    expect(friendlyErrorMessage('401: No auth credentials found', { keySource: 'app' }))
+      .toBe("The app's key was rejected. Try another provider.");
+  });
+
+  it('keeps the generic key text without a context, and a context changes no other message', () => {
+    expect(friendlyErrorMessage('401: No auth credentials found', {})).toBe('API key invalid or revoked. Check your provider settings.');
+    expect(friendlyErrorMessage('Request timed out after 20s', { keySource: 'user', providerName: 'Groq' }))
+      .toBe('This model took too long to respond. Try again.');
+    expect(friendlyErrorMessage(DAILY_LIMIT_ERROR, { keySource: 'app' })).toBe("You've reached today's free usage limit — it resets at midnight UTC.");
+  });
+
   it('passes undefined through and falls back to the generic message', () => {
     expect(friendlyErrorMessage(undefined)).toBeUndefined();
     expect(friendlyErrorMessage('socket hang up')).toBe('Something went wrong. Please try again.');
