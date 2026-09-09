@@ -40,6 +40,15 @@ export interface ChatRequest {
   maxTokens?: number;
 }
 
+/**
+ * Which credential an adapter sent: the app's own key from the environment, or a
+ * key the user saved in Settings and the client passed along. Set on every
+ * ChatResponse and written on every failure line, so a rejected key can be traced
+ * to its owner. The 2026-09-09 smoke logged four Mistral 401s that could not say
+ * which key had been rejected.
+ */
+export type KeySource = 'app' | 'user';
+
 export interface ChatResponse {
   content: string;
   model: LLMProvider;
@@ -47,6 +56,7 @@ export interface ChatResponse {
   responseTime: number;
   error?: string;
   fallback?: FallbackInfo;
+  keySource?: KeySource;
 }
 
 export interface MultiModelRequest {

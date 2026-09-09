@@ -1,4 +1,4 @@
-import type { LLMProvider } from './types';
+import type { KeySource, LLMProvider } from './types';
 
 // One place for turning a provider failure into the ChatResponse error string.
 //
@@ -46,13 +46,15 @@ export function redactSecrets(text: string): string {
 
 /**
  * Record a provider failure and return the error string for the ChatResponse.
- * Logs exactly one line: provider, model, status and a truncated, redacted
- * message. Never the error object, never a key.
+ * Logs exactly one line: provider, model, status, which key was sent (app or
+ * user) and a truncated, redacted message. Never the error object, never a key.
+ * The key source is what the 2026-09-09 smoke lacked: four 401 lines that could
+ * not say whether the app key or a saved user key had been rejected.
  */
-export function reportProviderError(provider: LLMProvider, model: string, error: unknown): string {
+export function reportProviderError(provider: LLMProvider, model: string, error: unknown, keySource: KeySource): string {
   const formatted = formatProviderError(error);
   const status = providerErrorStatus(error);
   const head = redactSecrets(formatted).replace(/\s+/g, ' ').slice(0, MAX_LOGGED_MESSAGE);
-  console.error(`[llm] ${provider} ${model} failed: status=${status ?? 'n/a'} ${head}`);
+  console.error(`[llm] ${provider} ${model} failed: status=${status ?? 'n/a'} key=${keySource} ${head}`);
   return formatted;
 }

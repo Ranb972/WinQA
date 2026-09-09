@@ -60,19 +60,19 @@ describe('reportProviderError', () => {
   it('returns the formatted string and logs one sanitized, truncated line', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const long = 'x'.repeat(500);
-    const result = reportProviderError('mistral', 'some/model:free', withStatus(`Bearer abcdefghijklmnop ${long}`, { status: 502 }));
+    const result = reportProviderError('mistral', 'some/model:free', withStatus(`Bearer abcdefghijklmnop ${long}`, { status: 502 }), 'user');
 
     expect(result).toBe(`502: Bearer abcdefghijklmnop ${long}`);
     expect(spy).toHaveBeenCalledTimes(1);
     const line = spy.mock.calls[0][0] as string;
-    expect(line.startsWith('[llm] mistral some/model:free failed: status=502 ')).toBe(true);
+    expect(line.startsWith('[llm] mistral some/model:free failed: status=502 key=user ')).toBe(true);
     expect(line).not.toContain('abcdefghijklmnop');
     expect(line.length).toBeLessThan(300);
   });
 
-  it('logs status=n/a for errors without a status', () => {
+  it('logs status=n/a for errors without a status, and the key source either way', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    reportProviderError('gemini', 'gemini-2.5-flash', new Error('socket hang up'));
-    expect(spy.mock.calls[0][0]).toBe('[llm] gemini gemini-2.5-flash failed: status=n/a socket hang up');
+    reportProviderError('gemini', 'gemini-2.5-flash', new Error('socket hang up'), 'app');
+    expect(spy.mock.calls[0][0]).toBe('[llm] gemini gemini-2.5-flash failed: status=n/a key=app socket hang up');
   });
 });

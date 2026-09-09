@@ -245,7 +245,25 @@ describe('chatWithFallback: time budget', () => {
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy.mock.calls[0][0]).toBe(`[llm] groq ${head} timed out after 0.2s`);
+    expect(spy.mock.calls[0][0]).toBe(`[llm] groq ${head} timed out after 0.2s key=app`);
+    spy.mockRestore();
+  });
+
+  it('names the user key in the timeout line and on the response when one was sent', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [head] = fallbackChains.groq;
+    script('groq', [never]);
+
+    const res = await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 1,
+      providerTimeout: 200,
+      customApiKeys: { groq: 'user-key-not-real' },
+    });
+
+    expect(spy.mock.calls[0][0]).toBe(`[llm] groq ${head} timed out after 0.2s key=user`);
+    expect(res.keySource).toBe('user');
+    expect(res.error).toBe('Request timed out after 0.2s');
     spy.mockRestore();
   });
 

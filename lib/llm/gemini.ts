@@ -1,5 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
-import { ChatMessage, ChatResponse, GeminiModel } from './types';
+import { ChatMessage, ChatResponse, GeminiModel, KeySource } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
 
@@ -21,6 +21,7 @@ export async function geminiChat(
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.gemini;
+  const keySource: KeySource = customApiKey ? 'user' : 'app';
 
   try {
     const ai = getGenAI(customApiKey);
@@ -60,6 +61,7 @@ export async function geminiChat(
       model: 'gemini',
       specificModel: modelToUse,
       responseTime,
+      keySource,
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -68,7 +70,8 @@ export async function geminiChat(
       model: 'gemini',
       specificModel: modelToUse,
       responseTime,
-      error: reportProviderError('gemini', modelToUse, error),
+      keySource,
+      error: reportProviderError('gemini', modelToUse, error, keySource),
     };
   }
 }

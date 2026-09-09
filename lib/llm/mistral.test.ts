@@ -30,6 +30,7 @@ describe('mistralText', () => {
 describe('mistralChat', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -45,6 +46,7 @@ describe('mistralChat', () => {
     expect(res.content).toBe('Hello');
     expect(res.model).toBe('mistral');
     expect(res.specificModel).toBe('ministral-8b-2512');
+    expect(res.keySource).toBe('user');
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.mistral.ai/v1/chat/completions');
     const body = JSON.parse(init.body as string);
@@ -64,7 +66,35 @@ describe('mistralChat', () => {
     expect(res.content).toBe('');
     expect(res.error).toBe('429: Rate limit exceeded');
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy.mock.calls[0][0]).toBe('[llm] mistral ministral-14b-2512 failed: status=429 429: Rate limit exceeded');
+    expect(spy.mock.calls[0][0]).toBe('[llm] mistral ministral-14b-2512 failed: status=429 key=user 429: Rate limit exceeded');
+  });
+
+  it('sends the app key from MISTRAL_API_KEY when no user key is passed and logs key=app on a 401', async () => {
+    vi.stubEnv('MISTRAL_API_KEY', 'app-key-not-real');
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // The exact body production returned four times on 2026-09-09.
+    const fetchMock = vi.fn(async () => jsonResponse(401, { detail: 'Invalid API Key' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await mistralChat(messages, 0.7, 8, 'ministral-14b-2512');
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer app-key-not-real');
+    expect(res.keySource).toBe('app');
+    expect(res.error).toBe('401: Invalid API Key');
+    expect(spy.mock.calls[0][0]).toBe('[llm] mistral ministral-14b-2512 failed: status=401 key=app 401: Invalid API Key');
+  });
+
+  it('treats an empty user key as no key: the app key is sent and reported', async () => {
+    vi.stubEnv('MISTRAL_API_KEY', 'app-key-not-real');
+    const fetchMock = vi.fn(async () => jsonResponse(200, { choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await mistralChat(messages, 0.7, 8, 'ministral-3b-2512', '');
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer app-key-not-real');
+    expect(res.keySource).toBe('app');
   });
 
   it('reads the 422 {detail:[{msg}]} and the {error:{message}} shapes too', async () => {

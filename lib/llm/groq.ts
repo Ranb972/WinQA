@@ -1,5 +1,5 @@
 import Groq from 'groq-sdk';
-import { AdapterOptions, ChatMessage, ChatResponse, GroqModel } from './types';
+import { AdapterOptions, ChatMessage, ChatResponse, GroqModel, KeySource } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
 
@@ -22,6 +22,7 @@ export async function groqChat(
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.groq;
+  const keySource: KeySource = customApiKey ? 'user' : 'app';
 
   try {
     const response = await getGroqClient(customApiKey).chat.completions.create({
@@ -44,6 +45,7 @@ export async function groqChat(
       model: 'groq',
       specificModel: modelToUse,
       responseTime,
+      keySource,
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -52,7 +54,8 @@ export async function groqChat(
       model: 'groq',
       specificModel: modelToUse,
       responseTime,
-      error: reportProviderError('groq', modelToUse, error),
+      keySource,
+      error: reportProviderError('groq', modelToUse, error, keySource),
     };
   }
 }

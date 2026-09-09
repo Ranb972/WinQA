@@ -10,6 +10,7 @@ import {
   CustomApiKeys,
   AdapterOptions,
   ReasoningEffort,
+  KeySource,
 } from './types';
 import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
@@ -238,11 +239,13 @@ export async function chatWithFallback(
     attemptCount++;
 
     const budgetSeconds = Math.round(attemptBudget / 100) / 10;
+    const keySource: KeySource = customApiKeys?.[currentProvider] ? 'user' : 'app';
     const timedOut: ChatResponse = {
       content: '',
       model: currentProvider,
       specificModel: currentModel,
       responseTime: attemptBudget,
+      keySource,
       error: `Request timed out after ${budgetSeconds}s`,
     };
 
@@ -263,7 +266,7 @@ export async function chatWithFallback(
     // logged here. Without this line a hung attempt left no trace in the runtime
     // logs (2026-09-08 smoke). The provider call itself keeps running unobserved.
     if (response === timedOut) {
-      console.error(`[llm] ${currentProvider} ${currentModel} timed out after ${budgetSeconds}s`);
+      console.error(`[llm] ${currentProvider} ${currentModel} timed out after ${budgetSeconds}s key=${keySource}`);
     }
 
     // Check if the response has an error

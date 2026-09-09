@@ -1,5 +1,5 @@
 import { CohereClient } from 'cohere-ai';
-import { ChatMessage, ChatResponse, CohereModel } from './types';
+import { ChatMessage, ChatResponse, CohereModel, KeySource } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
 
@@ -20,6 +20,7 @@ export async function cohereChat(
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.cohere;
+  const keySource: KeySource = customApiKey ? 'user' : 'app';
 
   try {
     // Convert messages to Cohere format
@@ -45,6 +46,7 @@ export async function cohereChat(
       model: 'cohere',
       specificModel: modelToUse,
       responseTime,
+      keySource,
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -53,7 +55,8 @@ export async function cohereChat(
       model: 'cohere',
       specificModel: modelToUse,
       responseTime,
-      error: reportProviderError('cohere', modelToUse, error),
+      keySource,
+      error: reportProviderError('cohere', modelToUse, error, keySource),
     };
   }
 }

@@ -1,4 +1,4 @@
-import { ChatMessage, ChatResponse, MistralModel } from './types';
+import { ChatMessage, ChatResponse, KeySource, MistralModel } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
 
@@ -63,6 +63,7 @@ export async function mistralChat(
 ): Promise<ChatResponse> {
   const startTime = Date.now();
   const modelToUse = modelOverride || defaultModels.mistral;
+  const keySource: KeySource = customApiKey ? 'user' : 'app';
 
   try {
     const response = await fetch(`${MISTRAL_BASE_URL}/chat/completions`, {
@@ -103,6 +104,7 @@ export async function mistralChat(
       model: 'mistral',
       specificModel: modelToUse,
       responseTime,
+      keySource,
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
@@ -111,7 +113,8 @@ export async function mistralChat(
       model: 'mistral',
       specificModel: modelToUse,
       responseTime,
-      error: reportProviderError('mistral', modelToUse, error),
+      keySource,
+      error: reportProviderError('mistral', modelToUse, error, keySource),
     };
   }
 }
