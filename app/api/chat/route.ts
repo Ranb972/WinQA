@@ -6,9 +6,12 @@ import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 
-// Worst case ≈ 2 provider timeouts (30s each) under the client's 2-attempt config;
-// also bounds the custom-provider path, whose fetch has no timeout of its own.
+// Every built-in call runs under a 42s total budget (20s per attempt, so two Compare
+// attempts plus delays finish before the client's 45s abort; Batch E3); the 60s cap
+// leaves headroom for the daily-allowance check and also bounds the custom-provider
+// path, whose fetch has no timeout of its own.
 export const maxDuration = 60;
+const TOTAL_TIMEOUT_MS = 42000;
 
 interface RequestBody {
   messages: ChatMessage[];
@@ -155,16 +158,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: friendlyErrorMessage(DAILY_LIMIT_ERROR) }, { status: 429 });
     }
 
-    // Build fallback overrides once; honored by both the multi-model and single-model paths.
-    // Checking each clamped value for undefined keeps an explicit 0 behaving identically
-    // whether it is sent alone or alongside other fields.
-    const fallbackOverrides = [safeCrossProviderFallback, safeMaxFallbackAttempts, safeFallbackDelay].some((v) => v !== undefined)
-      ? {
-          enableCrossProviderFallback: safeCrossProviderFallback,
-          maxAttempts: safeMaxFallbackAttempts,
-          delayBetweenAttempts: safeFallbackDelay,
-        }
-      : undefined;
+    // Build fallback overrides once; honored by both the multi-model and single-model
+    // paths. The total budget is always set; undefined tuning fields fall back to the
+    // engine's defaults, so an explicit 0 behaves the same sent alone or with others.
+    const fallbackOverrides = {
+      enableCrossProviderFallback: safeCrossProviderFallback,
+      maxAttempts: safeMaxFallbackAttempts,
+      delayBetweenAttempts: safeFallbackDelay,
+      totalTimeout: TOTAL_TIMEOUT_MS,
+    };
 
     // Handle custom provider request
     if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {

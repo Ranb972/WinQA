@@ -25,7 +25,9 @@ interface Message extends ChatMessageType {
   isLoading?: boolean;
 }
 
-// Timeout wrapper for fetch requests
+// Timeout wrapper for fetch requests. The 45s default sits above the chat route's
+// 42s total budget, so a server-side fallback result reaches the card instead of
+// being cut off by the client (the old 30s Compare override raced the server).
 const fetchWithTimeout = async (
   url: string,
   options: RequestInit,
@@ -41,7 +43,7 @@ const fetchWithTimeout = async (
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timed out after 45s');
+      throw new Error(`Request timed out after ${Math.round(timeout / 1000)}s`);
     }
     throw error;
   }
@@ -217,7 +219,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 maxFallbackAttempts: 2,
                 fallbackDelay: 200,
               }),
-            }, 30000);
+            });
 
             const data = await response.json() as ChatResponse;
 
@@ -263,7 +265,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                 models: `custom:${provider.id}`,
                 customProvider: provider,
               }),
-            }, 30000);
+            });
 
             const data = await response.json() as ChatResponse;
 

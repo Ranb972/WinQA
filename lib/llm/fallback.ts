@@ -79,6 +79,22 @@ export function classifyFailure(errorMessage: string | undefined): FailureClass 
 // No attempt starts when less than this much of the total budget remains.
 const MIN_ATTEMPT_BUDGET_MS = 1000;
 
+/**
+ * Cap per attempt when the caller sets none. 20s, down from 30s (Batch E3): the
+ * 2026-09-08 smoke showed a head that hung for the whole 30s Compare budget while
+ * its sibling would have answered; a slow head now hands over instead.
+ */
+export const DEFAULT_PROVIDER_TIMEOUT_MS = 20000;
+
+/**
+ * Minimum pause before retrying on the same provider. Mistral's Free plan enforces
+ * one request per second, so a 200ms Compare fall-through from one Ministral model
+ * to the next would draw a 429 for nothing (probe 2026-09-09).
+ */
+export const MIN_SAME_PROVIDER_DELAY_MS: Partial<Record<LLMProvider, number>> = {
+  mistral: 1000,
+};
+
 // Call the appropriate provider with a specific model
 async function callProvider(
   provider: LLMProvider,
@@ -161,7 +177,7 @@ export async function chatWithFallback(
     enableCrossProviderFallback = true,
     maxAttempts = 6,
     delayBetweenAttempts = 500,
-    providerTimeout = 30000,
+    providerTimeout = DEFAULT_PROVIDER_TIMEOUT_MS,
     totalTimeout,
     specificModel,
     customApiKeys,
@@ -204,13 +220,23 @@ export async function chatWithFallback(
   const deadline = totalTimeout === undefined ? undefined : Date.now() + totalTimeout;
   const remaining = (): number => (deadline === undefined ? Infinity : deadline - Date.now());
 
-  for (const { provider: currentProvider, model: currentModel } of fallbackSequence) {
+  for (let i = 0; i < fallbackSequence.length; i++) {
+    const { provider: currentProvider, model: currentModel } = fallbackSequence[i];
     if (attemptCount >= maxAttempts) break;
 
     const timeLeft = remaining();
     if (timeLeft < MIN_ATTEMPT_BUDGET_MS) break;
     const attemptBudget = Math.min(providerTimeout, timeLeft);
     attemptCount++;
+
+    const budgetSeconds = Math.round(attemptBudget / 100) / 10;
+    const timedOut: ChatResponse = {
+      content: '',
+      model: currentProvider,
+      specificModel: currentModel,
+      responseTime: attemptBudget,
+      error: `Request timed out after ${budgetSeconds}s`,
+    };
 
     const response = await Promise.race([
       callProvider(
@@ -221,14 +247,15 @@ export async function chatWithFallback(
         maxTokens,
         customApiKeys
       ),
-      sleep(attemptBudget).then((): ChatResponse => ({
-        content: '',
-        model: currentProvider,
-        specificModel: currentModel,
-        responseTime: attemptBudget,
-        error: `Request timed out after ${Math.round(attemptBudget / 100) / 10}s`,
-      })),
+      sleep(attemptBudget).then(() => timedOut),
     ]);
+
+    // The adapters log their own failures; a timeout is the engine's, so it is
+    // logged here. Without this line a hung attempt left no trace in the runtime
+    // logs (2026-09-08 smoke). The provider call itself keeps running unobserved.
+    if (response === timedOut) {
+      console.error(`[llm] ${currentProvider} ${currentModel} timed out after ${budgetSeconds}s`);
+    }
 
     // Check if the response has an error
     if (response.error) {
@@ -237,8 +264,11 @@ export async function chatWithFallback(
       lastReason = reason;
 
       if (retry) {
-        // Transient for this model: try the next one after a short delay
-        await sleep(Math.min(delayBetweenAttempts, Math.max(0, remaining())));
+        // Transient for this model: try the next one after a short delay, longer
+        // when the next model is on a provider with a per-second cap.
+        const next = fallbackSequence[i + 1];
+        const floor = next && next.provider === currentProvider ? (MIN_SAME_PROVIDER_DELAY_MS[currentProvider] ?? 0) : 0;
+        await sleep(Math.min(Math.max(delayBetweenAttempts, floor), Math.max(0, remaining())));
         continue;
       }
 

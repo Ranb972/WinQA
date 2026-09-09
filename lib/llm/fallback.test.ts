@@ -13,7 +13,7 @@ import { cohereChat } from '@/lib/llm/cohere';
 import { geminiChat } from '@/lib/llm/gemini';
 import { groqChat } from '@/lib/llm/groq';
 import { mistralChat } from '@/lib/llm/mistral';
-import { chatWithFallback, classifyFailure } from '@/lib/llm/fallback';
+import { chatWithFallback, classifyFailure, DEFAULT_PROVIDER_TIMEOUT_MS, MIN_SAME_PROVIDER_DELAY_MS } from '@/lib/llm/fallback';
 import { fallbackChains, defaultModels } from '@/lib/llm/registry';
 
 const adapters = {
@@ -165,6 +165,65 @@ describe('chatWithFallback: falling through the chain', () => {
 describe('chatWithFallback: time budget', () => {
   const never = () => new Promise<ChatResponse>(() => {});
 
+  it('caps an attempt at 20s by default and floors Mistral same-provider retries at 1s', () => {
+    expect(DEFAULT_PROVIDER_TIMEOUT_MS).toBe(20000);
+    expect(MIN_SAME_PROVIDER_DELAY_MS.mistral).toBe(1000);
+  });
+
+  it('waits at least the provider floor before retrying on the same provider', async () => {
+    const [head, second] = fallbackChains.mistral;
+    script('mistral', [
+      (m) => fail('mistral', m, '429: Rate limit exceeded'),
+      (m) => ok('mistral', m),
+    ]);
+
+    const started = Date.now();
+    const res = await chatWithFallback(messages, 'mistral', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 2,
+      delayBetweenAttempts: 200,
+    });
+    const elapsed = Date.now() - started;
+
+    expect(res.specificModel).toBe(second);
+    expect(res.fallback?.originalModel).toBe(head);
+    expect(elapsed).toBeGreaterThanOrEqual(950);
+    expect(elapsed).toBeLessThan(1600);
+  });
+
+  it('keeps the caller delay for providers without a floor', async () => {
+    script('groq', [
+      (m) => fail('groq', m, '503: overloaded'),
+      (m) => ok('groq', m),
+    ]);
+
+    const started = Date.now();
+    await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 2,
+      delayBetweenAttempts: 0,
+    });
+
+    expect(Date.now() - started).toBeLessThan(400);
+  });
+
+  it('logs one [llm] line when it times an attempt out', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [head] = fallbackChains.groq;
+    script('groq', [never, (m) => ok('groq', m)]);
+
+    await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 2,
+      delayBetweenAttempts: 0,
+      providerTimeout: 200,
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toBe(`[llm] groq ${head} timed out after 0.2s`);
+    spy.mockRestore();
+  });
+
   it('a hung provider times out per attempt and the next model gets only what is left of totalTimeout', async () => {
     const [head, second] = fallbackChains.mistral;
     script('mistral', [never, never]);
@@ -190,14 +249,14 @@ describe('chatWithFallback: time budget', () => {
   });
 
   it('a second attempt runs when enough budget remains and is capped by it', async () => {
-    const [, second] = fallbackChains.mistral;
-    script('mistral', [
-      (m) => fail('mistral', m, '503: overloaded'),
+    const [, second] = fallbackChains.groq;
+    script('groq', [
+      (m) => fail('groq', m, '503: overloaded'),
       never,
     ]);
 
     const started = Date.now();
-    const res = await chatWithFallback(messages, 'mistral', 0.7, 1024, {
+    const res = await chatWithFallback(messages, 'groq', 0.7, 1024, {
       enableCrossProviderFallback: false,
       maxAttempts: 2,
       delayBetweenAttempts: 0,
@@ -206,7 +265,7 @@ describe('chatWithFallback: time budget', () => {
     });
     const elapsed = Date.now() - started;
 
-    expect(adapters.mistral).toHaveBeenCalledTimes(2);
+    expect(adapters.groq).toHaveBeenCalledTimes(2);
     expect(res.specificModel).toBe(second);
     expect(res.error).toMatch(/timed out/);
     expect(res.fallback?.usedModel).toBe(second);
