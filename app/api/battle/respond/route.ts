@@ -6,9 +6,11 @@ import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Up to two same-provider attempts (a withdrawn or overloaded head falls through to
 // the next model of its family) inside a 24s total budget: the second attempt only
-// gets what the first left, so the route stays under its 30s cap and the battle
-// page's 25s abort. Gemini 3.8 Flash answered a Code Duel prompt with a 503 after
-// 5s in the 2026-09-08 smoke; one attempt made that the whole result.
+// gets what the first left, so the route stays under its 30s cap. The battle page
+// aborts at 35s, above that cap: its old 25s abort lost the race against the 24s
+// budget plus a cold start (2026-09-09 Code Duel). Gemini 3.8 Flash answered a
+// Code Duel prompt with a 503 after 5s in the 2026-09-08 smoke; one attempt made
+// that the whole result. A retry after a timeout needs 8s left (lib/llm/fallback.ts).
 export const maxDuration = 30;
 const PROVIDER_TIMEOUT_MS = 20000;
 const TOTAL_TIMEOUT_MS = 24000;

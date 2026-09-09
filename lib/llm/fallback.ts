@@ -115,6 +115,15 @@ export const MIN_SAME_PROVIDER_DELAY_MS: Partial<Record<LLMProvider, number>> = 
   mistral: 1000,
 };
 
+/**
+ * A retry after a timed-out attempt needs at least this much of the total budget
+ * left. In the 2026-09-09 Code Duel the second Gemini model got the 3.9s the
+ * first had left of 24s and timed out too: that retry could not have answered a
+ * Code Duel prompt and only delayed the honest timeout text. Fast failures keep
+ * the 1s floor, since a withdrawn model's sibling can answer in a second or two.
+ */
+export const MIN_RETRY_AFTER_TIMEOUT_MS = 8000;
+
 // Call the appropriate provider with a specific model
 async function callProvider(
   provider: LLMProvider,
@@ -296,7 +305,7 @@ export async function chatWithFallback(
     if (remaining() < MIN_ATTEMPT_BUDGET_MS) break;
     attemptCount++;
 
-    let { response } = await runAttempt(currentProvider, currentModel);
+    let { response, timedOut } = await runAttempt(currentProvider, currentModel);
 
     // A saved user key the provider rejects must not take the feature down when
     // the app's own key would answer (owner rule, 2026-09-09): retry the same
@@ -310,7 +319,7 @@ export async function chatWithFallback(
       userKeyRejected = true;
       await sleep(Math.min(MIN_SAME_PROVIDER_DELAY_MS[currentProvider] ?? 0, Math.max(0, remaining())));
       if (remaining() >= MIN_ATTEMPT_BUDGET_MS) {
-        ({ response } = await runAttempt(currentProvider, currentModel));
+        ({ response, timedOut } = await runAttempt(currentProvider, currentModel));
       }
     }
 
@@ -321,6 +330,11 @@ export async function chatWithFallback(
       lastReason = reason;
 
       if (retry) {
+        // A retry into a sliver of budget after a timeout cannot answer; stop and
+        // return the timeout instead of delaying it (the exhausted path below adds
+        // the fallback badge when an earlier model already ran).
+        if (timedOut && remaining() < MIN_RETRY_AFTER_TIMEOUT_MS) break;
+
         // Transient for this model: try the next one after a short delay, longer
         // when the next model is on a provider with a per-second cap.
         const next = fallbackSequence[i + 1];

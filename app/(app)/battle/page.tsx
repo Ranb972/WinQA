@@ -333,14 +333,21 @@ export default function BattlePage() {
 
   // --- Single-model fetch for progressive display ---
 
+  // Above the respond route's 30s cap (maxDuration), so the server's own answer
+  // or timeout text always arrives before the page gives up. The old 25s abort
+  // raced the route's 24s budget plus a cold start and lost: in the 2026-09-09
+  // Code Duel the Gemini card showed the raw browser abort text at "0.0s".
+  const CLIENT_TIMEOUT_MS = 35000;
+
   const fetchSingleResponse = async (
     fighter: FighterConfig,
     prompt: string,
     _idx: number
   ): Promise<BattleResponse> => {
     void _idx; // Param required by call sites but unused inside this function
+    const started = Date.now();
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
 
     try {
       const res = await fetch('/api/battle/respond', {
@@ -355,9 +362,10 @@ export default function BattlePage() {
       });
       clearTimeout(timeoutId);
 
-      const data = await res.json();
+      // A platform 504 or a proxy error carries an HTML body, not JSON.
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        return { content: '', responseTime: 0, error: data.error || 'Request failed' };
+        return { content: '', responseTime: Date.now() - started, error: data.error || `Request failed (${res.status})` };
       }
       return {
         content: data.content || '',
@@ -367,10 +375,15 @@ export default function BattlePage() {
       };
     } catch (err) {
       clearTimeout(timeoutId);
+      // The abort is this page's own timer: say so, and report the time it took
+      // rather than the 0 that used to render as "0.0s".
+      const timedOut = err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
       return {
         content: '',
-        responseTime: 0,
-        error: err instanceof Error ? err.message : 'Request failed',
+        responseTime: Date.now() - started,
+        error: timedOut
+          ? `Request timed out after ${Math.round(CLIENT_TIMEOUT_MS / 1000)}s`
+          : err instanceof Error ? err.message : 'Request failed',
       };
     }
   };

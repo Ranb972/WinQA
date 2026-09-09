@@ -13,7 +13,7 @@ import { cohereChat } from '@/lib/llm/cohere';
 import { geminiChat } from '@/lib/llm/gemini';
 import { groqChat } from '@/lib/llm/groq';
 import { mistralChat } from '@/lib/llm/mistral';
-import { chatWithFallback, classifyFailure, isAuthFailure, DEFAULT_PROVIDER_TIMEOUT_MS, MIN_SAME_PROVIDER_DELAY_MS } from '@/lib/llm/fallback';
+import { chatWithFallback, classifyFailure, isAuthFailure, DEFAULT_PROVIDER_TIMEOUT_MS, MIN_SAME_PROVIDER_DELAY_MS, MIN_RETRY_AFTER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import { fallbackChains, defaultModels } from '@/lib/llm/registry';
 
 const adapters = {
@@ -318,6 +318,10 @@ describe('chatWithFallback: reasoning effort', () => {
 describe('chatWithFallback: time budget', () => {
   const never = () => new Promise<ChatResponse>(() => {});
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('caps an attempt at 20s by default and floors Mistral same-provider retries at 1s', () => {
     expect(DEFAULT_PROVIDER_TIMEOUT_MS).toBe(20000);
     expect(MIN_SAME_PROVIDER_DELAY_MS.mistral).toBe(1000);
@@ -457,5 +461,67 @@ describe('chatWithFallback: time budget', () => {
     expect(adapters.groq).toHaveBeenCalledTimes(2);
     expect(res.error).toBeUndefined();
     expect(res.fallback?.reason).toBe('error');
+  });
+
+  it('does not retry into a short budget after a timeout', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [head] = fallbackChains.groq;
+    script('groq', [never, (m) => ok('groq', m)]);
+
+    const started = Date.now();
+    const res = await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 2,
+      delayBetweenAttempts: 0,
+      providerTimeout: 300,
+      totalTimeout: 3000,
+    });
+
+    // About 2.7s remain after the timeout, under MIN_RETRY_AFTER_TIMEOUT_MS:
+    // the timeout comes back at once instead of a second call that cannot answer.
+    expect(MIN_RETRY_AFTER_TIMEOUT_MS).toBe(8000);
+    expect(adapters.groq).toHaveBeenCalledTimes(1);
+    expect(res.specificModel).toBe(head);
+    expect(res.error).toBe('Request timed out after 0.3s');
+    expect(res.fallback).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(300 + 400);
+  });
+
+  it('retries after a timeout when at least MIN_RETRY_AFTER_TIMEOUT_MS remains', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [head, second] = fallbackChains.groq;
+    script('groq', [never, (m) => ok('groq', m)]);
+
+    const res = await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 2,
+      delayBetweenAttempts: 0,
+      providerTimeout: 200,
+      totalTimeout: 20000,
+    });
+
+    expect(adapters.groq).toHaveBeenCalledTimes(2);
+    expect(res.specificModel).toBe(second);
+    expect(res.error).toBeUndefined();
+    expect(res.fallback).toEqual({ originalModel: head, usedModel: second, reason: 'error' });
+  });
+
+  it('a timeout on the second model of a chain still carries the fallback badge when it stops', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [head, second] = fallbackChains.groq;
+    script('groq', [(m) => fail('groq', m, '503: overloaded'), never]);
+
+    const res = await chatWithFallback(messages, 'groq', 0.7, 1024, {
+      enableCrossProviderFallback: false,
+      maxAttempts: 3,
+      delayBetweenAttempts: 0,
+      providerTimeout: 300,
+      totalTimeout: 3000,
+    });
+
+    expect(adapters.groq).toHaveBeenCalledTimes(2);
+    expect(res.specificModel).toBe(second);
+    expect(res.error).toMatch(/timed out/);
+    expect(res.fallback).toEqual({ originalModel: head, usedModel: second, reason: 'error' });
   });
 });
