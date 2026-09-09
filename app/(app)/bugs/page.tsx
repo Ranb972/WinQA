@@ -622,7 +622,7 @@ function BugsPageContent() {
                       <SelectItem value="cohere" className="text-white focus:bg-white/[0.04]">Cohere</SelectItem>
                       <SelectItem value="gemini" className="text-white focus:bg-white/[0.04]">Gemini</SelectItem>
                       <SelectItem value="groq" className="text-white focus:bg-white/[0.04]">Groq</SelectItem>
-                      <SelectItem value="openrouter" className="text-white focus:bg-white/[0.04]">OpenRouter</SelectItem>
+                      <SelectItem value="mistral" className="text-white focus:bg-white/[0.04]">Mistral</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

@@ -117,28 +117,41 @@ export const MODEL_REGISTRY = {
       verifiedOn: '2026-09-07',
     },
   ],
-  // NVIDIA Nemotron family, the largest set of :free chat models in OpenRouter's live
-  // catalogue on 2026-09-08 (16 free models; MiniMax, the 2026-09-07 pick, had none
-  // left: both its free slugs were withdrawn within a day, the API answering 404
-  // "This model is unavailable for free"). Free variants: 20 RPM, 50 RPD, 1,000 RPD
-  // with $10 lifetime credit (openrouter.ai/docs/api-reference/limits).
-  // nvidia/nemotron-3-ultra-550b-a55b:free belongs to the family but answered two
-  // probes on 2026-09-08 with 502 "Upstream error from Nvidia: Service temporarily
-  // overloaded" (inside an HTTP 200 body); add it when the radar sees it answer.
-  openrouter: [
+  // Ministral 3 family (14B, 8B, 3B), largest first, on Mistral's Free plan with the
+  // app's own key (owner decision 2026-09-09, Batch E3). Replaces OpenRouter, whose
+  // free route failed twice in two days: the MiniMax free slugs were withdrawn within
+  // a day of their probe, and Nemotron 3.5 Lightning hung past 30s in a four-provider
+  // Compare. OpenRouter remains a custom-provider preset.
+  // Why Ministral and not Mistral Medium 3.5 / Small 4: on this workspace's Free plan
+  // the API enforces a zero requests-per-minute limit on both (x-ratelimit-limit-
+  // req-minute: 0, 429 "Rate limit exceeded" on every call) although the Admin
+  // panel's Limits page lists 1 RPS for them, while ministral-8b-2512 answered with
+  // 188 requests and 625K tokens per minute. mistral-large-2512 is paid-only (403).
+  // The rate-limit headers, not the Limits page, say what a key may call; GET
+  // /v1/models, not documentation pages, says which ids exist (a docs read gave a
+  // wrong Medium id). Free-plan data is used for training unless opted out (Admin
+  // panel, Privacy, "Anonymous improvement data"; help.mistral.ai article 455207).
+  mistral: [
     {
-      id: 'nvidia/nemotron-3.5-lightning:free',
-      name: 'Nemotron 3.5 Lightning',
-      description: 'Free tier, 1M context',
-      source: 'https://openrouter.ai/nvidia/nemotron-3.5-lightning:free',
-      verifiedOn: '2026-09-08',
+      id: 'ministral-14b-2512',
+      name: 'Ministral 3 14B',
+      description: 'Largest of the family',
+      source: 'https://docs.mistral.ai/getting-started/models/models_overview',
+      verifiedOn: '2026-09-09',
     },
     {
-      id: 'nvidia/nemotron-3-super-120b-a12b:free',
-      name: 'Nemotron 3 Super',
-      description: 'Free tier, 120B hybrid MoE',
-      source: 'https://openrouter.ai/nvidia/nemotron-3-super-120b-a12b:free',
-      verifiedOn: '2026-09-08',
+      id: 'ministral-8b-2512',
+      name: 'Ministral 3 8B',
+      description: 'Balanced',
+      source: 'https://docs.mistral.ai/getting-started/models/models_overview',
+      verifiedOn: '2026-09-09',
+    },
+    {
+      id: 'ministral-3b-2512',
+      name: 'Ministral 3 3B',
+      description: 'Smallest, fastest',
+      source: 'https://docs.mistral.ai/getting-started/models/models_overview',
+      verifiedOn: '2026-09-09',
     },
   ],
 } as const satisfies Record<LLMProvider, readonly ModelEntry[]>;
@@ -148,10 +161,10 @@ export const MODEL_REGISTRY = {
 export type CohereModel = (typeof MODEL_REGISTRY)['cohere'][number]['id'];
 export type GeminiModel = (typeof MODEL_REGISTRY)['gemini'][number]['id'];
 export type GroqModel = (typeof MODEL_REGISTRY)['groq'][number]['id'];
-export type OpenRouterModel = (typeof MODEL_REGISTRY)['openrouter'][number]['id'];
-export type SpecificModel = CohereModel | GeminiModel | GroqModel | OpenRouterModel;
+export type MistralModel = (typeof MODEL_REGISTRY)['mistral'][number]['id'];
+export type SpecificModel = CohereModel | GeminiModel | GroqModel | MistralModel;
 
-export const REGISTRY_PROVIDERS: readonly LLMProvider[] = ['cohere', 'gemini', 'groq', 'openrouter'];
+export const REGISTRY_PROVIDERS: readonly LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
 
 /** Entries for one provider, widened to the plain interface for iteration. */
 export function registryEntries(provider: LLMProvider): readonly ModelEntry[] {

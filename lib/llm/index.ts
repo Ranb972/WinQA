@@ -1,7 +1,7 @@
 import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
 import { groqChat } from './groq';
-import { openrouterChat } from './openrouter';
+import { mistralChat } from './mistral';
 import { chatWithFallback } from './fallback';
 import {
   ChatMessage,
@@ -10,7 +10,7 @@ import {
   CohereModel,
   GeminiModel,
   GroqModel,
-  OpenRouterModel,
+  MistralModel,
   MultiModelRequest,
   MultiModelResponse,
   CustomApiKeys,
@@ -63,8 +63,8 @@ export async function chat(
       return geminiChat(messages, temperature, maxTokens, specificModel as GeminiModel | undefined, customApiKeys?.gemini);
     case 'groq':
       return groqChat(messages, temperature, maxTokens, specificModel as GroqModel | undefined, customApiKeys?.groq);
-    case 'openrouter':
-      return openrouterChat(messages, temperature, maxTokens, specificModel as OpenRouterModel | undefined, customApiKeys?.openrouter);
+    case 'mistral':
+      return mistralChat(messages, temperature, maxTokens, specificModel as MistralModel | undefined, customApiKeys?.mistral);
     default:
       return {
         content: '',
@@ -103,14 +103,14 @@ export const modelDisplayNames: Record<LLMProvider, string> = {
   cohere: 'Cohere Command',
   gemini: 'Google Gemini',
   groq: 'Groq',
-  openrouter: 'OpenRouter',
+  mistral: 'Mistral',
 };
 
 export const modelColors: Record<LLMProvider, string> = {
   cohere: 'text-purple-400',
   gemini: 'text-blue-400',
   groq: 'text-orange-400',
-  openrouter: 'text-green-400',
+  mistral: 'text-green-400',
 };
 
 // Provider display names (shorter, for badges)
@@ -118,5 +118,5 @@ export const providerDisplayNames: Record<LLMProvider, string> = {
   cohere: 'Cohere',
   gemini: 'Google',
   groq: 'Groq',
-  openrouter: 'OpenRouter',
+  mistral: 'Mistral',
 };

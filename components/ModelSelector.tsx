@@ -33,13 +33,13 @@ interface ModelSelectorProps {
   onCustomProvidersChange?: (ids: string[]) => void;
 }
 
-const providers: LLMProvider[] = ['cohere', 'gemini', 'groq', 'openrouter'];
+const providers: LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
 
 const modelBadgeColors: Record<LLMProvider, string> = {
   cohere: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
   gemini: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
   groq: 'bg-orange-600/20 text-orange-400 border-orange-600/30',
-  openrouter: 'bg-green-600/20 text-green-400 border-green-600/30',
+  mistral: 'bg-green-600/20 text-green-400 border-green-600/30',
 };
 
 const ModelGearPopover = ({

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { LLMProvider } from '@/lib/llm/types';
 // Every probe targets the provider's registry default, so a key check never names a
-// model outside the lineup (audit V05: the OpenRouter probe used deepseek-r1, in no
+// model outside the lineup (audit V05: the then-OpenRouter probe used deepseek-r1, in no
 // list; the Groq probe used llama-3.1-8b-instant, shut down 2026-08-16).
 import { defaultModels } from '@/lib/llm/registry';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
@@ -147,23 +147,22 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
 }
 
 /**
- * Test an OpenRouter API key
+ * Test a Mistral API key
  */
-async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
+async function testMistralKey(apiKey: string): Promise<TestKeyResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'X-Title': 'WinQA',
+        Accept: 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: defaultModels.openrouter,
+        model: defaultModels.mistral,
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 1,
       }),
@@ -179,8 +178,9 @@ async function testOpenRouterKey(apiKey: string): Promise<TestKeyResponse> {
     }
 
     if (!response.ok) {
+      // Mistral error bodies carry {message} or {error:{message}}.
       const data = await response.json().catch(() => ({}));
-      return { valid: false, error: friendlyErrorMessage(data.error?.message || response.statusText) };
+      return { valid: false, error: friendlyErrorMessage(`${response.status}: ${data.message || data.error?.message || response.statusText}`) };
     }
 
     return { valid: true };
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate provider
-    const validProviders: LLMProvider[] = ['cohere', 'gemini', 'groq', 'openrouter'];
+    const validProviders: LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
     if (!validProviders.includes(provider)) {
       return NextResponse.json(
         { valid: false, error: 'Invalid provider' },
@@ -233,8 +233,8 @@ export async function POST(request: NextRequest) {
       case 'groq':
         result = await testGroqKey(apiKey);
         break;
-      case 'openrouter':
-        result = await testOpenRouterKey(apiKey);
+      case 'mistral':
+        result = await testMistralKey(apiKey);
         break;
       default:
         result = { valid: false, error: 'Unknown provider' };

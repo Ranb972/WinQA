@@ -79,7 +79,7 @@ const providers = [
   { name: 'Cohere', description: modelNames('cohere') },
   { name: 'Google Gemini', description: modelNames('gemini') },
   { name: 'Groq', description: `Fast inference — ${modelNames('groq')}` },
-  { name: 'OpenRouter', description: `${modelNames('openrouter')} on the free tier` },
+  { name: 'Mistral', description: modelNames('mistral') },
 ];
 
 export default function AboutPage() {

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Provider and prompt are required' }, { status: 400 });
     }
 
-    const validProviders: LLMProvider[] = ['cohere', 'gemini', 'groq', 'openrouter'];
+    const validProviders: LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
     if (!validProviders.includes(provider)) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }

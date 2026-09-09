@@ -28,7 +28,7 @@ interface RequestBody {
 // '__proto__' all pass and then reach `for (const m of fallbackChains[provider])`
 // (lib/llm/fallback.ts:106) holding a Function — an uncaught TypeError surfacing as a
 // 500. PROVIDER_MODELS is a UI catalogue, not an authorization list.
-const VALID_PROVIDERS = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'openrouter']);
+const VALID_PROVIDERS = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'mistral']);
 
 /**
  * The first (provider, id) preference that names a model the registry does not know,

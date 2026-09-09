@@ -62,7 +62,7 @@ export default function ChatMessage({
                 model === 'cohere' && 'bg-purple-600/20 text-purple-400 border-purple-600/30',
                 model === 'gemini' && 'bg-blue-600/20 text-blue-400 border-blue-600/30',
                 model === 'groq' && 'bg-orange-600/20 text-orange-400 border-orange-600/30',
-                model === 'openrouter' && 'bg-green-600/20 text-green-400 border-green-600/30'
+                model === 'mistral' && 'bg-green-600/20 text-green-400 border-green-600/30'
               )}
             >
               {providerDisplayNames[model]}
@@ -108,7 +108,7 @@ export default function ChatMessage({
                 model === 'cohere' && 'bg-purple-600/20 text-purple-400 border-purple-600/30',
                 model === 'gemini' && 'bg-blue-600/20 text-blue-400 border-blue-600/30',
                 model === 'groq' && 'bg-orange-600/20 text-orange-400 border-orange-600/30',
-                model === 'openrouter' && 'bg-green-600/20 text-green-400 border-green-600/30'
+                model === 'mistral' && 'bg-green-600/20 text-green-400 border-green-600/30'
               )}
             >
               {compact ? (specificModel || providerDisplayNames[model]) : `${specificModel || 'unknown'} (${providerDisplayNames[model]})`}

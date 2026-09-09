@@ -34,7 +34,7 @@ const providerGradients: Record<LLMProvider, string> = {
   cohere: 'from-purple-600 to-purple-900',
   gemini: 'from-blue-600 to-blue-900',
   groq: 'from-orange-600 to-orange-900',
-  openrouter: 'from-green-600 to-green-900',
+  mistral: 'from-green-600 to-green-900',
 };
 
 function getDisplayName(provider: string, model: string): string {

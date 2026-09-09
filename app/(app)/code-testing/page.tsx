@@ -61,11 +61,11 @@ const MODEL_OPTION_DESCRIPTIONS: Record<LLMProvider, string> = {
   groq: 'Fast inference (Recommended)',
   gemini: 'Google AI',
   cohere: 'Cohere',
-  openrouter: 'Free tier',
+  mistral: 'Mistral AI',
 };
 
 const MODEL_OPTIONS: { value: LLMProvider | string; label: string; description: string }[] = (
-  ['groq', 'gemini', 'cohere', 'openrouter'] as LLMProvider[]
+  ['groq', 'gemini', 'cohere', 'mistral'] as LLMProvider[]
 ).map((provider) => ({
   value: provider,
   label: `${providerDisplayNames[provider]} - ${specificModelDisplayNames[defaultModels[provider]]}`,

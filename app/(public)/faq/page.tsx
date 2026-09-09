@@ -41,7 +41,7 @@ const faqs = [
   {
     question: 'What AI models can I test on WinQA?',
     answer:
-      `WinQA connects to four providers: Cohere (${modelNames('cohere')}), Google Gemini (${modelNames('gemini')}), Groq (${modelNames('groq')}, fast inference), and OpenRouter (${modelNames('openrouter')}, free tier). You pick which ones to use and can swap between them anytime.`,
+      `WinQA connects to four providers: Cohere (${modelNames('cohere')}), Google Gemini (${modelNames('gemini')}), Groq (${modelNames('groq')}, fast inference), and Mistral (${modelNames('mistral')}). You pick which ones to use and can swap between them anytime.`,
   },
   {
     question: 'Do I need my own API keys?',

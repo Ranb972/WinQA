@@ -1,4 +1,5 @@
 import { LLMProvider } from './llm/types';
+import { REGISTRY_PROVIDERS } from './llm/registry';
 import {
   encryptApiKeys,
   decryptApiKeys,
@@ -8,23 +9,30 @@ import {
 
 const STORAGE_KEY = 'winqa_api_keys';
 
-export interface ApiKeys {
-  cohere?: string;
-  gemini?: string;
-  groq?: string;
-  openrouter?: string;
-}
+export type ApiKeys = Partial<Record<LLMProvider, string>>;
 
 interface EncryptedStorage {
   encrypted: true;
   keys: Record<string, EncryptedData>;
 }
 
-interface LegacyStorage {
-  cohere?: string;
-  gemini?: string;
-  groq?: string;
-  openrouter?: string;
+type LegacyStorage = Record<string, unknown>;
+
+/**
+ * Keep only non-empty keys for providers in the current registry. Stored keys
+ * outlive lineups (localStorage): a key saved for a provider that has since left
+ * the built-ins (OpenRouter, Batch E3) is dropped here on read, silently, instead
+ * of riding along on every request.
+ */
+function keepRegistered(keys: Record<string, unknown>): ApiKeys {
+  const filtered: ApiKeys = {};
+  for (const provider of REGISTRY_PROVIDERS) {
+    const value = keys[provider];
+    if (typeof value === 'string' && value.trim()) {
+      filtered[provider] = value.trim();
+    }
+  }
+  return filtered;
 }
 
 /**
@@ -46,27 +54,22 @@ export async function getApiKeys(userId?: string): Promise<ApiKeys> {
         // Can't decrypt without userId, return empty
         return {};
       }
-      return await decryptApiKeys(parsed.keys, userId);
+      return keepRegistered(await decryptApiKeys(parsed.keys, userId));
     }
 
     // Legacy unencrypted format - migrate if we have userId
     const legacyData = parsed as LegacyStorage;
+    const filtered = keepRegistered(legacyData);
     if (userId && Object.keys(legacyData).length > 0) {
       // Migrate to encrypted format
-      const filtered: ApiKeys = {};
-      for (const [key, value] of Object.entries(legacyData)) {
-        if (value && typeof value === 'string' && value.trim()) {
-          filtered[key as keyof ApiKeys] = value.trim();
-        }
-      }
       if (Object.keys(filtered).length > 0) {
         await setApiKeys(filtered, userId);
       }
       return filtered;
     }
 
-    // Return legacy data as-is if no userId
-    return legacyData;
+    // No userId: legacy data, filtered to the current providers
+    return filtered;
   } catch {
     // Invalid JSON or decryption failed, return empty
     return {};
@@ -82,12 +85,7 @@ export async function setApiKeys(keys: ApiKeys, userId?: string): Promise<void> 
   if (typeof window === 'undefined') return;
 
   // Filter out empty strings
-  const filtered: ApiKeys = {};
-  for (const [key, value] of Object.entries(keys)) {
-    if (value && value.trim()) {
-      filtered[key as keyof ApiKeys] = value.trim();
-    }
-  }
+  const filtered = keepRegistered(keys);
 
   // If no keys to save, clear storage
   if (Object.keys(filtered).length === 0) {

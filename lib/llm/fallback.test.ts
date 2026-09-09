@@ -7,12 +7,12 @@ import type { ChatMessage, ChatResponse, LLMProvider } from '@/lib/llm/types';
 vi.mock('@/lib/llm/cohere', () => ({ cohereChat: vi.fn() }));
 vi.mock('@/lib/llm/gemini', () => ({ geminiChat: vi.fn() }));
 vi.mock('@/lib/llm/groq', () => ({ groqChat: vi.fn() }));
-vi.mock('@/lib/llm/openrouter', () => ({ openrouterChat: vi.fn() }));
+vi.mock('@/lib/llm/mistral', () => ({ mistralChat: vi.fn() }));
 
 import { cohereChat } from '@/lib/llm/cohere';
 import { geminiChat } from '@/lib/llm/gemini';
 import { groqChat } from '@/lib/llm/groq';
-import { openrouterChat } from '@/lib/llm/openrouter';
+import { mistralChat } from '@/lib/llm/mistral';
 import { chatWithFallback, classifyFailure } from '@/lib/llm/fallback';
 import { fallbackChains, defaultModels } from '@/lib/llm/registry';
 
@@ -20,7 +20,7 @@ const adapters = {
   cohere: vi.mocked(cohereChat),
   gemini: vi.mocked(geminiChat),
   groq: vi.mocked(groqChat),
-  openrouter: vi.mocked(openrouterChat),
+  mistral: vi.mocked(mistralChat),
 } as const;
 
 const messages: ChatMessage[] = [{ role: 'user', content: 'hi' }];
@@ -75,21 +75,21 @@ describe('classifyFailure', () => {
 
 describe('chatWithFallback: falling through the chain', () => {
   it('a withdrawn head (404) falls through to the next model of the same provider', async () => {
-    const [head, second] = fallbackChains.openrouter;
-    script('openrouter', [
-      (m) => fail('openrouter', m, '404: This model is unavailable for free.'),
-      (m) => ok('openrouter', m),
+    const [head, second] = fallbackChains.mistral;
+    script('mistral', [
+      (m) => fail('mistral', m, '404: This model is unavailable for free.'),
+      (m) => ok('mistral', m),
     ]);
 
-    const res = await chatWithFallback(messages, 'openrouter', 0.7, 1024, {
+    const res = await chatWithFallback(messages, 'mistral', 0.7, 1024, {
       enableCrossProviderFallback: false,
       maxAttempts: 2,
       delayBetweenAttempts: 0,
     });
 
-    expect(adapters.openrouter).toHaveBeenCalledTimes(2);
-    expect(modelArg(adapters.openrouter.mock.calls[0])).toBe(head);
-    expect(modelArg(adapters.openrouter.mock.calls[1])).toBe(second);
+    expect(adapters.mistral).toHaveBeenCalledTimes(2);
+    expect(modelArg(adapters.mistral.mock.calls[0])).toBe(head);
+    expect(modelArg(adapters.mistral.mock.calls[1])).toBe(second);
     expect(res.error).toBeUndefined();
     expect(res.specificModel).toBe(second);
     expect(res.fallback).toEqual({ originalModel: head, usedModel: second, reason: 'error' });
@@ -166,11 +166,11 @@ describe('chatWithFallback: time budget', () => {
   const never = () => new Promise<ChatResponse>(() => {});
 
   it('a hung provider times out per attempt and the next model gets only what is left of totalTimeout', async () => {
-    const [head, second] = fallbackChains.openrouter;
-    script('openrouter', [never, never]);
+    const [head, second] = fallbackChains.mistral;
+    script('mistral', [never, never]);
 
     const started = Date.now();
-    const res = await chatWithFallback(messages, 'openrouter', 0.7, 1024, {
+    const res = await chatWithFallback(messages, 'mistral', 0.7, 1024, {
       enableCrossProviderFallback: false,
       maxAttempts: 2,
       delayBetweenAttempts: 0,
@@ -180,8 +180,8 @@ describe('chatWithFallback: time budget', () => {
     const elapsed = Date.now() - started;
 
     // The remaining ~300ms is under the 1s minimum, so the second attempt is skipped.
-    expect(adapters.openrouter).toHaveBeenCalledTimes(1);
-    expect(modelArg(adapters.openrouter.mock.calls[0])).toBe(head);
+    expect(adapters.mistral).toHaveBeenCalledTimes(1);
+    expect(modelArg(adapters.mistral.mock.calls[0])).toBe(head);
     expect(res.error).toMatch(/timed out/);
     expect(res.specificModel).toBe(head);
     expect(res.specificModel).not.toBe(second);
@@ -190,14 +190,14 @@ describe('chatWithFallback: time budget', () => {
   });
 
   it('a second attempt runs when enough budget remains and is capped by it', async () => {
-    const [, second] = fallbackChains.openrouter;
-    script('openrouter', [
-      (m) => fail('openrouter', m, '503: overloaded'),
+    const [, second] = fallbackChains.mistral;
+    script('mistral', [
+      (m) => fail('mistral', m, '503: overloaded'),
       never,
     ]);
 
     const started = Date.now();
-    const res = await chatWithFallback(messages, 'openrouter', 0.7, 1024, {
+    const res = await chatWithFallback(messages, 'mistral', 0.7, 1024, {
       enableCrossProviderFallback: false,
       maxAttempts: 2,
       delayBetweenAttempts: 0,
@@ -206,7 +206,7 @@ describe('chatWithFallback: time budget', () => {
     });
     const elapsed = Date.now() - started;
 
-    expect(adapters.openrouter).toHaveBeenCalledTimes(2);
+    expect(adapters.mistral).toHaveBeenCalledTimes(2);
     expect(res.specificModel).toBe(second);
     expect(res.error).toMatch(/timed out/);
     expect(res.fallback?.usedModel).toBe(second);

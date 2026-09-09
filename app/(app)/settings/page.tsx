@@ -90,11 +90,11 @@ const providers: ProviderConfig[] = [
     docsUrl: 'https://console.groq.com/keys',
   },
   {
-    key: 'openrouter',
-    name: 'OpenRouter',
-    description: `Access ${specificModelDisplayNames[defaultModels.openrouter]} and other free models`,
-    placeholder: 'Enter your OpenRouter API key',
-    docsUrl: 'https://openrouter.ai/keys',
+    key: 'mistral',
+    name: 'Mistral',
+    description: `Access ${specificModelDisplayNames[defaultModels.mistral]} and other Mistral models`,
+    placeholder: 'Enter your Mistral API key',
+    docsUrl: 'https://console.mistral.ai/api-keys',
   },
 ];
 

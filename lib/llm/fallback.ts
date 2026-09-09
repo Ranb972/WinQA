@@ -6,13 +6,13 @@ import {
   CohereModel,
   GeminiModel,
   GroqModel,
-  OpenRouterModel,
+  MistralModel,
   CustomApiKeys,
 } from './types';
 import { cohereChat } from './cohere';
 import { geminiChat } from './gemini';
 import { groqChat } from './groq';
-import { openrouterChat } from './openrouter';
+import { mistralChat } from './mistral';
 import { fallbackChains, defaultModels, isRegisteredModel } from './registry';
 
 // The chains, defaults and display names live in the registry (lib/llm/registry.ts);
@@ -20,7 +20,7 @@ import { fallbackChains, defaultModels, isRegisteredModel } from './registry';
 export { fallbackChains, defaultModels, specificModelDisplayNames } from './registry';
 
 // Cross-provider fallback order when all models in a provider fail
-export const crossProviderFallbackOrder: LLMProvider[] = ['groq', 'gemini', 'openrouter', 'cohere'];
+export const crossProviderFallbackOrder: LLMProvider[] = ['groq', 'gemini', 'mistral', 'cohere'];
 
 export type FailureReason = 'rate_limit' | 'quota_exceeded' | 'error';
 
@@ -95,8 +95,8 @@ async function callProvider(
       return geminiChat(messages, temperature, maxTokens, model as GeminiModel, customApiKeys?.gemini);
     case 'groq':
       return groqChat(messages, temperature, maxTokens, model as GroqModel, customApiKeys?.groq);
-    case 'openrouter':
-      return openrouterChat(messages, temperature, maxTokens, model as OpenRouterModel, customApiKeys?.openrouter);
+    case 'mistral':
+      return mistralChat(messages, temperature, maxTokens, model as MistralModel, customApiKeys?.mistral);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }

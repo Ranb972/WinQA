@@ -67,14 +67,14 @@ const providerColorDots: Record<LLMProvider, string> = {
   cohere: 'bg-purple-400',
   gemini: 'bg-blue-400',
   groq: 'bg-orange-400',
-  openrouter: 'bg-green-400',
+  mistral: 'bg-green-400',
 };
 
 const providerBorderColors: Record<LLMProvider, string> = {
   cohere: 'border-purple-500/40',
   gemini: 'border-blue-500/40',
   groq: 'border-orange-500/40',
-  openrouter: 'border-green-500/40',
+  mistral: 'border-green-500/40',
 };
 
 function getDisplayName(provider: string, model: string): string {

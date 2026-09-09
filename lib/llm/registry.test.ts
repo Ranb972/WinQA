@@ -31,6 +31,20 @@ const RETIRED_IDS = [
   // OpenRouter: free slugs withdrawn 2026-09-08 (404 "unavailable for free")
   'minimax/minimax-m3:free',
   'minimax/minimax-m2.7:free',
+  // OpenRouter left the built-in lineup 2026-09-09 (Batch E3); its ids live only in
+  // the custom-provider preset, never in the registry
+  'nvidia/nemotron-3.5-lightning:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  // Mistral: previous versions with announced retirement dates (docs.mistral.ai), the
+  // Medium id a docs-page read got wrong (400 Invalid model, 2026-09-09), and Large 3,
+  // which the Free plan refuses (403). Medium 3.5 and Small 4 are not retired, only
+  // rate-limited to zero on the app's workspace; own-key users keep them in the preset.
+  'mistral-medium-2508',
+  'mistral-small-2506',
+  'mistral-large-2411',
+  'mistral-medium-3504',
+  'mistral-large-2512',
   // Custom-provider presets
   'claude-3-5-sonnet-20241022',
   'claude-3-opus-20240229',
@@ -50,15 +64,15 @@ const FAMILY_PREFIX = {
   cohere: 'command-',
   gemini: 'gemini-',
   groq: 'openai/gpt-oss-',
-  openrouter: 'nvidia/nemotron-',
+  mistral: 'ministral-',
 } as const;
 
 const allEntries = REGISTRY_PROVIDERS.flatMap((p) => registryEntries(p));
 
 describe('model registry: shape and provenance', () => {
   it('covers the four built-in providers and nothing else', () => {
-    expect(Object.keys(MODEL_REGISTRY).sort()).toEqual(['cohere', 'gemini', 'groq', 'openrouter']);
-    expect([...REGISTRY_PROVIDERS].sort()).toEqual(['cohere', 'gemini', 'groq', 'openrouter']);
+    expect(Object.keys(MODEL_REGISTRY).sort()).toEqual(['cohere', 'gemini', 'groq', 'mistral']);
+    expect([...REGISTRY_PROVIDERS].sort()).toEqual(['cohere', 'gemini', 'groq', 'mistral']);
   });
 
   it('has at least one and at most four entries per provider (Gemini spans two generations)', () => {
@@ -156,11 +170,11 @@ describe('model registry: membership and preference sanitising', () => {
       cohere: defaultModels.cohere,
       gemini: 'gemini-2.0-flash',
       groq: 'llama-3.3-70b-versatile',
-      openrouter: defaultModels.openrouter,
+      mistral: defaultModels.mistral,
       toString: 'x',
       custom: 'anything',
     });
-    expect(clean).toEqual({ cohere: defaultModels.cohere, openrouter: defaultModels.openrouter });
+    expect(clean).toEqual({ cohere: defaultModels.cohere, mistral: defaultModels.mistral });
     expect(sanitizeModelPreferences(null)).toEqual({});
     expect(sanitizeModelPreferences(undefined)).toEqual({});
     expect(sanitizeModelPreferences('nope' as unknown as Record<string, unknown>)).toEqual({});

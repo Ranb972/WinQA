@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://api.cohere.ai https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai wss://*.clerk.accounts.dev https://challenges.cloudflare.com https://clerk-telemetry.com https://clerk.winqa.ai https://*.clerk.com wss://clerk.winqa.ai",
+              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://api.cohere.ai https://generativelanguage.googleapis.com https://api.groq.com https://api.mistral.ai wss://*.clerk.accounts.dev https://challenges.cloudflare.com https://clerk-telemetry.com https://clerk.winqa.ai https://*.clerk.com wss://clerk.winqa.ai",
               "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://challenges.cloudflare.com https://clerk.winqa.ai https://*.clerk.com",
               "worker-src 'self' blob:",
             ].join('; '),
