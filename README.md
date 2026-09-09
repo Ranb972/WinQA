@@ -20,7 +20,7 @@
 
 ## What is WinQA
 
-I got tired of flipping between four browser tabs trying to figure out which model was lying to me. WinQA sends the same prompt to Cohere, Gemini, Groq, and OpenRouter at once, lets you pit them against each other in structured challenges, and gives you somewhere to keep notes when one of them breaks in an interesting way. Run it locally, or poke at the live version at [winqa.ai](https://winqa.ai).
+I got tired of flipping between four browser tabs trying to figure out which model was lying to me. WinQA sends the same prompt to Cohere, Gemini, Groq, and Mistral at once, lets you pit them against each other in structured challenges, and gives you somewhere to keep notes when one of them breaks in an interesting way. Run it locally, or poke at the live version at [winqa.ai](https://winqa.ai).
 
 ---
 
@@ -61,7 +61,7 @@ Test Cases is a library of scenarios you keep reusing to probe models. Insights 
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS, Framer Motion |
 | Backend | Next.js API Routes, MongoDB Atlas, Mongoose |
 | Auth | Clerk (Google + GitHub OAuth) |
-| LLM Providers | Cohere, Google Gemini, Groq, OpenRouter |
+| LLM Providers | Cohere, Google Gemini, Groq, Mistral (Ministral 3) |
 | Code Execution | Piston API |
 | Security | AES-256-GCM encryption for stored API keys, HSTS, CSP headers |
 | Deployment | Vercel |
@@ -93,7 +93,7 @@ ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef 
 COHERE_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GOOGLE_API_KEY=AIzaSyXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+MISTRAL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ---

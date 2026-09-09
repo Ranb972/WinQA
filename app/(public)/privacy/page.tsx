@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                 <h3 className="text-sm font-medium text-orange-500 font-mono uppercase tracking-wider mb-2">API Keys</h3>
                 <p className="text-sm">
-                  If you provide API keys for AI providers (Cohere, Google Gemini, Groq, OpenRouter), they are <span className="text-white">encrypted using AES-256-GCM</span> before storage. Keys are only decrypted server-side when making requests to AI providers on your behalf and are never logged or exposed in plaintext.
+                  If you provide API keys for AI providers (Cohere, Google Gemini, Groq, Mistral), they are <span className="text-white">encrypted using AES-256-GCM</span> before storage. Keys are only decrypted server-side when making requests to AI providers on your behalf and are never logged or exposed in plaintext.
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
@@ -164,7 +164,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span><span className="text-white">AI Providers</span> — Your prompts are sent to the AI providers you select (Cohere, Google, Groq, OpenRouter) to generate responses. Refer to each provider&apos;s privacy policy for their data handling practices.</span>
+                  <span><span className="text-white">AI Providers</span> — Your prompts are sent to the AI providers you select (Cohere, Google, Groq, Mistral) to generate responses. Refer to each provider&apos;s privacy policy for their data handling practices.</span>
                 </li>
               </ul>
             </div>

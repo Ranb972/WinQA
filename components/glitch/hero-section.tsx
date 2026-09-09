@@ -51,7 +51,7 @@ export function HeroSection() {
 
             {/* Subtitle */}
             <p className="text-lg sm:text-xl text-white/50 max-w-xl mb-12 leading-relaxed">
-              Compare Gemini, Cohere, Groq, and OpenRouter side-by-side.
+              Compare Gemini, Cohere, Groq, and Mistral side-by-side.
               Run 9 battle challenges. Document every hallucination. Build evidence.
             </p>
 
@@ -101,7 +101,7 @@ export function HeroSection() {
                 <div>
                   <p className="font-mono text-white/60 text-xs mb-4 tracking-wider uppercase">Connected Providers</p>
                   <div className="space-y-2">
-                    {['Cohere', 'Gemini', 'Groq', 'OpenRouter'].map((provider, i) => (
+                    {['Cohere', 'Gemini', 'Groq', 'Mistral'].map((provider, i) => (
                       <motion.div
                         key={provider}
                         className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02] border border-white/[0.04] rounded"

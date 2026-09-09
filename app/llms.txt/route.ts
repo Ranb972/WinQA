@@ -3,7 +3,7 @@ export function GET() {
 
 > AI Testing Playground — Compare AI models, test prompts, track hallucinations, and build your prompt engineering knowledge base. Free developer tool for QA professionals.
 
-WinQA is a free, web-based AI testing playground that lets developers and QA professionals compare responses from multiple AI providers (Cohere, Google Gemini, Groq, and OpenRouter) side-by-side. The platform includes 9 unique challenge types in its AI Battle Arena, a code execution lab supporting JavaScript, Python, and TypeScript, a hallucination and bug tracker, and a curated prompt engineering library.
+WinQA is a free, web-based AI testing playground that lets developers and QA professionals compare responses from multiple AI providers (Cohere, Google Gemini, Groq, and Mistral) side-by-side. The platform includes 9 unique challenge types in its AI Battle Arena, a code execution lab supporting JavaScript, Python, and TypeScript, a hallucination and bug tracker, and a curated prompt engineering library.
 
 ## Pages
 
