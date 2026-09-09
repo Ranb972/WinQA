@@ -23,6 +23,7 @@ import {
   XCircle,
   Cpu,
   Search,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Select,
@@ -102,6 +103,16 @@ function CornerAccents({ color = 'bg-orange-500/60' }: { color?: string }) {
   );
 }
 
+/**
+ * One line for the page when a saved key was rejected and the engine went on with
+ * the app key (lib/llm/fallback.ts, Batch E3.1). Null when nothing happened.
+ */
+function keyNoticeFor(data: ChatResponse): string | null {
+  if (!data.userKeyRejected) return null;
+  const name = providerDisplayNames[data.model] || data.model;
+  return `Your saved ${name} key was rejected, so the app key was used. Check it in Settings.`;
+}
+
 export default function CodeTestingPage() {
   const { user } = useUser();
   const [mode, setMode] = useState<'write' | 'ask'>('write');
@@ -125,6 +136,7 @@ export default function CodeTestingPage() {
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [debugSelectedModel, setDebugSelectedModel] = useState<string>('groq');
   const [debugMode, setDebugMode] = useState<DebugMode>('summary');
+  const [keyNotice, setKeyNotice] = useState<string | null>(null);
 
   // Drives the "X min ago" labels in the code history (refreshes every 60s).
   const [now, setNow] = useState(() => Date.now());
@@ -179,6 +191,7 @@ export default function CodeTestingPage() {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
+    setKeyNotice(null);
     setPendingCode(null);
     setResult(null);
     setShowDebugSelector(false);
@@ -215,6 +228,7 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
       });
 
       const data = await response.json() as ChatResponse;
+      setKeyNotice(keyNoticeFor(data));
       if (data.error) throw new Error(data.error);
 
       let cleanCode = data.content.trim();
@@ -276,6 +290,7 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
 
     setShowDebugSelector(false);
     setIsDebugging(true);
+    setKeyNotice(null);
     setDebugResult(null);
 
     try {
@@ -333,6 +348,7 @@ Please analyze the error and explain:
       });
 
       const data = await response.json() as ChatResponse;
+      setKeyNotice(keyNoticeFor(data));
       if (data.error) throw new Error(data.error);
       setDebugResult(data.content);
     } catch (error) {
@@ -347,6 +363,7 @@ Please analyze the error and explain:
 
     setShowSuccessSelector(false);
     setIsAnalyzingSuccess(true);
+    setKeyNotice(null);
     setSuccessAnalysisResult(null);
 
     try {
@@ -398,6 +415,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       });
 
       const data = await response.json() as ChatResponse;
+      setKeyNotice(keyNoticeFor(data));
       if (data.error) throw new Error(data.error);
       setSuccessAnalysisResult(data.content);
     } catch (error) {
@@ -612,6 +630,14 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
               Ask AI
             </button>
           </div>
+
+          {/* A saved key was rejected on the last request; the app key answered. */}
+          {keyNotice && (
+            <div className="flex items-center gap-2 px-6 py-2 border-b border-amber-600/20 bg-amber-600/10 font-mono text-[11px] text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              {keyNotice}
+            </div>
+          )}
 
           {/* Tab Content */}
           <div className="p-6">

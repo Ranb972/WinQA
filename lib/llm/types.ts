@@ -57,6 +57,12 @@ export interface ChatResponse {
   error?: string;
   fallback?: FallbackInfo;
   keySource?: KeySource;
+  /**
+   * A saved user key was rejected (401/403) during this call and the engine went
+   * on with the app key (owner rule, 2026-09-09: a stale stored key must never
+   * take a feature down that the app key would serve).
+   */
+  userKeyRejected?: boolean;
 }
 
 export interface MultiModelRequest {

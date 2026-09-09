@@ -22,6 +22,7 @@ interface Message extends ChatMessageType {
   specificModel?: string;
   responseTime?: number;
   fallback?: FallbackInfo;
+  userKeyRejected?: boolean;
   isLoading?: boolean;
 }
 
@@ -173,6 +174,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
           specificModel: data.specificModel,
           responseTime: data.responseTime,
           fallback: data.fallback,
+          userKeyRejected: data.userKeyRejected,
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
@@ -232,6 +234,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                       specificModel: data.specificModel,
                       responseTime: data.responseTime,
                       fallback: data.fallback,
+                      userKeyRejected: data.userKeyRejected,
                       isLoading: false,
                     }
                   : msg
@@ -445,6 +448,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                     specificModel={message.specificModel}
                     responseTime={message.responseTime}
                     fallback={message.fallback}
+                    userKeyRejected={message.userKeyRejected}
                     isLoading={message.isLoading}
                     onFlagBug={() => handleFlagBug(message)}
                     onSaveToLibrary={handleSaveToLibrary}
@@ -533,6 +537,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                               specificModel={message.specificModel}
                               responseTime={message.responseTime}
                               fallback={message.fallback}
+                              userKeyRejected={message.userKeyRejected}
                               isLoading={message.isLoading}
                               onFlagBug={() => handleFlagBug(message)}
                               onSaveToLibrary={handleSaveToLibrary}

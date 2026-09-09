@@ -16,6 +16,8 @@ interface ChatMessageProps {
   specificModel?: string;
   responseTime?: number;
   fallback?: FallbackInfo;
+  /** A saved key was rejected and the app key answered instead (lib/llm/fallback.ts). */
+  userKeyRejected?: boolean;
   isLoading?: boolean;
   onFlagBug?: () => void;
   onSaveToLibrary?: () => void;
@@ -29,6 +31,7 @@ export default function ChatMessage({
   specificModel,
   responseTime,
   fallback,
+  userKeyRejected,
   isLoading,
   onFlagBug,
   onSaveToLibrary,
@@ -124,6 +127,12 @@ export default function ChatMessage({
             <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-600/10 px-2 py-0.5 rounded border border-amber-600/20">
               <AlertCircle className="h-3 w-3" />
               Fallback: {specificModelDisplayNames[fallback.usedModel as keyof typeof specificModelDisplayNames] || fallback.usedModel}
+            </span>
+          )}
+          {userKeyRejected && (
+            <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-600/10 px-2 py-0.5 rounded border border-amber-600/20">
+              <AlertCircle className="h-3 w-3" />
+              Saved key rejected, app key used
             </span>
           )}
         </div>

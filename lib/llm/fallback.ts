@@ -79,6 +79,23 @@ export function classifyFailure(errorMessage: string | undefined): FailureClass 
   return { retry: false, reason: 'error' };
 }
 
+/**
+ * True for the two statuses that mean the credential itself is no good: 401 and
+ * 403. Keyed on the status the adapters prefix, never on wording, so a 400 whose
+ * text happens to say "invalid" is not mistaken for a bad key.
+ */
+export function isAuthFailure(errorMessage: string): boolean {
+  const status = leadingStatus(errorMessage);
+  return status === 401 || status === 403;
+}
+
+/** The same key set with one provider's user key removed. */
+function withoutProviderKey(keys: CustomApiKeys, provider: LLMProvider): CustomApiKeys {
+  const rest: CustomApiKeys = { ...keys };
+  delete rest[provider];
+  return rest;
+}
+
 // No attempt starts when less than this much of the total budget remains.
 const MIN_ATTEMPT_BUDGET_MS = 1000;
 
@@ -225,40 +242,40 @@ export async function chatWithFallback(
   let attemptCount = 0;
   let lastResponse: ChatResponse | null = null;
   let lastReason: FailureReason = 'error';
+  // The keys in force for this call. A user key the provider rejects is dropped
+  // here, so every later attempt of the call runs on the app key.
+  let keys: CustomApiKeys | undefined = customApiKeys;
+  let userKeyRejected = false;
 
   const deadline = totalTimeout === undefined ? undefined : Date.now() + totalTimeout;
   const remaining = (): number => (deadline === undefined ? Infinity : deadline - Date.now());
 
-  for (let i = 0; i < fallbackSequence.length; i++) {
-    const { provider: currentProvider, model: currentModel } = fallbackSequence[i];
-    if (attemptCount >= maxAttempts) break;
+  /** Every response leaves through here, flagged when a saved key was rejected on the way. */
+  const finish = (response: ChatResponse): ChatResponse => {
+    if (userKeyRejected) response.userKeyRejected = true;
+    return response;
+  };
 
-    const timeLeft = remaining();
-    if (timeLeft < MIN_ATTEMPT_BUDGET_MS) break;
-    const attemptBudget = Math.min(providerTimeout, timeLeft);
-    attemptCount++;
-
+  // One attempt on (provider, model) with the keys in force, capped at what is
+  // left of the per-attempt and total budgets.
+  const runAttempt = async (
+    attemptProvider: LLMProvider,
+    attemptModel: SpecificModel
+  ): Promise<{ response: ChatResponse; timedOut: boolean }> => {
+    const attemptBudget = Math.min(providerTimeout, remaining());
     const budgetSeconds = Math.round(attemptBudget / 100) / 10;
-    const keySource: KeySource = customApiKeys?.[currentProvider] ? 'user' : 'app';
+    const keySource: KeySource = keys?.[attemptProvider] ? 'user' : 'app';
     const timedOut: ChatResponse = {
       content: '',
-      model: currentProvider,
-      specificModel: currentModel,
+      model: attemptProvider,
+      specificModel: attemptModel,
       responseTime: attemptBudget,
       keySource,
       error: `Request timed out after ${budgetSeconds}s`,
     };
 
     const response = await Promise.race([
-      callProvider(
-        currentProvider,
-        currentModel,
-        messages,
-        temperature,
-        maxTokens,
-        customApiKeys,
-        adapterOptions
-      ),
+      callProvider(attemptProvider, attemptModel, messages, temperature, maxTokens, keys, adapterOptions),
       sleep(attemptBudget).then(() => timedOut),
     ]);
 
@@ -266,7 +283,35 @@ export async function chatWithFallback(
     // logged here. Without this line a hung attempt left no trace in the runtime
     // logs (2026-09-08 smoke). The provider call itself keeps running unobserved.
     if (response === timedOut) {
-      console.error(`[llm] ${currentProvider} ${currentModel} timed out after ${budgetSeconds}s key=${keySource}`);
+      console.error(`[llm] ${attemptProvider} ${attemptModel} timed out after ${budgetSeconds}s key=${keySource}`);
+    }
+    if (!response.keySource) response.keySource = keySource;
+    return { response, timedOut: response === timedOut };
+  };
+
+  for (let i = 0; i < fallbackSequence.length; i++) {
+    const { provider: currentProvider, model: currentModel } = fallbackSequence[i];
+    if (attemptCount >= maxAttempts) break;
+
+    if (remaining() < MIN_ATTEMPT_BUDGET_MS) break;
+    attemptCount++;
+
+    let { response } = await runAttempt(currentProvider, currentModel);
+
+    // A saved user key the provider rejects must not take the feature down when
+    // the app's own key would answer (owner rule, 2026-09-09): retry the same
+    // model once on the app key, after the provider's per-second floor, and drop
+    // the rejected key for the rest of the call. The retry repairs this step
+    // rather than moving down the chain, so it does not count toward maxAttempts;
+    // it does stay inside the total budget.
+    if (response.error && keys?.[currentProvider] && isAuthFailure(response.error)) {
+      console.error(`[llm] ${currentProvider} ${currentModel} user key rejected (${leadingStatus(response.error)}), retrying with the app key`);
+      keys = withoutProviderKey(keys, currentProvider);
+      userKeyRejected = true;
+      await sleep(Math.min(MIN_SAME_PROVIDER_DELAY_MS[currentProvider] ?? 0, Math.max(0, remaining())));
+      if (remaining() >= MIN_ATTEMPT_BUDGET_MS) {
+        ({ response } = await runAttempt(currentProvider, currentModel));
+      }
     }
 
     // Check if the response has an error
@@ -292,7 +337,7 @@ export async function chatWithFallback(
           reason: lastReason,
         };
       }
-      return response;
+      return finish(response);
     }
 
     // Success! Add fallback info if we're not on the first attempt
@@ -304,7 +349,7 @@ export async function chatWithFallback(
       };
     }
 
-    return response;
+    return finish(response);
   }
 
   // Attempts or budget exhausted: return the last failure. The fallback badge is
@@ -318,11 +363,11 @@ export async function chatWithFallback(
         reason: lastReason,
       };
     }
-    return lastResponse;
+    return finish(lastResponse);
   }
 
   // This shouldn't happen, but just in case
-  return {
+  return finish({
     content: '',
     model: provider,
     specificModel: startModel,
@@ -333,5 +378,5 @@ export async function chatWithFallback(
       usedModel: startModel,
       reason: 'error',
     },
-  };
+  });
 }
