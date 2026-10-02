@@ -118,10 +118,19 @@ export function getHeaderType(baseUrl: string): 'bearer' | 'x-api-key' {
 }
 
 /**
- * Normalize a base URL for comparison (remove trailing slash, lowercase)
+ * Normalize a base URL for comparison (remove trailing slashes, lowercase).
+ *
+ * A backward scan, not a regex: /\/+$/ backtracks quadratically on a long run of
+ * slashes followed by a non-slash (0.48 s at 40k slashes), and this runs on the
+ * user-supplied base URL of every custom-provider request (scan F1/F2). The loop
+ * touches each character at most once.
  */
 export function normalizeBaseUrl(url: string): string {
-  return url.toLowerCase().replace(/\/+$/, '');
+  let end = url.length;
+  while (end > 0 && url.charCodeAt(end - 1) === 47 /* '/' */) {
+    end--;
+  }
+  return url.slice(0, end).toLowerCase();
 }
 
 /**

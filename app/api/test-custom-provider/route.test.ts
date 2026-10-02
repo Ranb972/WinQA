@@ -189,6 +189,17 @@ describe('POST /api/test-custom-provider — guards unchanged', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('400 for a base URL over 2048 characters (no upstream call)', async () => {
+    const longUrl = 'https://api.example.com/v1/' + 'a'.repeat(3000);
+    const res = await POST(makeRequest({ ...validBody, baseUrl: longUrl }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      valid: false,
+      error: 'Base URL is too long (2048 characters max)',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('401 Unauthorized unchanged when auth returns no user (no upstream call)', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: null } as unknown as Awaited<ReturnType<typeof auth>>);
     const res = await POST(makeRequest(validBody));

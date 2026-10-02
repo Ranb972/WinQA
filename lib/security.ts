@@ -40,12 +40,23 @@ export function validateEnum(value: unknown, allowed: readonly string[]): boolea
 }
 
 /**
+ * Longest custom-provider base URL accepted. Real provider base URLs are well under
+ * 100 characters; 2048 is the de-facto URL limit of browsers and CDNs. The cap bounds
+ * the work every later string operation on the URL can do (scan F1/F2).
+ */
+export const MAX_PROVIDER_URL_LENGTH = 2048;
+
+/**
  * Validate a custom-provider base URL the way every server-side caller must:
- * HTTPS only, and never a private/internal address. Returns the message to show
- * the user, or null when the URL is acceptable. One helper shared by the chat path
- * and the test-connection route so the two guards cannot drift (audit CR-14).
+ * at most MAX_PROVIDER_URL_LENGTH characters, HTTPS only, and never a
+ * private/internal address. Returns the message to show the user, or null when the
+ * URL is acceptable. One helper shared by the chat path and the test-connection
+ * route so the two guards cannot drift (audit CR-14).
  */
 export function checkProviderUrl(baseUrl: unknown): string | null {
+  if (typeof baseUrl === 'string' && baseUrl.length > MAX_PROVIDER_URL_LENGTH) {
+    return `Base URL is too long (${MAX_PROVIDER_URL_LENGTH} characters max)`;
+  }
   if (typeof baseUrl !== 'string' || !baseUrl.startsWith('https://')) {
     return 'Base URL must use HTTPS';
   }

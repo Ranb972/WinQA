@@ -46,3 +46,28 @@ describe('checkProviderUrl (custom-provider base URL guard)', () => {
     );
   });
 });
+
+describe('checkProviderUrl length cap (F1/F2)', () => {
+  const urlOfLength = (n: number): string => {
+    const prefix = 'https://api.example.com/v1/';
+    return prefix + 'a'.repeat(n - prefix.length);
+  };
+
+  it('accepts a base URL of exactly 2048 characters', () => {
+    const url = urlOfLength(2048);
+    expect(url).toHaveLength(2048);
+    expect(checkProviderUrl(url)).toBeNull();
+  });
+
+  it('rejects a base URL of 2049 characters', () => {
+    const url = urlOfLength(2049);
+    expect(url).toHaveLength(2049);
+    expect(checkProviderUrl(url)).toBe('Base URL is too long (2048 characters max)');
+  });
+
+  it('rejects a 40k-slash URL before anything parses it', () => {
+    expect(checkProviderUrl('https://a.com/' + '/'.repeat(40_000) + 'x')).toBe(
+      'Base URL is too long (2048 characters max)'
+    );
+  });
+});
