@@ -9,7 +9,13 @@
 import { BlockList, isIP, type LookupFunction } from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from 'undici';
-import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+import {
+  REDIRECT_BLOCKED_ERROR,
+  UNREACHABLE_PROVIDER_ERROR,
+  BASE_URL_HTTPS_ERROR,
+  BASE_URL_PRIVATE_ERROR,
+  BASE_URL_TOO_LONG_ERROR,
+} from '@/lib/friendly-errors';
 
 /**
  * Strip Mongo operator-syntax characters ($ prefix and any . in the string)
@@ -64,13 +70,13 @@ export const MAX_PROVIDER_URL_LENGTH = 2048;
  */
 export function checkProviderUrl(baseUrl: unknown): string | null {
   if (typeof baseUrl === 'string' && baseUrl.length > MAX_PROVIDER_URL_LENGTH) {
-    return `Base URL is too long (${MAX_PROVIDER_URL_LENGTH} characters max)`;
+    return BASE_URL_TOO_LONG_ERROR;
   }
   if (typeof baseUrl !== 'string' || !baseUrl.startsWith('https://')) {
-    return 'Base URL must use HTTPS';
+    return BASE_URL_HTTPS_ERROR;
   }
   if (isPrivateUrl(baseUrl)) {
-    return 'Base URL must not point to a private/internal address';
+    return BASE_URL_PRIVATE_ERROR;
   }
   return null;
 }
@@ -179,8 +185,10 @@ export function isPrivateUrl(urlString: string): boolean {
   }
 }
 
-/** Shown when a custom-provider host resolves to a private/internal address. */
-export const UNREACHABLE_PROVIDER_ERROR = 'The provider address is not reachable from WinQA';
+// Shown when a custom-provider host resolves to a private/internal address. Defined
+// in lib/friendly-errors.ts (client-safe) so the UI can map it without importing
+// this server-only module; re-exported for server callers.
+export { UNREACHABLE_PROVIDER_ERROR };
 
 /** The base URL failed the URL guard or its host resolved to a blocked address. */
 export class ProviderUrlError extends Error {

@@ -4,6 +4,8 @@
 import { encryptApiKey, decryptApiKey, EncryptedData } from './crypto';
 // Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
 import { normalizeBaseUrl } from '@/lib/llm/models';
+// Client-safe: lib/friendly-errors has only a type import (erased at build).
+import { ADDRESS_GUARD_ERRORS } from '@/lib/friendly-errors';
 
 const STORAGE_KEY = 'winqa_custom_providers';
 export const MAX_CUSTOM_PROVIDERS = 6;
@@ -364,6 +366,13 @@ export function friendlyTestFailure(
   // WinQA's own daily cap, not the provider's: no HTTP status, just when it resets.
   if (status === 429 && rawError === PROVIDER_TEST_LIMIT_ERROR) {
     return { reason: PROVIDER_TEST_LIMIT_ERROR, statusText: null, detail: 'Resets at 00:00 UTC' };
+  }
+
+  // The route's own 400 for an address WinQA refuses (checkProviderUrl or DNS
+  // vetting). That body carries no status, so the client falls back to 400; it
+  // is not the provider rejecting the request.
+  if (status === 400 && ADDRESS_GUARD_ERRORS.has(rawError)) {
+    return { reason: 'WinQA blocks this address', statusText: null, detail: rawError };
   }
 
   let reason: string;

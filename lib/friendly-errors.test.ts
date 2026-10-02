@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { friendlyErrorMessage, DAILY_LIMIT_ERROR, REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+import {
+  friendlyErrorMessage,
+  DAILY_LIMIT_ERROR,
+  REDIRECT_BLOCKED_ERROR,
+  UNREACHABLE_PROVIDER_ERROR,
+  ADDRESS_GUARD_ERRORS,
+} from '@/lib/friendly-errors';
 
 // Raw strings as the adapters now emit them (status prefixed by lib/llm/provider-error.ts).
 describe('friendlyErrorMessage', () => {
@@ -51,5 +57,41 @@ describe('friendlyErrorMessage', () => {
   it('passes undefined through and falls back to the generic message', () => {
     expect(friendlyErrorMessage(undefined)).toBeUndefined();
     expect(friendlyErrorMessage('socket hang up')).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('friendlyErrorMessage: WinQA address block (S11)', () => {
+  it('maps the unreachable-address sentinel to the address message', () => {
+    expect(UNREACHABLE_PROVIDER_ERROR).toBe('The provider address is not reachable from WinQA');
+    expect(friendlyErrorMessage('The provider address is not reachable from WinQA')).toBe(
+      'WinQA cannot connect to this provider address. Check the base URL.'
+    );
+  });
+
+  it.each([
+    'Base URL must use HTTPS',
+    'Base URL must not point to a private/internal address',
+    'Base URL is too long (2048 characters max)',
+  ])('maps the base-URL guard text "%s" to the address message', (raw) => {
+    expect(friendlyErrorMessage(raw)).toBe('WinQA cannot connect to this provider address. Check the base URL.');
+  });
+});
+
+describe('friendlyErrorMessage: the address-guard match is an exact set (S11)', () => {
+  it('holds exactly the guard texts checkProviderUrl and the DNS vetting return', () => {
+    expect([...ADDRESS_GUARD_ERRORS].sort()).toEqual(
+      [
+        'Base URL is too long (2048 characters max)',
+        'Base URL must not point to a private/internal address',
+        'Base URL must use HTTPS',
+        'The provider address is not reachable from WinQA',
+      ].sort()
+    );
+  });
+
+  it('a provider text that merely begins with "Base URL" is not treated as WinQA\'s block', () => {
+    expect(friendlyErrorMessage('Base URL not configured for this deployment')).toBe(
+      'Something went wrong. Please try again.'
+    );
   });
 });

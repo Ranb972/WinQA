@@ -446,3 +446,50 @@ describe('daily connection-test limit (S6)', () => {
     expect(out.statusText).toBe('HTTP 429');
   });
 });
+
+describe('friendlyTestFailure: WinQA address block (S11)', () => {
+  const blocked = (error: string): CustomProviderTestResult => ({
+    valid: false,
+    error,
+    status: 400,
+    latencyMs: 0,
+    model: 'test-model-1',
+  });
+
+  it.each([
+    'The provider address is not reachable from WinQA',
+    'Base URL must not point to a private/internal address',
+    'Base URL must use HTTPS',
+  ])('the route 400 "%s" reads as a WinQA block, not as the provider rejecting it', (error) => {
+    const out = friendlyTestFailure(blocked(error));
+    expect(out).toEqual({ reason: 'WinQA blocks this address', statusText: null, detail: error });
+    // No raw status shown ("HTTPS" in the guard text itself is fine).
+    expect(JSON.stringify(out)).not.toMatch(/HTTP \d/);
+  });
+
+  it('end to end: the route 400 body (no status field) through testCustomProviderConnection', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ valid: false, error: 'The provider address is not reachable from WinQA' }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        })
+      )
+    );
+    const out = friendlyTestFailure(await testCustomProviderConnection(provider), API_KEY);
+    expect(out.reason).toBe('WinQA blocks this address');
+    expect(out.statusText).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it('a provider 400 with other text keeps "The provider rejected the request"', () => {
+    expect(friendlyTestFailure(blocked('model field is required')).reason).toBe('The provider rejected the request');
+  });
+
+  it('a provider 400 that merely begins with "Base URL" keeps "The provider rejected the request"', () => {
+    const out = friendlyTestFailure(blocked('Base URL not configured for this deployment'));
+    expect(out.reason).toBe('The provider rejected the request');
+    expect(out.statusText).toBe('HTTP 400');
+  });
+});

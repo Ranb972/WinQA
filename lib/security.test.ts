@@ -12,8 +12,15 @@ import {
   ProviderUrlError,
   ProviderRedirectError,
   ProviderTimeoutError,
+  MAX_PROVIDER_URL_LENGTH,
 } from '@/lib/security';
-import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+import {
+  REDIRECT_BLOCKED_ERROR,
+  ADDRESS_GUARD_ERRORS,
+  BASE_URL_HTTPS_ERROR,
+  BASE_URL_PRIVATE_ERROR,
+  BASE_URL_TOO_LONG_ERROR,
+} from '@/lib/friendly-errors';
 
 // No test touches the network: DNS answers and the undici fetch are mocked. The
 // one real-undici test below talks to a server on 127.0.0.1 that it starts itself.
@@ -463,5 +470,18 @@ describe('safeProviderFetch: every provider call is bounded in time (S5)', () =>
     const res = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 });
     expect(res.status).toBe(200);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('checkProviderUrl returns the shared guard constants (S11)', () => {
+  it('every message it returns is one of ADDRESS_GUARD_ERRORS', () => {
+    const messages = [
+      checkProviderUrl('http://api.example.com/v1'),
+      checkProviderUrl('https://10.0.0.1/v1'),
+      checkProviderUrl('https://api.example.com/' + 'a'.repeat(3000)),
+    ];
+    expect(messages).toEqual([BASE_URL_HTTPS_ERROR, BASE_URL_PRIVATE_ERROR, BASE_URL_TOO_LONG_ERROR]);
+    for (const m of messages) expect(ADDRESS_GUARD_ERRORS.has(m as string)).toBe(true);
+    expect(BASE_URL_TOO_LONG_ERROR).toContain(String(MAX_PROVIDER_URL_LENGTH));
   });
 });

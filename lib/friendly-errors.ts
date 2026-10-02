@@ -2,6 +2,23 @@ import type { KeySource } from './llm/types';
 
 export const DAILY_LIMIT_ERROR = 'daily limit reached';
 export const REDIRECT_BLOCKED_ERROR = 'Provider attempted an HTTP redirect (blocked for security)';
+/** A custom-provider host resolved to a private/internal address (lib/security.ts). */
+export const UNREACHABLE_PROVIDER_ERROR = 'The provider address is not reachable from WinQA';
+// checkProviderUrl's messages (lib/security.ts returns these constants). The length
+// in BASE_URL_TOO_LONG_ERROR is MAX_PROVIDER_URL_LENGTH; a test pins the two together.
+export const BASE_URL_HTTPS_ERROR = 'Base URL must use HTTPS';
+export const BASE_URL_PRIVATE_ERROR = 'Base URL must not point to a private/internal address';
+export const BASE_URL_TOO_LONG_ERROR = 'Base URL is too long (2048 characters max)';
+/**
+ * Every text WinQA's own provider-address guard produces, matched exactly: a
+ * provider's message that happens to start the same way stays the provider's.
+ */
+export const ADDRESS_GUARD_ERRORS: ReadonlySet<string> = new Set([
+  UNREACHABLE_PROVIDER_ERROR,
+  BASE_URL_HTTPS_ERROR,
+  BASE_URL_PRIVATE_ERROR,
+  BASE_URL_TOO_LONG_ERROR,
+]);
 
 /**
  * What the route knows about a failed call and the raw message does not: which
@@ -51,6 +68,12 @@ export function friendlyErrorMessage(raw: string | undefined, context?: ErrorCon
 
   if (raw === REDIRECT_BLOCKED_ERROR) {
     return 'This provider attempted a redirect, which WinQA blocks for security. Check the provider URL.';
+  }
+
+  // WinQA's own address guard (checkProviderUrl's texts and the DNS-vetting
+  // sentinel), not a provider failure.
+  if (ADDRESS_GUARD_ERRORS.has(raw)) {
+    return 'WinQA cannot connect to this provider address. Check the base URL.';
   }
 
   const lower = raw.toLowerCase();
