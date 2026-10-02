@@ -136,7 +136,7 @@ async function executeWithJudge0(
     body: JSON.stringify({
       language_id: languageId,
       source_code: Buffer.from(code).toString('base64'),
-      stdin: stdin ? Buffer.from(stdin).toString('base64') : '',
+      stdin: stdin ? Buffer.from(stdin, 'utf8').toString('base64') : '',
       cpu_time_limit: 10,
       wall_time_limit: 15,
     }),
@@ -190,7 +190,7 @@ async function executeWithJudge0CE(
         body: JSON.stringify({
           language_id: languageId,
           source_code: Buffer.from(code).toString('base64'),
-          stdin: stdin ? Buffer.from(stdin).toString('base64') : '',
+          stdin: stdin ? Buffer.from(stdin, 'utf8').toString('base64') : '',
           cpu_time_limit: 10,
           wall_time_limit: 15,
         }),
@@ -257,6 +257,24 @@ export async function POST(request: NextRequest) {
     if (code.length > 50000) {
       return NextResponse.json(
         { success: false, error: 'Code is too long (max 50,000 characters)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate stdin before metering so a rejected request burns no unit.
+    // The `stdin = ''` default above covers only undefined, so null and every
+    // other non-string (e.g. { length: 2e9 }, which Buffer.from would allocate)
+    // reach this check.
+    if (typeof stdin !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'stdin must be a string' },
+        { status: 400 }
+      );
+    }
+
+    if (stdin.length > 10000) {
+      return NextResponse.json(
+        { success: false, error: 'stdin must be 10,000 characters or fewer' },
         { status: 400 }
       );
     }
