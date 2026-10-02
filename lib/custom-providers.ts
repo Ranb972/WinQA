@@ -2,6 +2,8 @@
 // Uses the same encryption pattern as api-keys.ts
 
 import { encryptApiKey, decryptApiKey, EncryptedData } from './crypto';
+// Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
+import { normalizeBaseUrl } from '@/lib/llm/models';
 
 const STORAGE_KEY = 'winqa_custom_providers';
 export const MAX_CUSTOM_PROVIDERS = 6;
@@ -317,6 +319,83 @@ export async function testCustomProviderConnection(
       model: provider.modelId,
     };
   }
+}
+
+// Separator for testFingerprint: NUL cannot appear in a URL, key header or model id.
+const FINGERPRINT_SEP = '\u0000';
+
+/** Stable identity of what a connection test exercised (URL, key, model, header type; not the name). */
+export function testFingerprint(input: {
+  baseUrl: string;
+  apiKey: string;
+  modelId: string;
+  headerType?: 'bearer' | 'x-api-key';
+}): string {
+  return [
+    normalizeBaseUrl(input.baseUrl),
+    input.apiKey,
+    input.modelId.trim(),
+    input.headerType ?? 'bearer',
+  ].join(FINGERPRINT_SEP);
+}
+
+/** Longest `detail` friendlyTestFailure returns (longer text is cut and ends with "…"). */
+export const TEST_DETAIL_MAX = 160;
+
+/** Plain-words reason for a failed test, the raw HTTP status, and the redacted raw error. */
+export function friendlyTestFailure(
+  result: CustomProviderTestResult,
+  apiKey?: string
+): { reason: string; statusText: string | null; detail: string | null } {
+  const { status } = result;
+  const rawError = typeof result.error === 'string' ? result.error : '';
+
+  let reason: string;
+  if (status === 401 || status === 403) {
+    reason = 'The key was rejected';
+  } else if (status === 404) {
+    reason = 'Model or endpoint not found';
+  } else if (status === 400 || status === 422) {
+    reason = 'The provider rejected the request';
+  } else if (status === 408 || status === 504 || /timed? ?out|abort/i.test(rawError)) {
+    reason = 'No response in time';
+  } else if (typeof status === 'number' && status >= 500 && status <= 599) {
+    reason = 'The provider had a server error';
+  } else if (typeof status === 'number' && status >= 300 && status <= 399) {
+    reason = 'The provider tried to redirect (blocked)';
+  } else if (status === null) {
+    reason = 'Could not reach the provider';
+  } else {
+    reason = 'Connection failed';
+  }
+
+  const statusText = typeof status === 'number' ? `HTTP ${status}` : null;
+
+  let detail: string | null = (apiKey ? redactKey(rawError, apiKey) : rawError).trim();
+  if (detail.length > TEST_DETAIL_MAX) {
+    detail = `${detail.slice(0, TEST_DETAIL_MAX - 1).trimEnd()}…`;
+  }
+  if (!detail || detail.toLowerCase() === reason.toLowerCase()) {
+    detail = null;
+  }
+
+  return { reason, statusText, detail };
+}
+
+/** One-line success text: "Connected · model · 1.2 s" (model part omitted when empty). */
+export function formatTestPassed(result: CustomProviderTestResult): string {
+  const seconds = `${(result.latencyMs / 1000).toFixed(1)} s`;
+  const model = typeof result.model === 'string' ? result.model.trim() : '';
+  return model ? `Connected · ${model} · ${seconds}` : `Connected · ${seconds}`;
+}
+
+/** Save gate: valid fields and either a passing test on the current values or a name-only edit. */
+export function canSaveProvider(input: {
+  isValid: boolean;
+  testPassed: boolean;
+  nameOnlyChange: boolean;
+}): boolean {
+  return input.isValid && (input.testPassed || input.nameOnlyChange);
 }
 
 /**

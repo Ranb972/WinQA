@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Import-safe in node: the module (and ./crypto) touch window/localStorage
 // only inside functions, never at top level.
-import { redactKey, testCustomProviderConnection } from '@/lib/custom-providers';
+import {
+  redactKey,
+  testCustomProviderConnection,
+  testFingerprint,
+  friendlyTestFailure,
+  formatTestPassed,
+  canSaveProvider,
+  TEST_DETAIL_MAX,
+  type CustomProviderTestResult,
+} from '@/lib/custom-providers';
 
 // Fake, test-only key (long enough for redaction to apply).
 const API_KEY = 'sk-test-FAKEKEY-0123456789abcdef';
@@ -170,5 +179,184 @@ describe('testCustomProviderConnection', () => {
     fetchMock.mockRejectedValueOnce('boom');
     const result = await testCustomProviderConnection(provider);
     expect(result).toMatchObject({ valid: false, error: 'Connection failed', status: null });
+  });
+});
+
+describe('testFingerprint', () => {
+  const base = {
+    baseUrl: 'https://api.example.com/v1',
+    apiKey: API_KEY,
+    modelId: 'test-model-1',
+    headerType: 'bearer' as const,
+  };
+
+  it('is stable for identical input', () => {
+    expect(testFingerprint(base)).toBe(testFingerprint({ ...base }));
+  });
+
+  it('ignores trailing slashes on the base URL', () => {
+    expect(testFingerprint({ ...base, baseUrl: 'https://api.example.com/v1/' })).toBe(
+      testFingerprint(base)
+    );
+    expect(testFingerprint({ ...base, baseUrl: 'https://api.example.com/v1///' })).toBe(
+      testFingerprint(base)
+    );
+  });
+
+  it('ignores surrounding whitespace in the model id', () => {
+    expect(testFingerprint({ ...base, modelId: '  test-model-1 \t' })).toBe(testFingerprint(base));
+  });
+
+  it('defaults the header type to bearer', () => {
+    const { headerType: _omit, ...noHeader } = base;
+    void _omit;
+    expect(testFingerprint(noHeader)).toBe(testFingerprint(base));
+    expect(testFingerprint(noHeader)).not.toBe(
+      testFingerprint({ ...base, headerType: 'x-api-key' })
+    );
+  });
+
+  it('changes with each of the four inputs', () => {
+    const fp = testFingerprint(base);
+    expect(testFingerprint({ ...base, baseUrl: 'https://api.other.com/v1' })).not.toBe(fp);
+    expect(testFingerprint({ ...base, apiKey: `${API_KEY}x` })).not.toBe(fp);
+    expect(testFingerprint({ ...base, modelId: 'test-model-2' })).not.toBe(fp);
+    expect(testFingerprint({ ...base, headerType: 'x-api-key' })).not.toBe(fp);
+  });
+
+  it('cannot be forged by shifting text between fields', () => {
+    expect(testFingerprint({ ...base, apiKey: 'ab', modelId: 'c' })).not.toBe(
+      testFingerprint({ ...base, apiKey: 'a', modelId: 'bc' })
+    );
+  });
+
+  it('ignores fields outside the fingerprint (name, id, enabled)', () => {
+    const stored = { ...base, id: 'custom_1', name: 'Old name', enabled: false };
+    const renamed = { ...stored, name: 'New name', enabled: true };
+    expect(testFingerprint(stored)).toBe(testFingerprint(renamed));
+  });
+});
+
+describe('friendlyTestFailure', () => {
+  const fail = (status: number | null, error?: string): CustomProviderTestResult => ({
+    valid: false,
+    error,
+    status,
+    latencyMs: 120,
+    model: 'test-model-1',
+  });
+
+  it.each([
+    [401, 'The key was rejected'],
+    [403, 'The key was rejected'],
+    [404, 'Model or endpoint not found'],
+    [400, 'The provider rejected the request'],
+    [422, 'The provider rejected the request'],
+    [408, 'No response in time'],
+    [504, 'No response in time'],
+    [500, 'The provider had a server error'],
+    [502, 'The provider had a server error'],
+    [503, 'The provider had a server error'],
+    [301, 'The provider tried to redirect (blocked)'],
+    [307, 'The provider tried to redirect (blocked)'],
+    [429, 'Connection failed'],
+    [418, 'Connection failed'],
+  ])('status %i -> %s, with "HTTP %i"', (status, reason) => {
+    const out = friendlyTestFailure(fail(status, 'upstream said no'));
+    expect(out.reason).toBe(reason);
+    expect(out.statusText).toBe(`HTTP ${status}`);
+  });
+
+  it('null status: could not reach, no status text', () => {
+    expect(friendlyTestFailure(fail(null, 'Failed to fetch'))).toEqual({
+      reason: 'Could not reach the provider',
+      statusText: null,
+      detail: 'Failed to fetch',
+    });
+  });
+
+  it.each(['Request timed out', 'timeout after 15000ms', 'The operation was aborted', 'TIME OUT'])(
+    'timeout text "%s" -> No response in time',
+    (error) => {
+      expect(friendlyTestFailure(fail(null, error)).reason).toBe('No response in time');
+    }
+  );
+
+  it('status classes win over timeout text', () => {
+    expect(friendlyTestFailure(fail(401, 'timed out')).reason).toBe('The key was rejected');
+  });
+
+  it('detail is the raw error, trimmed', () => {
+    expect(friendlyTestFailure(fail(401, '  Invalid API key  ')).detail).toBe('Invalid API key');
+  });
+
+  it('detail is cut to TEST_DETAIL_MAX chars ending in an ellipsis', () => {
+    const long = 'x'.repeat(500);
+    const detail = friendlyTestFailure(fail(500, long)).detail;
+    expect(TEST_DETAIL_MAX).toBe(160);
+    expect(detail).toHaveLength(TEST_DETAIL_MAX);
+    expect(detail?.endsWith('…')).toBe(true);
+    expect(friendlyTestFailure(fail(500, 'y'.repeat(160))).detail).toBe('y'.repeat(160));
+  });
+
+  it('detail is redacted when the key is supplied', () => {
+    const out = friendlyTestFailure(fail(401, `bad key ${API_KEY}`), API_KEY);
+    expect(out.detail).toBe('bad key [key]');
+    expect(JSON.stringify(out)).not.toContain(API_KEY);
+  });
+
+  it('redaction happens before the cut, so a key at the cut point never leaks a prefix', () => {
+    const error = `${'z'.repeat(150)} ${API_KEY}`;
+    const out = friendlyTestFailure(fail(401, error), API_KEY);
+    expect(out.detail).toBe(`${'z'.repeat(150)} [key]`);
+  });
+
+  it('detail is null when empty, whitespace or missing', () => {
+    expect(friendlyTestFailure(fail(500, '')).detail).toBeNull();
+    expect(friendlyTestFailure(fail(500, '   ')).detail).toBeNull();
+    expect(friendlyTestFailure(fail(500)).detail).toBeNull();
+  });
+
+  it('detail is null when it repeats the reason', () => {
+    expect(friendlyTestFailure(fail(418, 'Connection failed')).detail).toBeNull();
+    expect(friendlyTestFailure(fail(401, ' the key was rejected ')).detail).toBeNull();
+  });
+});
+
+describe('formatTestPassed', () => {
+  const pass = (latencyMs: number, model: string): CustomProviderTestResult => ({
+    valid: true,
+    status: 200,
+    latencyMs,
+    model,
+  });
+
+  it('formats model and latency in seconds with one decimal', () => {
+    expect(formatTestPassed(pass(1234, 'gpt-x'))).toBe('Connected · gpt-x · 1.2 s');
+  });
+
+  it('rounds latency', () => {
+    expect(formatTestPassed(pass(1250, 'm'))).toBe('Connected · m · 1.3 s');
+    expect(formatTestPassed(pass(49, 'm'))).toBe('Connected · m · 0.0 s');
+    expect(formatTestPassed(pass(15000, 'm'))).toBe('Connected · m · 15.0 s');
+  });
+
+  it('omits the model part when empty', () => {
+    expect(formatTestPassed(pass(800, ''))).toBe('Connected · 0.8 s');
+    expect(formatTestPassed(pass(800, '  '))).toBe('Connected · 0.8 s');
+  });
+});
+
+describe('canSaveProvider', () => {
+  it.each([
+    [true, true, false, true],
+    [true, false, true, true],
+    [true, true, true, true],
+    [true, false, false, false],
+    [false, true, false, false],
+    [false, false, true, false],
+    [false, true, true, false],
+  ])('isValid=%s testPassed=%s nameOnlyChange=%s -> %s', (isValid, testPassed, nameOnlyChange, want) => {
+    expect(canSaveProvider({ isValid, testPassed, nameOnlyChange })).toBe(want);
   });
 });

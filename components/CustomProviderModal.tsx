@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff, Loader2, FlaskConical, Check, X } from 'lucide-react';
-import { CustomProvider, testCustomProviderConnection } from '@/lib/custom-providers';
+import {
+  CustomProvider,
+  CustomProviderTestResult,
+  testCustomProviderConnection,
+  testFingerprint,
+  friendlyTestFailure,
+  formatTestPassed,
+  canSaveProvider,
+} from '@/lib/custom-providers';
 import {
   COMMON_CUSTOM_PROVIDERS,
   getSuggestedModels,
@@ -44,6 +52,9 @@ interface CustomProviderModalProps {
 
 type TestStatus = 'idle' | 'testing' | 'valid' | 'invalid';
 
+// What the status line under Test connection says after a failed test.
+type TestFailure = { reason: string; statusText: string | null; detail: string | null };
+
 export default function CustomProviderModal({
   open,
   onOpenChange,
@@ -58,7 +69,15 @@ export default function CustomProviderModal({
   const [customModelId, setCustomModelId] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testError, setTestError] = useState('');
+  const [testError, setTestError] = useState<TestFailure | null>(null);
+  // Last passing test and the fingerprint (URL, key, model, header) it ran on.
+  const [passed, setPassed] = useState<{
+    fingerprint: string;
+    result: CustomProviderTestResult;
+  } | null>(null);
+  // Bumped by every test, every tested-field edit and every open; a response
+  // from an older request is ignored.
+  const requestSeq = useRef(0);
   const [suggestedModels, setSuggestedModels] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -71,6 +90,7 @@ export default function CustomProviderModal({
   const modelFieldId = `${uid}-model`;
   const customModelFieldId = `${uid}-custom-model`;
   const quickFillLabelId = `${uid}-quick-fill`;
+  const saveHelpId = `${uid}-save-help`;
 
   useEffect(() => {
     setMounted(true);
@@ -103,7 +123,9 @@ export default function CustomProviderModal({
       }
       setShowApiKey(false);
       setTestStatus('idle');
-      setTestError('');
+      setTestError(null);
+      setPassed(null);
+      requestSeq.current += 1;
     }
   }, [open, provider]);
 
@@ -117,9 +139,19 @@ export default function CustomProviderModal({
     }
   }, [baseUrl]);
 
+  // A tested field changed: the button and status line go back to idle and any
+  // in-flight test result is dropped. `passed` is kept; it only counts while its
+  // fingerprint equals the current one.
+  const resetTest = () => {
+    requestSeq.current += 1;
+    setTestStatus('idle');
+    setTestError(null);
+  };
+
   const handleQuickFill = (providerName: string) => {
     const suggestion = COMMON_CUSTOM_PROVIDERS.find((p) => p.name === providerName);
     if (suggestion) {
+      resetTest();
       setName(suggestion.name);
       setBaseUrl(suggestion.baseUrl);
       setModelId(suggestion.models[0] || '');
@@ -130,15 +162,33 @@ export default function CustomProviderModal({
   // sentinel, otherwise the selected or typed id.
   const effectiveModelId = modelId === CUSTOM_MODEL ? customModelId.trim() : modelId;
 
+  // Save gate. The name is not part of the fingerprint, so a name-only edit of a
+  // stored provider may save without a new test.
+  const currentFingerprint = testFingerprint({
+    baseUrl,
+    apiKey,
+    modelId: effectiveModelId,
+    headerType: getHeaderType(baseUrl),
+  });
+  const testPassed = passed !== null && passed.fingerprint === currentFingerprint;
+  const nameOnlyChange = !!provider && testFingerprint(provider) === currentFingerprint;
+  const isValid = !!(name && baseUrl && apiKey && effectiveModelId);
+  const canSave = canSaveProvider({ isValid, testPassed, nameOnlyChange });
+
   const handleTest = async () => {
+    requestSeq.current += 1;
+    const seq = requestSeq.current;
+    const fp = currentFingerprint;
+
     if (!baseUrl || !apiKey || !effectiveModelId) {
-      setTestError('Please fill in all required fields');
+      setTestError({ reason: 'Please fill in all required fields', statusText: null, detail: null });
       setTestStatus('invalid');
       return;
     }
 
     setTestStatus('testing');
-    setTestError('');
+    setTestError(null);
+    setPassed(null);
 
     const testProvider: CustomProvider = {
       id: 'test',
@@ -152,16 +202,23 @@ export default function CustomProviderModal({
 
     const result = await testCustomProviderConnection(testProvider);
 
+    // A newer test, an edit of a tested field, or a reopen happened meanwhile.
+    if (seq !== requestSeq.current) {
+      return;
+    }
+
     if (result.valid) {
+      setPassed({ fingerprint: fp, result });
       setTestStatus('valid');
     } else {
       setTestStatus('invalid');
-      setTestError(result.error || 'Connection failed');
+      // The key goes in so `detail` is redacted again before it is shown.
+      setTestError(friendlyTestFailure(result, apiKey));
     }
   };
 
   const handleSave = () => {
-    if (!name || !baseUrl || !apiKey || !effectiveModelId) {
+    if (!name || !baseUrl || !apiKey || !effectiveModelId || !canSave) {
       return;
     }
 
@@ -178,8 +235,13 @@ export default function CustomProviderModal({
     onOpenChange(false);
   };
 
-  const isValid = name && baseUrl && apiKey && effectiveModelId;
   const isEditMode = !!provider;
+  const showSaveHelp = isValid && !canSave;
+
+  // The button keeps its four labels; after an edit that returns to the tested
+  // values it shows Connected again, matching the status line.
+  const buttonStatus: TestStatus =
+    testStatus === 'idle' && testPassed ? 'valid' : testStatus;
 
   // A live id for the current base URL, shown as the placeholder of every model-id input.
   const modelPlaceholder = `e.g. ${suggestedModels[0] ?? 'gpt-5.6-terra'}`;
@@ -243,7 +305,10 @@ export default function CustomProviderModal({
             <Input
               id={baseUrlId}
               value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
+              onChange={(e) => {
+                setBaseUrl(e.target.value);
+                resetTest();
+              }}
               placeholder="e.g., https://api.openai.com/v1"
               inputMode="url"
               autoCapitalize="none"
@@ -268,7 +333,7 @@ export default function CustomProviderModal({
                 value={apiKey}
                 onChange={(e) => {
                   setApiKey(e.target.value);
-                  setTestStatus('idle');
+                  resetTest();
                 }}
                 placeholder="Enter your API key"
                 autoCapitalize="none"
@@ -297,7 +362,13 @@ export default function CustomProviderModal({
               Model ID
             </label>
             {mounted && suggestedModels.length > 0 ? (
-              <Select value={modelId} onValueChange={setModelId}>
+              <Select
+                value={modelId}
+                onValueChange={(value) => {
+                  setModelId(value);
+                  resetTest();
+                }}
+              >
                 <SelectTrigger
                   id={modelFieldId}
                   className="h-11 bg-slate-950 border-slate-700 focus:ring-2 focus:ring-violet-500"
@@ -326,7 +397,10 @@ export default function CustomProviderModal({
               <Input
                 id={modelFieldId}
                 value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
+                onChange={(e) => {
+                  setModelId(e.target.value);
+                  resetTest();
+                }}
                 placeholder={modelPlaceholder}
                 autoCapitalize="none"
                 spellCheck={false}
@@ -341,7 +415,10 @@ export default function CustomProviderModal({
                 <Input
                   id={customModelFieldId}
                   value={customModelId}
-                  onChange={(e) => setCustomModelId(e.target.value)}
+                  onChange={(e) => {
+                    setCustomModelId(e.target.value);
+                    resetTest();
+                  }}
                   placeholder={modelPlaceholder}
                   autoCapitalize="none"
                   spellCheck={false}
@@ -360,24 +437,24 @@ export default function CustomProviderModal({
               onClick={handleTest}
               disabled={testStatus === 'testing' || !isValid}
               className={`h-11 w-full sm:w-auto transition-colors ${
-                testStatus === 'valid'
+                buttonStatus === 'valid'
                   ? 'border-emerald-500/50 text-emerald-400'
-                  : testStatus === 'invalid'
+                  : buttonStatus === 'invalid'
                   ? 'border-rose-500/50 text-rose-400'
                   : 'border-slate-600'
               }`}
             >
-              {testStatus === 'testing' ? (
+              {buttonStatus === 'testing' ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                   Testing…
                 </>
-              ) : testStatus === 'valid' ? (
+              ) : buttonStatus === 'valid' ? (
                 <>
                   <Check className="h-4 w-4 mr-2" aria-hidden="true" />
                   Connected
                 </>
-              ) : testStatus === 'invalid' ? (
+              ) : buttonStatus === 'invalid' ? (
                 <>
                   <X className="h-4 w-4 mr-2" aria-hidden="true" />
                   Failed
@@ -392,9 +469,27 @@ export default function CustomProviderModal({
             <p
               role="status"
               aria-live="polite"
-              className="mt-2 min-h-[1.5rem] text-xs text-rose-400 break-words"
+              className={`mt-2 min-h-[1.5rem] text-xs break-words ${
+                testStatus === 'testing'
+                  ? 'text-slate-400'
+                  : testPassed
+                  ? 'text-emerald-400'
+                  : 'text-rose-400'
+              }`}
             >
-              {testError}
+              {testStatus === 'testing' ? (
+                'Testing connection…'
+              ) : testPassed && passed ? (
+                formatTestPassed(passed.result)
+              ) : testStatus === 'invalid' && testError ? (
+                <>
+                  {testError.reason}
+                  {testError.statusText ? ` · ${testError.statusText}` : ''}
+                  {testError.detail && (
+                    <span className="block mt-0.5 text-slate-500">{testError.detail}</span>
+                  )}
+                </>
+              ) : null}
             </p>
           </div>
         </div>
@@ -409,12 +504,18 @@ export default function CustomProviderModal({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!isValid}
+            disabled={!canSave}
+            aria-describedby={showSaveHelp ? saveHelpId : undefined}
             className="h-11 w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white"
           >
             {isEditMode ? 'Save changes' : 'Add provider'}
           </Button>
         </DialogFooter>
+        {showSaveHelp && (
+          <p id={saveHelpId} className="-mt-2 text-xs text-slate-400 sm:text-right">
+            Test the connection before saving.
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Edit2,
@@ -11,17 +11,28 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CustomProvider } from '@/lib/custom-providers';
+import {
+  CustomProvider,
+  CustomProviderTestResult,
+  friendlyTestFailure,
+  formatTestPassed,
+} from '@/lib/custom-providers';
 
 interface CustomProviderCardProps {
   provider: CustomProvider;
   onEdit: () => void;
   onDelete: () => void;
-  onTest: () => Promise<{ valid: boolean; error?: string }>;
+  onTest: () => Promise<CustomProviderTestResult>;
   onToggle: () => void;
 }
 
 type TestStatus = 'idle' | 'testing' | 'valid' | 'invalid';
+
+// Status line text: one line, plus the redacted raw error on a second line on failure.
+type TestMessage = { text: string; detail: string | null };
+
+// How long a pass (and the remove confirmation) stays visible.
+const RESET_MS = 3000;
 
 export default function CustomProviderCard({
   provider,
@@ -31,37 +42,105 @@ export default function CustomProviderCard({
   onToggle,
 }: CustomProviderCardProps) {
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testError, setTestError] = useState<string>('');
+  const [testMessage, setTestMessage] = useState<TestMessage | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // One timer for every delayed reset; cleared on each new action and on unmount.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped by every test; a response from an older test is ignored.
+  const requestSeq = useRef(0);
 
-  const handleTest = async () => {
+  const clearResetTimer = () => {
+    if (resetTimer.current) {
+      clearTimeout(resetTimer.current);
+      resetTimer.current = null;
+    }
+  };
+
+  const scheduleReset = (fn: () => void) => {
+    clearResetTimer();
+    resetTimer.current = setTimeout(() => {
+      resetTimer.current = null;
+      fn();
+    }, RESET_MS);
+  };
+
+  // On unmount: stop the timer and drop any in-flight test (no toggle after removal).
+  useEffect(() => {
+    const seqRef = requestSeq;
+    const timerRef = resetTimer;
+    return () => {
+      seqRef.current += 1;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // Runs the server-side test and shows the result. A pass clears itself after
+  // RESET_MS; a failure stays until the next action. Returns null when stale.
+  const runTest = async (): Promise<CustomProviderTestResult | null> => {
+    clearResetTimer();
+    setShowDeleteConfirm(false);
+    requestSeq.current += 1;
+    const seq = requestSeq.current;
     setTestStatus('testing');
-    setTestError('');
+    setTestMessage(null);
 
     const result = await onTest();
+    if (seq !== requestSeq.current) {
+      return null;
+    }
 
     if (result.valid) {
       setTestStatus('valid');
+      setTestMessage({ text: formatTestPassed(result), detail: null });
+      scheduleReset(() => {
+        setTestStatus('idle');
+        setTestMessage(null);
+      });
     } else {
+      const failure = friendlyTestFailure(result, provider.apiKey);
       setTestStatus('invalid');
-      setTestError(result.error || 'Test failed');
+      setTestMessage({
+        text: failure.statusText ? `${failure.reason} · ${failure.statusText}` : failure.reason,
+        detail: failure.detail,
+      });
     }
+    return result;
+  };
 
-    // Reset status after 3 seconds
-    setTimeout(() => {
+  const handleTest = async () => {
+    await runTest();
+  };
+
+  // Turning off is immediate. Turning on tests first and stays off on failure.
+  const handleToggle = async () => {
+    if (provider.enabled) {
+      // A new action: drop a shown test result and its pending reset.
+      clearResetTimer();
       setTestStatus('idle');
-      setTestError('');
-    }, 3000);
+      setTestMessage(null);
+      onToggle();
+      return;
+    }
+    const result = await runTest();
+    if (result?.valid) {
+      onToggle();
+    }
   };
 
   const handleDelete = () => {
     if (showDeleteConfirm) {
+      clearResetTimer();
       onDelete();
       setShowDeleteConfirm(false);
     } else {
+      // A new action: drop a shown test result (an in-flight test keeps running).
+      if (testStatus !== 'testing') {
+        setTestStatus('idle');
+        setTestMessage(null);
+      }
       setShowDeleteConfirm(true);
-      // Auto-hide confirmation after 3 seconds
-      setTimeout(() => setShowDeleteConfirm(false), 3000);
+      // Auto-hide confirmation after RESET_MS
+      scheduleReset(() => setShowDeleteConfirm(false));
     }
   };
 
@@ -115,11 +194,29 @@ export default function CustomProviderCard({
             </code>
           </div>
 
-          {testError && (
-            <p role="status" className="text-xs text-rose-400 mt-1 break-words">
-              {testError}
-            </p>
-          )}
+          {/* Always rendered so screen readers announce every change */}
+          <p
+            role="status"
+            aria-live="polite"
+            className={`text-xs break-words ${testStatus === 'idle' ? '' : 'mt-1'} ${
+              testStatus === 'testing'
+                ? 'text-slate-400'
+                : testStatus === 'valid'
+                ? 'text-emerald-400'
+                : 'text-rose-400'
+            }`}
+          >
+            {testStatus === 'testing' ? (
+              'Testing connection…'
+            ) : testMessage ? (
+              <>
+                {testMessage.text}
+                {testMessage.detail && (
+                  <span className="block mt-0.5 text-slate-500">{testMessage.detail}</span>
+                )}
+              </>
+            ) : null}
+          </p>
         </div>
 
         {/* Actions */}
@@ -131,9 +228,14 @@ export default function CustomProviderCard({
             aria-checked={provider.enabled}
             aria-label={provider.enabled ? 'Turn off' : 'Turn on'}
             title={provider.enabled ? 'Turn off' : 'Turn on'}
-            onClick={onToggle}
-            className="h-11 min-w-11 px-1 flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            onClick={handleToggle}
+            disabled={testStatus === 'testing'}
+            aria-busy={testStatus === 'testing'}
+            className="h-11 min-w-11 px-1 flex items-center justify-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 disabled:cursor-wait"
           >
+            {testStatus === 'testing' && (
+              <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-hidden="true" />
+            )}
             <span
               aria-hidden="true"
               className={`relative block shrink-0 w-10 h-5 rounded-full transition-colors ${

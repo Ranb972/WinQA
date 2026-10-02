@@ -54,6 +54,7 @@ import {
   toggleCustomProvider,
   MAX_CUSTOM_PROVIDERS,
   testCustomProviderConnection,
+  CustomProviderTestResult,
 } from '@/lib/custom-providers';
 import CustomProviderCard from '@/components/CustomProviderCard';
 import CustomProviderModal from '@/components/CustomProviderModal';
@@ -284,9 +285,11 @@ export default function SettingsPage() {
     );
   };
 
+  // The card calls this before turning a provider on and only persists the toggle
+  // (handleToggleProvider) after a pass.
   const handleTestCustomProvider = async (
     provider: CustomProvider
-  ): Promise<{ valid: boolean; error?: string }> => {
+  ): Promise<CustomProviderTestResult> => {
     return testCustomProviderConnection(provider);
   };
 
