@@ -13,8 +13,7 @@ import {
   XCircle,
   PlayCircle,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { LLMProvider } from '@/lib/llm/types';
 import {
   modelColors,
@@ -82,8 +81,7 @@ function getDisplayName(provider: string, model: string): string {
 
 function MarkdownResponse({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+    <SafeMarkdown
       components={{
         pre: ({ children }) => (
           <pre className="bg-slate-950 rounded-lg p-3 my-2 overflow-x-auto text-xs">{children}</pre>
@@ -114,7 +112,7 @@ function MarkdownResponse({ content }: { content: string }) {
       }}
     >
       {content}
-    </ReactMarkdown>
+    </SafeMarkdown>
   );
 }
 

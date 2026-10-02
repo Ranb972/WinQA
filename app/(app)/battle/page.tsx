@@ -19,8 +19,7 @@ import {
   ScrollText,
   User,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { BATTLE_CHALLENGES, BattleChallenge } from '@/lib/battle-challenges';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { LLMProvider } from '@/lib/llm/types';
@@ -134,8 +133,7 @@ const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, t
 
 function MarkdownResponse({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+    <SafeMarkdown
       components={{
         pre: ({ children }) => (
           <pre className="bg-black/40 rounded-lg p-3 my-2 overflow-x-auto text-xs">{children}</pre>
@@ -162,7 +160,7 @@ function MarkdownResponse({ content }: { content: string }) {
       }}
     >
       {content}
-    </ReactMarkdown>
+    </SafeMarkdown>
   );
 }
 

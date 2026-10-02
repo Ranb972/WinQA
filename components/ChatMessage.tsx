@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { Bug, Library, Copy, Check, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LLMProvider, FallbackInfo, providerDisplayNames, specificModelDisplayNames } from '@/lib/llm';
@@ -178,8 +177,7 @@ export default function ChatMessage({
 
       {/* Content */}
       <div className="prose prose-invert prose-sm max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+        <SafeMarkdown
           components={{
             code({ className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
@@ -232,7 +230,7 @@ export default function ChatMessage({
           }}
         >
           {content}
-        </ReactMarkdown>
+        </SafeMarkdown>
       </div>
     </div>
   );
