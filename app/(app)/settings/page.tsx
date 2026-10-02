@@ -570,6 +570,9 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => toggleVisibility(provider.key)}
+                            aria-label={`Show ${provider.name} key`}
+                            aria-pressed={!!isVisible}
+                            title={isVisible ? 'Hide key' : 'Show key'}
                             className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
                           >
                             {isVisible ? (
@@ -582,7 +585,9 @@ export default function SettingsPage() {
 
                         {currentValue && (
                           <button
+                            type="button"
                             onClick={() => handleTestKey(provider.key)}
+                            aria-label={`Test ${provider.name} key`}
                             disabled={status === 'testing'}
                             className={`h-11 w-11 shrink-0 rounded flex items-center justify-center transition-colors ${
                               status === 'valid'
@@ -594,20 +599,22 @@ export default function SettingsPage() {
                             title="Test API key"
                           >
                             {status === 'testing' ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                             ) : (
-                              <FlaskConical className="h-4 w-4" />
+                              <FlaskConical className="h-4 w-4" aria-hidden="true" />
                             )}
                           </button>
                         )}
 
                         {currentValue && (
                           <button
+                            type="button"
                             onClick={() => handleClearKey(provider.key)}
+                            aria-label={`Clear ${provider.name} key`}
                             className="h-11 w-11 shrink-0 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Clear API key"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                       </div>
