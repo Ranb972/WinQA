@@ -399,3 +399,50 @@ describe('toggleIntent', () => {
     expect(MISSING_KEY_TEXT).toBe('Edit the provider and add a key first');
   });
 });
+
+describe('daily connection-test limit (S6)', () => {
+  const limitBody = {
+    valid: false,
+    error: 'Daily connection-test limit reached',
+    status: 429,
+    latencyMs: 0,
+    model: 'test-model-1',
+    resetsAt: '2026-10-03T00:00:00.000Z',
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('maps the route 429 to plain words, no HTTP status, and when it resets', () => {
+    const out = friendlyTestFailure(limitBody);
+    expect(out).toEqual({
+      reason: 'Daily connection-test limit reached',
+      statusText: null,
+      detail: 'Resets at 00:00 UTC',
+    });
+    expect(JSON.stringify(out)).not.toContain('HTTP');
+    expect(JSON.stringify(out)).not.toContain('429');
+  });
+
+  it('end to end through testCustomProviderConnection: no "HTTP" reaches the user', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify(limitBody), { status: 429, headers: { 'content-type': 'application/json' } })
+      )
+    );
+    const result = await testCustomProviderConnection(provider);
+    expect(result).toMatchObject({ valid: false, status: 429, error: 'Daily connection-test limit reached' });
+    const out = friendlyTestFailure(result, API_KEY);
+    expect(out.reason).toBe('Daily connection-test limit reached');
+    expect(out.statusText).toBeNull();
+    expect(JSON.stringify(out)).not.toContain('HTTP');
+  });
+
+  it('an upstream 429 with any other text keeps the generic mapping', () => {
+    const out = friendlyTestFailure({ ...limitBody, error: 'upstream said no' });
+    expect(out.reason).toBe('Connection failed');
+    expect(out.statusText).toBe('HTTP 429');
+  });
+});

@@ -3,13 +3,15 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IDailyUsage extends Document {
   userId: string;
   date: string; // YYYY-MM-DD (UTC)
-  count: number;
+  count: number; // LLM requests (lib/rate-limit.ts consumeDailyAllowance)
+  providerTests: number; // custom-provider connection tests (consumeProviderTestAllowance)
 }
 
 const DailyUsageSchema = new Schema<IDailyUsage>({
   userId: { type: String, required: true },
   date: { type: String, required: true },
   count: { type: Number, default: 0 },
+  providerTests: { type: Number, default: 0 },
 });
 
 DailyUsageSchema.index({ userId: 1, date: 1 }, { unique: true });

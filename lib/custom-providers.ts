@@ -344,6 +344,12 @@ export function testFingerprint(input: {
   ].join(FINGERPRINT_SEP);
 }
 
+/**
+ * Error text of the route's own 429 when the user's daily connection-test cap is
+ * used up (lib/rate-limit.ts DAILY_PROVIDER_TEST_LIMIT, reset at 00:00 UTC).
+ */
+export const PROVIDER_TEST_LIMIT_ERROR = 'Daily connection-test limit reached';
+
 /** Longest `detail` friendlyTestFailure returns (longer text is cut and ends with "…"). */
 export const TEST_DETAIL_MAX = 160;
 
@@ -354,6 +360,11 @@ export function friendlyTestFailure(
 ): { reason: string; statusText: string | null; detail: string | null } {
   const { status } = result;
   const rawError = typeof result.error === 'string' ? result.error : '';
+
+  // WinQA's own daily cap, not the provider's: no HTTP status, just when it resets.
+  if (status === 429 && rawError === PROVIDER_TEST_LIMIT_ERROR) {
+    return { reason: PROVIDER_TEST_LIMIT_ERROR, statusText: null, detail: 'Resets at 00:00 UTC' };
+  }
 
   let reason: string;
   if (status === 401 || status === 403) {

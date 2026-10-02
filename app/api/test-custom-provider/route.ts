@@ -10,6 +10,10 @@ import {
   type PinnedAddress,
 } from '@/lib/security';
 import { isAnthropicProvider, normalizeBaseUrl } from '@/lib/llm/models';
+import { consumeProviderTestAllowance, nextUtcMidnightIso } from '@/lib/rate-limit';
+// Import-safe on the server: lib/custom-providers touches window/localStorage only
+// inside functions.
+import { PROVIDER_TEST_LIMIT_ERROR } from '@/lib/custom-providers';
 
 // Sends a real test message to a user's custom endpoint. Resolving the host and
 // the test request each get TEST_CONNECTION_TIMEOUT_MS, so the route answers
@@ -239,6 +243,23 @@ export async function POST(request: NextRequest) {
         latencyMs: 0,
         model: modelId,
       } satisfies TestConnectionResult);
+    }
+
+    // Metered only once every guard has passed, so a rejected request costs
+    // nothing; counted apart from the LLM allowance (lib/rate-limit.ts).
+    const { allowed } = await consumeProviderTestAllowance(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          valid: false,
+          error: PROVIDER_TEST_LIMIT_ERROR,
+          status: 429,
+          latencyMs: 0,
+          model: modelId,
+          resetsAt: nextUtcMidnightIso(),
+        },
+        { status: 429 }
+      );
     }
 
     const result = await testConnection(baseUrl, apiKey, modelId, headerType, pinned);

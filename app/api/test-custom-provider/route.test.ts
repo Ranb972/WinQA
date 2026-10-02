@@ -5,6 +5,7 @@ import { auth } from '@clerk/nextjs/server';
 import { POST } from '@/app/api/test-custom-provider/route';
 import { safeProviderFetch } from '@/lib/security';
 import { friendlyTestFailure } from '@/lib/custom-providers';
+import { consumeDailyAllowance, consumeProviderTestAllowance } from '@/lib/rate-limit';
 
 // auth() is mocked to a valid user so requests clear the auth gate; single
 // tests override it with mockResolvedValueOnce.
@@ -17,6 +18,17 @@ vi.mock('@clerk/nextjs/server', () => ({
 vi.mock('@/lib/security', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/security')>();
   return { ...actual, safeProviderFetch: vi.fn(actual.safeProviderFetch) };
+});
+
+// Metering is mocked (no DB): allowed unless a test says otherwise. The LLM
+// allowance is mocked too, only to prove the route never touches it.
+vi.mock('@/lib/rate-limit', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/rate-limit')>();
+  return {
+    ...actual,
+    consumeDailyAllowance: vi.fn(async () => ({ allowed: true })),
+    consumeProviderTestAllowance: vi.fn(async () => ({ allowed: true })),
+  };
 });
 
 // No real DNS and no network: every host resolves to the public answer below
@@ -59,6 +71,9 @@ beforeEach(() => {
   dnsMock.lookup.mockReset();
   dnsMock.lookup.mockResolvedValue([{ address: PUBLIC_ADDRESS, family: 4 }]);
   vi.mocked(safeProviderFetch).mockClear();
+  vi.mocked(consumeProviderTestAllowance).mockReset();
+  vi.mocked(consumeProviderTestAllowance).mockResolvedValue({ allowed: true });
+  vi.mocked(consumeDailyAllowance).mockClear();
   vi.stubGlobal('fetch', globalFetch);
 });
 
@@ -360,5 +375,79 @@ describe('POST /api/test-custom-provider — the test times out after 10 s (S5)'
       status: null,
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/test-custom-provider — metered per user per day (S6)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('allowance exhausted -> 429 with the limit body, upstream never called', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-02T15:30:00Z'));
+    vi.mocked(consumeProviderTestAllowance).mockResolvedValueOnce({ allowed: false });
+
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(429);
+    const json = await res.json();
+    expect(json).toEqual({
+      valid: false,
+      error: 'Daily connection-test limit reached',
+      status: 429,
+      latencyMs: 0,
+      model: MODEL,
+      resetsAt: '2026-10-03T00:00:00.000Z',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(safeProviderFetch).not.toHaveBeenCalled();
+
+    // What Settings shows for it: plain words, never a raw "HTTP 429".
+    const shown = friendlyTestFailure(json);
+    expect(shown).toEqual({
+      reason: 'Daily connection-test limit reached',
+      statusText: null,
+      detail: 'Resets at 00:00 UTC',
+    });
+    expect(JSON.stringify(shown)).not.toContain('HTTP');
+  });
+
+  it('the happy path consumes exactly one provider-test unit and no LLM unit', async () => {
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json.valid).toBe(true);
+    expect(consumeProviderTestAllowance).toHaveBeenCalledTimes(1);
+    expect(consumeProviderTestAllowance).toHaveBeenCalledWith('user_test');
+    expect(consumeDailyAllowance).not.toHaveBeenCalled();
+  });
+
+  it('a failing upstream answer still costs one unit (the call was made)', async () => {
+    fetchMock.mockResolvedValueOnce(upstream(401));
+    await POST(makeRequest(validBody));
+    expect(consumeProviderTestAllowance).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['missing field', { baseUrl: BASE_URL, modelId: MODEL }],
+    ['http URL', { ...validBody, baseUrl: 'http://api.example.com/v1' }],
+    ['private literal', { ...validBody, baseUrl: 'https://10.0.0.1/v1' }],
+    ['over-long URL', { ...validBody, baseUrl: 'https://api.example.com/' + 'a'.repeat(3000) }],
+  ])('a 400 (%s) consumes nothing', async (_label, body) => {
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(400);
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+  });
+
+  it('a host resolving to a private address is a 400 that consumes nothing', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '10.0.0.5', family: 4 }]);
+    const res = await POST(makeRequest({ ...validBody, baseUrl: 'https://evil.example/v1' }));
+    expect(res.status).toBe(400);
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+  });
+
+  it('401 Unauthorized consumes nothing', async () => {
+    vi.mocked(auth).mockResolvedValueOnce({ userId: null } as unknown as Awaited<ReturnType<typeof auth>>);
+    await POST(makeRequest(validBody));
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
   });
 });
