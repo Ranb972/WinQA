@@ -267,7 +267,7 @@ export default function CustomProviderModal({
               <p id={quickFillLabelId} className="text-xs text-slate-400 mb-2">
                 Quick fill from common providers
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
                 {COMMON_CUSTOM_PROVIDERS.map((p) => (
                   <button
                     key={p.name}
@@ -343,7 +343,8 @@ export default function CustomProviderModal({
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                aria-label={showApiKey ? 'Hide key' : 'Show key'}
+                aria-label="Show key"
+                title={showApiKey ? 'Hide key' : 'Show key'}
                 aria-pressed={showApiKey}
                 className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
               >

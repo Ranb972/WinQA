@@ -478,8 +478,8 @@ export default function SettingsPage() {
             <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
 
             {/* Section Header */}
-            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="px-5 py-4 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-1 h-5 bg-orange-500 rounded-full" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Authentication Credentials</h2>
               </div>
@@ -504,8 +504,8 @@ export default function SettingsPage() {
                     transition={{ delay: 0.1 * index, duration: 0.3 }}
                     className="p-5 border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.02] transition-colors"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center">
                           <Settings className="w-4 h-4 text-orange-500" />
                         </div>
@@ -545,7 +545,7 @@ export default function SettingsPage() {
                         href={provider.docsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 py-2.5 px-1 text-orange-500 text-xs font-mono uppercase tracking-[0.15em] hover:text-orange-400 transition-colors"
+                        className="inline-flex items-center gap-1 min-h-11 whitespace-nowrap px-1 pl-11 sm:pl-1 text-orange-500 text-xs font-mono uppercase tracking-[0.15em] hover:text-orange-400 transition-colors"
                       >
                         Acquire Key
                         <ExternalLink className="w-3 h-3" />
@@ -568,7 +568,7 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => toggleVisibility(provider.key)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-white/40 hover:text-white/60 transition-colors"
+                            className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
                           >
                             {isVisible ? (
                               <EyeOff className="h-4 w-4" />
@@ -582,7 +582,7 @@ export default function SettingsPage() {
                           <button
                             onClick={() => handleTestKey(provider.key)}
                             disabled={status === 'testing'}
-                            className={`h-10 w-10 rounded flex items-center justify-center transition-colors ${
+                            className={`h-11 w-11 shrink-0 rounded flex items-center justify-center transition-colors ${
                               status === 'valid'
                                 ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
                                 : status === 'invalid'
@@ -602,7 +602,7 @@ export default function SettingsPage() {
                         {currentValue && (
                           <button
                             onClick={() => handleClearKey(provider.key)}
-                            className="h-10 w-10 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="h-11 w-11 shrink-0 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Clear API key"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -633,7 +633,7 @@ export default function SettingsPage() {
                           value={modelPreferences[provider.key] || getDefaultModel(provider.key) || ''}
                           onValueChange={(v) => handleModelChange(provider.key, v)}
                         >
-                          <SelectTrigger className="bg-black border-white/[0.08] h-10 text-sm focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20">
+                          <SelectTrigger className="bg-black border-white/[0.08] h-11 text-sm focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20">
                             <SelectValue placeholder="Select model" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
@@ -663,7 +663,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleSaveAll}
                 disabled={!hasChanges || isSaving}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-orange-500 hover:bg-orange-400 text-black text-xs font-mono uppercase tracking-[0.15em] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 min-h-11 px-5 py-2.5 rounded bg-orange-500 hover:bg-orange-400 text-black text-xs font-mono uppercase tracking-[0.15em] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>

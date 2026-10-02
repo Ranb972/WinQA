@@ -226,7 +226,7 @@ export default function CustomProviderCard({
             type="button"
             role="switch"
             aria-checked={provider.enabled}
-            aria-label={provider.enabled ? 'Turn off' : 'Turn on'}
+            aria-label={`${provider.name} enabled`}
             title={provider.enabled ? 'Turn off' : 'Turn on'}
             onClick={handleToggle}
             disabled={testStatus === 'testing'}
@@ -263,7 +263,7 @@ export default function CustomProviderCard({
                 ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
                 : 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10'
             }`}
-            aria-label="Test connection"
+            aria-label={`Test connection for ${provider.name}`}
             title="Test connection"
           >
             {testStatus === 'testing' ? (
@@ -279,7 +279,7 @@ export default function CustomProviderCard({
             size="icon"
             onClick={onEdit}
             className="h-11 w-11 text-slate-400 hover:text-violet-400 hover:bg-violet-500/10"
-            aria-label="Edit"
+            aria-label={`Edit ${provider.name}`}
             title="Edit"
           >
             <Edit2 className="h-4 w-4" aria-hidden="true" />
@@ -295,7 +295,9 @@ export default function CustomProviderCard({
                 ? 'text-rose-400 bg-rose-500/20 hover:bg-rose-500/30'
                 : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
             }`}
-            aria-label={showDeleteConfirm ? 'Click again to remove' : 'Remove'}
+            aria-label={
+              showDeleteConfirm ? `Click again to remove ${provider.name}` : `Remove ${provider.name}`
+            }
             title={showDeleteConfirm ? 'Click again to remove' : 'Remove'}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
