@@ -1,6 +1,12 @@
 /**
  * Shared security utilities for API routes.
+ *
+ * Server-only: imports node:net. Imported by API routes and by lib/llm/custom.ts
+ * (itself imported only by app/api/chat/route.ts); never import it from a client
+ * component.
  */
+
+import { BlockList, isIP } from 'node:net';
 
 /**
  * Strip Mongo operator-syntax characters ($ prefix and any . in the string)
@@ -66,37 +72,103 @@ export function checkProviderUrl(baseUrl: unknown): string | null {
   return null;
 }
 
-/** Check if a URL points to a private/internal IP address. */
+/**
+ * Every address range a custom-provider request must never reach: private,
+ * loopback, link-local, shared (CGNAT), documentation, benchmarking, multicast,
+ * reserved and the IPv6 equivalents (RFC 1122, 1918, 3927, 4193, 4291, 5737, 6052,
+ * 6598, 6666, 2544, 3849, 5771, 1112, 919).
+ *
+ * IPv4-mapped IPv6 (::ffff:a.b.c.d) is NOT listed as a range on purpose:
+ * BlockList.check() compares a mapped address against the IPv4 rules itself, and
+ * a ::ffff:0:0/96 rule would also match every plain IPv4 address (BlockList maps
+ * IPv4 into that prefix when it checks IPv6 rules), blocking the whole internet.
+ */
+const PRIVATE_ADDRESSES = new BlockList();
+for (const [network, prefix] of [
+  ['0.0.0.0', 8], // "this network" (RFC 1122)
+  ['10.0.0.0', 8], // private (RFC 1918)
+  ['100.64.0.0', 10], // shared address space / CGNAT (RFC 6598)
+  ['127.0.0.0', 8], // loopback (RFC 1122)
+  ['169.254.0.0', 16], // link-local, cloud metadata (RFC 3927)
+  ['172.16.0.0', 12], // private (RFC 1918)
+  ['192.0.0.0', 24], // IETF protocol assignments (RFC 6890)
+  ['192.0.2.0', 24], // TEST-NET-1 (RFC 5737)
+  ['192.168.0.0', 16], // private (RFC 1918)
+  ['198.18.0.0', 15], // benchmarking (RFC 2544)
+  ['198.51.100.0', 24], // TEST-NET-2 (RFC 5737)
+  ['203.0.113.0', 24], // TEST-NET-3 (RFC 5737)
+  ['224.0.0.0', 4], // multicast (RFC 5771)
+  ['240.0.0.0', 4], // reserved, includes 255.255.255.255 broadcast (RFC 1112, 919)
+] as const) {
+  PRIVATE_ADDRESSES.addSubnet(network, prefix, 'ipv4');
+}
+for (const [network, prefix] of [
+  ['::', 128], // unspecified (RFC 4291)
+  ['::1', 128], // loopback (RFC 4291)
+  ['64:ff9b::', 96], // NAT64, reaches IPv4 through a translator (RFC 6052)
+  ['100::', 64], // discard-only (RFC 6666)
+  ['2001:db8::', 32], // documentation (RFC 3849)
+  ['fc00::', 7], // unique local (RFC 4193)
+  ['fe80::', 10], // link-local (RFC 4291)
+  ['ff00::', 8], // multicast (RFC 4291)
+] as const) {
+  PRIVATE_ADDRESSES.addSubnet(network, prefix, 'ipv6');
+}
+
+/**
+ * True when `ip` (a bare IPv4 or IPv6 address, no brackets) is private, internal
+ * or otherwise not a public unicast address. One classifier for URL literals and
+ * for DNS answers. Fails closed: anything that is not an IP address is blocked.
+ */
+export function isPrivateAddress(ip: string): boolean {
+  // A zone index (fe80::1%eth0) is not part of the address.
+  const address = typeof ip === 'string' ? ip.split('%')[0] : '';
+  const family = isIP(address);
+  if (family === 4) return PRIVATE_ADDRESSES.check(address, 'ipv4');
+  if (family === 6) return PRIVATE_ADDRESSES.check(address, 'ipv6');
+  return true;
+}
+
+// Host names that only ever mean "this machine" or "this private network".
+const INTERNAL_NAME_SUFFIXES = ['.localhost', '.local', '.internal'];
+
+// Dot-separated decimal or 0x-hex parts: the shapes the WHATWG URL parser turns
+// into an IPv4 address for http(s). Anything this shape that is not already a
+// dotted quad was left unnormalised (non-special scheme) and is refused outright.
+const NUMERIC_HOST = /^(?:0x[0-9a-f]*|[0-9]+)(?:\.(?:0x[0-9a-f]*|[0-9]+))*$/i;
+
+/**
+ * Check if a URL's host is an internal name or a private/internal IP literal.
+ * Names are not resolved here; this is the pure, synchronous half of the SSRF
+ * guard. Fails closed on an unparseable URL.
+ */
 export function isPrivateUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString);
-    const hostname = url.hostname.toLowerCase();
+    // URL has already lowercased the host and normalised hex, octal, decimal and
+    // short IPv4 forms (0x7f000001, 2130706433, 127.1) to dotted quads for http(s).
+    let hostname = url.hostname.toLowerCase();
+    if (hostname.startsWith('[') && hostname.endsWith(']')) {
+      hostname = hostname.slice(1, -1);
+    }
+    // "localhost." and "localhost" are the same name to a resolver.
+    let end = hostname.length;
+    while (end > 0 && hostname.charCodeAt(end - 1) === 46 /* '.' */) end--;
+    hostname = hostname.slice(0, end);
 
-    // Block localhost variants
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]') {
+    if (!hostname) return true;
+
+    if (isIP(hostname)) {
+      return isPrivateAddress(hostname);
+    }
+
+    if (hostname === 'localhost' || INTERNAL_NAME_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
       return true;
     }
 
-    // Block 0.0.0.0
-    if (hostname === '0.0.0.0') {
+    if (NUMERIC_HOST.test(hostname)) {
       return true;
     }
-
-    // Block private IP ranges
-    const parts = hostname.split('.').map(Number);
-    if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
-      // 10.0.0.0/8
-      if (parts[0] === 10) return true;
-      // 172.16.0.0/12
-      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-      // 192.168.0.0/16
-      if (parts[0] === 192 && parts[1] === 168) return true;
-      // 169.254.0.0/16 (link-local)
-      if (parts[0] === 169 && parts[1] === 254) return true;
-    }
-
-    // Block metadata endpoints (cloud providers)
-    if (hostname === '169.254.169.254') return true;
 
     return false;
   } catch {
