@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,11 @@ import {
 // Sentinel value of the model <Select> that reveals the free-text input.
 const CUSTOM_MODEL = '__custom__';
 
+// One look for every text field in the dialog (44 px touch height, visible focus ring).
+const FIELD_CLASS =
+  'h-11 bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-violet-500';
+const LABEL_CLASS = 'text-sm font-medium text-slate-300 mb-1.5 block';
+
 interface CustomProviderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,6 +61,16 @@ export default function CustomProviderModal({
   const [testError, setTestError] = useState('');
   const [suggestedModels, setSuggestedModels] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
+
+  // Real label/field pairs: ids are generated per modal instance.
+  const uid = useId();
+  const nameId = `${uid}-name`;
+  const baseUrlId = `${uid}-base-url`;
+  const baseUrlHelpId = `${uid}-base-url-help`;
+  const apiKeyId = `${uid}-api-key`;
+  const modelFieldId = `${uid}-model`;
+  const customModelFieldId = `${uid}-custom-model`;
+  const quickFillLabelId = `${uid}-quick-fill`;
 
   useEffect(() => {
     setMounted(true);
@@ -166,9 +181,12 @@ export default function CustomProviderModal({
   const isValid = name && baseUrl && apiKey && effectiveModelId;
   const isEditMode = !!provider;
 
+  // A live id for the current base URL, shown as the placeholder of every model-id input.
+  const modelPlaceholder = `e.g. ${suggestedModels[0] ?? 'gpt-5.6-terra'}`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-900 border-slate-800 max-w-lg">
+      <DialogContent className="bg-slate-900 border-slate-800 w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-slate-100">
             {isEditMode ? 'Edit Custom Provider' : 'Add Custom Provider'}
@@ -183,17 +201,18 @@ export default function CustomProviderModal({
         <div className="space-y-4 py-4">
           {/* Quick Fill Suggestions */}
           {!isEditMode && (
-            <div>
-              <label className="text-xs text-slate-500 mb-2 block">
+            <div role="group" aria-labelledby={quickFillLabelId}>
+              <p id={quickFillLabelId} className="text-xs text-slate-400 mb-2">
                 Quick fill from common providers
-              </label>
-              <div className="flex flex-wrap gap-2">
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {COMMON_CUSTOM_PROVIDERS.map((p) => (
                   <button
                     key={p.name}
                     type="button"
                     onClick={() => handleQuickFill(p.name)}
-                    className="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+                    title={p.name}
+                    className="min-h-11 w-full px-2 text-sm text-center truncate bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                   >
                     {p.name}
                   </button>
@@ -204,40 +223,47 @@ export default function CustomProviderModal({
 
           {/* Provider Name */}
           <div>
-            <label className="text-sm font-medium text-slate-300 mb-1 block">
+            <label htmlFor={nameId} className={LABEL_CLASS}>
               Provider Name
             </label>
             <Input
+              id={nameId}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., OpenAI, Anthropic"
-              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
+              className={FIELD_CLASS}
             />
           </div>
 
           {/* Base URL */}
           <div>
-            <label className="text-sm font-medium text-slate-300 mb-1 block">
+            <label htmlFor={baseUrlId} className={LABEL_CLASS}>
               API Base URL
             </label>
             <Input
+              id={baseUrlId}
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="e.g., https://api.openai.com/v1"
-              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-describedby={baseUrlHelpId}
+              className={FIELD_CLASS}
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p id={baseUrlHelpId} className="text-xs text-slate-400 mt-1">
               The base URL for the API (without /chat/completions)
             </p>
           </div>
 
           {/* API Key */}
           <div>
-            <label className="text-sm font-medium text-slate-300 mb-1 block">
+            <label htmlFor={apiKeyId} className={LABEL_CLASS}>
               API Key
             </label>
             <div className="relative">
               <Input
+                id={apiKeyId}
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => {
@@ -245,17 +271,21 @@ export default function CustomProviderModal({
                   setTestStatus('idle');
                 }}
                 placeholder="Enter your API key"
-                className="pr-10 bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
+                autoCapitalize="none"
+                spellCheck={false}
+                className={`pr-11 ${FIELD_CLASS}`}
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                aria-label={showApiKey ? 'Hide key' : 'Show key'}
+                aria-pressed={showApiKey}
+                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
               >
                 {showApiKey ? (
-                  <EyeOff className="h-4 w-4" />
+                  <EyeOff className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4" aria-hidden="true" />
                 )}
               </button>
             </div>
@@ -263,12 +293,15 @@ export default function CustomProviderModal({
 
           {/* Model ID */}
           <div>
-            <label className="text-sm font-medium text-slate-300 mb-1 block">
+            <label htmlFor={modelFieldId} className={LABEL_CLASS}>
               Model ID
             </label>
             {mounted && suggestedModels.length > 0 ? (
               <Select value={modelId} onValueChange={setModelId}>
-                <SelectTrigger className="bg-slate-950 border-slate-700">
+                <SelectTrigger
+                  id={modelFieldId}
+                  className="h-11 bg-slate-950 border-slate-700 focus:ring-2 focus:ring-violet-500"
+                >
                   <SelectValue placeholder="Select a model" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
@@ -276,46 +309,57 @@ export default function CustomProviderModal({
                     <SelectItem
                       key={model}
                       value={model}
-                      className="text-slate-300 focus:bg-slate-800"
+                      className="py-3 sm:py-1.5 text-slate-300 focus:bg-slate-800"
                     >
                       {model}
                     </SelectItem>
                   ))}
                   <SelectItem
                     value={CUSTOM_MODEL}
-                    className="text-slate-400 focus:bg-slate-800"
+                    className="py-3 sm:py-1.5 text-slate-400 focus:bg-slate-800"
                   >
-                    Enter custom model...
+                    Enter custom model…
                   </SelectItem>
                 </SelectContent>
               </Select>
             ) : (
               <Input
+                id={modelFieldId}
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
-                placeholder="e.g., gpt-5.6-terra, claude-sonnet-5"
-                className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
+                placeholder={modelPlaceholder}
+                autoCapitalize="none"
+                spellCheck={false}
+                className={FIELD_CLASS}
               />
             )}
             {modelId === CUSTOM_MODEL && (
-              <Input
-                value={customModelId}
-                onChange={(e) => setCustomModelId(e.target.value)}
-                placeholder="Enter custom model ID"
-                className="mt-2 bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600"
-                autoFocus
-              />
+              <>
+                <label htmlFor={customModelFieldId} className="sr-only">
+                  Custom model ID
+                </label>
+                <Input
+                  id={customModelFieldId}
+                  value={customModelId}
+                  onChange={(e) => setCustomModelId(e.target.value)}
+                  placeholder={modelPlaceholder}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className={`mt-2 ${FIELD_CLASS}`}
+                  autoFocus
+                />
+              </>
             )}
           </div>
 
-          {/* Test Connection */}
-          <div className="flex items-center gap-3 pt-2">
+          {/* Test Connection: the status line keeps its height so text never shifts the layout */}
+          <div className="pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={handleTest}
               disabled={testStatus === 'testing' || !isValid}
-              className={`transition-colors ${
+              className={`h-11 w-full sm:w-auto transition-colors ${
                 testStatus === 'valid'
                   ? 'border-emerald-500/50 text-emerald-400'
                   : testStatus === 'invalid'
@@ -325,48 +369,50 @@ export default function CustomProviderModal({
             >
               {testStatus === 'testing' ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Testing...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+                  Testing…
                 </>
               ) : testStatus === 'valid' ? (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="h-4 w-4 mr-2" aria-hidden="true" />
                   Connected
                 </>
               ) : testStatus === 'invalid' ? (
                 <>
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-4 w-4 mr-2" aria-hidden="true" />
                   Failed
                 </>
               ) : (
                 <>
-                  <FlaskConical className="h-4 w-4 mr-2" />
-                  Test Connection
+                  <FlaskConical className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Test connection
                 </>
               )}
             </Button>
-            {testError && (
-              <span className="text-xs text-rose-400 truncate" title={testError}>
-                {testError}
-              </span>
-            )}
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-2 min-h-[1.5rem] text-xs text-rose-400 break-words"
+            >
+              {testError}
+            </p>
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="text-slate-400 hover:text-slate-100"
+            className="h-11 w-full sm:w-auto text-slate-400 hover:text-slate-100"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={!isValid}
-            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white"
+            className="h-11 w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white"
           >
-            {isEditMode ? 'Save Changes' : 'Add Provider'}
+            {isEditMode ? 'Save changes' : 'Add provider'}
           </Button>
         </DialogFooter>
       </DialogContent>

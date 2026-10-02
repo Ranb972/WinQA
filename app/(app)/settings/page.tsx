@@ -690,8 +690,8 @@ export default function SettingsPage() {
             <div className="absolute bottom-0 right-0 w-4 h-[2px] bg-orange-500" />
             <div className="absolute bottom-0 right-0 w-[2px] h-4 bg-orange-500" />
 
-            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="px-5 py-4 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-1 h-5 bg-orange-500 rounded-full" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Connected Sources</h2>
               </div>
@@ -722,7 +722,7 @@ export default function SettingsPage() {
               )}
 
               {customProviders.length === 0 && (
-                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/25 text-center py-4 mb-4">
+                <p className="font-mono text-xs uppercase tracking-[0.15em] leading-relaxed text-zinc-400 text-center px-2 py-4 mb-4 break-words">
                   No intelligence sources connected
                 </p>
               )}
@@ -730,15 +730,15 @@ export default function SettingsPage() {
               {customProviders.length < MAX_CUSTOM_PROVIDERS && (
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded border border-dashed border-white/[0.08] text-zinc-500 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.15em] transition-colors"
+                  className="w-full h-11 flex items-center justify-center gap-2 rounded border border-dashed border-white/[0.08] text-zinc-400 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.15em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
                 >
-                  <Plus className="h-4 w-4" />
-                  Connect New Source
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add provider
                 </button>
               )}
 
               {customProviders.length >= MAX_CUSTOM_PROVIDERS && (
-                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/25 text-center">
+                <p className="font-mono text-xs uppercase tracking-[0.15em] leading-relaxed text-zinc-400 text-center px-2 break-words">
                   Maximum {MAX_CUSTOM_PROVIDERS} sources connected
                 </p>
               )}
