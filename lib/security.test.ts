@@ -11,6 +11,7 @@ import {
   pinnedLookup,
   ProviderUrlError,
   ProviderRedirectError,
+  ProviderTimeoutError,
 } from '@/lib/security';
 import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
 
@@ -224,6 +225,8 @@ describe('isPrivateAddress (shared classifier for literals and DNS answers)', ()
 
 describe('safeProviderFetch: resolve once, vet every answer, connect to the vetted address (S4)', () => {
   const answer = (address: string, family: 4 | 6) => ({ address, family });
+  // Every provider fetch states its time budget.
+  const T = 10_000;
 
   beforeEach(() => {
     dnsMock.lookup.mockReset();
@@ -233,7 +236,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
 
   it('rejects a host that resolves to 10.0.0.5 and never fetches', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
-    const err = await safeProviderFetch('https://evil.example/v1/chat/completions', { method: 'POST' }).catch((e) => e);
+    const err = await safeProviderFetch('https://evil.example/v1/chat/completions', { method: 'POST', timeoutMs: T }).catch((e) => e);
     expect(err).toBeInstanceOf(ProviderUrlError);
     expect(err.message).toBe('The provider address is not reachable from WinQA');
     expect(dnsMock.lookup).toHaveBeenCalledWith('evil.example', { all: true, verbatim: true });
@@ -242,7 +245,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
 
   it('rejects a host that resolves to fd00::1 (IPv6 unique local)', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('fd00::1', 6)]);
-    await expect(resolveProviderAddress('https://evil.example/v1')).rejects.toThrow(
+    await expect(resolveProviderAddress('https://evil.example/v1', T)).rejects.toThrow(
       'The provider address is not reachable from WinQA'
     );
     expect(undiciMock.fetch).not.toHaveBeenCalled();
@@ -250,33 +253,33 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
 
   it('rejects when ANY answer is private, even if the first is public', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('93.184.216.34', 4), answer('127.0.0.1', 4)]);
-    await expect(resolveProviderAddress('https://mixed.example/v1')).rejects.toBeInstanceOf(ProviderUrlError);
+    await expect(resolveProviderAddress('https://mixed.example/v1', T)).rejects.toBeInstanceOf(ProviderUrlError);
   });
 
   it('rejects an empty answer', async () => {
     dnsMock.lookup.mockResolvedValueOnce([]);
-    await expect(resolveProviderAddress('https://empty.example/v1')).rejects.toThrow(
+    await expect(resolveProviderAddress('https://empty.example/v1', T)).rejects.toThrow(
       'The provider address is not reachable from WinQA'
     );
   });
 
   it('passes a resolver failure through unchanged', async () => {
     dnsMock.lookup.mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND nope.example'));
-    await expect(resolveProviderAddress('https://nope.example/v1')).rejects.toThrow(
+    await expect(resolveProviderAddress('https://nope.example/v1', T)).rejects.toThrow(
       'getaddrinfo ENOTFOUND nope.example'
     );
   });
 
   it('runs checkProviderUrl first: http, private literals and over-long URLs never reach DNS', async () => {
     for (const url of ['http://api.example.com/v1', 'https://127.0.0.2/v1', 'https://x.com/' + 'a'.repeat(2100)]) {
-      await expect(safeProviderFetch(url, {})).rejects.toBeInstanceOf(ProviderUrlError);
+      await expect(safeProviderFetch(url, { timeoutMs: T })).rejects.toBeInstanceOf(ProviderUrlError);
     }
     expect(dnsMock.lookup).not.toHaveBeenCalled();
     expect(undiciMock.fetch).not.toHaveBeenCalled();
   });
 
   it('a public IP literal is vetted without a DNS lookup', async () => {
-    await expect(resolveProviderAddress('https://93.184.216.34/v1')).resolves.toEqual({
+    await expect(resolveProviderAddress('https://93.184.216.34/v1', T)).resolves.toEqual({
       hostname: '93.184.216.34',
       address: '93.184.216.34',
       family: 4,
@@ -289,7 +292,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
     undiciMock.fetch.mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }));
 
     const url = 'https://api.example.com/v1/chat/completions';
-    const res = await safeProviderFetch(url, { method: 'POST', headers: { a: 'b' }, body: '{}' });
+    const res = await safeProviderFetch(url, { method: 'POST', headers: { a: 'b' }, body: '{}', timeoutMs: T });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -320,7 +323,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
     undiciMock.fetch.mockResolvedValueOnce(
       new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } })
     );
-    const err = await safeProviderFetch('https://api.example.com/v1/x', {}).catch((e) => e);
+    const err = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: T }).catch((e) => e);
     expect(err).toBeInstanceOf(ProviderRedirectError);
     expect(err.status).toBe(302);
     expect(err.message).toBe(REDIRECT_BLOCKED_ERROR);
@@ -332,7 +335,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
   it('reuses a pinned address for the same host instead of resolving again', async () => {
     undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
     const pinned = { hostname: 'api.example.com', address: '93.184.216.34', family: 4 as const };
-    await safeProviderFetch('https://api.example.com/v1/x', { pinned });
+    await safeProviderFetch('https://api.example.com/v1/x', { pinned, timeoutMs: T });
     expect(dnsMock.lookup).not.toHaveBeenCalled();
     expect(undiciMock.agents[0].options.connect?.lookup).toBeTypeOf('function');
   });
@@ -340,7 +343,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
   it('resolves again when the pinned address belongs to another host', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
     const pinned = { hostname: 'other.example', address: '93.184.216.34', family: 4 as const };
-    await expect(safeProviderFetch('https://evil.example/v1', { pinned })).rejects.toBeInstanceOf(ProviderUrlError);
+    await expect(safeProviderFetch('https://evil.example/v1', { pinned, timeoutMs: T })).rejects.toBeInstanceOf(ProviderUrlError);
     expect(undiciMock.fetch).not.toHaveBeenCalled();
   });
 });
@@ -377,5 +380,88 @@ describe('pinnedLookup with the real undici Agent (no external network)', () => 
     } finally {
       await agent.close();
     }
+  });
+});
+
+describe('safeProviderFetch: every provider call is bounded in time (S5)', () => {
+  const PENDING = Symbol('pending');
+  // Only setTimeout is faked, so setImmediate below still tells "settled" from "pending".
+  const settledOrPending = <T,>(p: Promise<T>) =>
+    Promise.race([p, new Promise<typeof PENDING>((resolve) => setImmediate(() => resolve(PENDING)))]);
+
+  // An upstream that never answers but honours abort, like undici does.
+  const hangUntilAborted = (_url: string, init: { signal?: AbortSignal }) =>
+    new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+    });
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    dnsMock.lookup.mockReset();
+    undiciMock.fetch.mockReset();
+    undiciMock.agents.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('a hanging upstream is aborted after timeoutMs with the engine\'s timed-out text', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockImplementationOnce(hangUntilAborted);
+
+    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 }).catch((e) => e);
+
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(await settledOrPending(result)).toBe(PENDING);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const err = await settledOrPending(result);
+    expect(err).toBeInstanceOf(ProviderTimeoutError);
+    expect((err as Error).message).toBe('Request timed out after 10s');
+    expect(undiciMock.fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+  });
+
+  it('a hanging DNS answer is bounded by the same budget', async () => {
+    dnsMock.lookup.mockImplementationOnce(() => new Promise(() => {}));
+
+    const result = safeProviderFetch('https://slow-dns.example/v1', { timeoutMs: 20_000 }).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(20_000);
+    const err = await settledOrPending(result);
+    expect(err).toBeInstanceOf(ProviderTimeoutError);
+    expect((err as Error).message).toBe('Request timed out after 20s');
+    expect(undiciMock.fetch).not.toHaveBeenCalled();
+  });
+
+  it('resolveProviderAddress takes a budget too', async () => {
+    dnsMock.lookup.mockImplementationOnce(() => new Promise(() => {}));
+    const result = resolveProviderAddress('https://slow-dns.example/v1', 10_000).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await settledOrPending(result)).toBeInstanceOf(ProviderTimeoutError);
+  });
+
+  it('a body that stalls after the headers is aborted too', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockImplementationOnce(async (_url: string, init: { signal: AbortSignal }) => ({
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      body: null,
+      arrayBuffer: () =>
+        new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason))),
+    }));
+
+    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 }).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await settledOrPending(result)).toBeInstanceOf(ProviderTimeoutError);
+  });
+
+  it('a fast answer clears its timer', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const res = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 });
+    expect(res.status).toBe(200);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -8,8 +8,8 @@ import { consumeDailyAllowance } from '@/lib/rate-limit';
 
 // Every built-in call runs under a 42s total budget (20s per attempt, so two Compare
 // attempts plus delays finish before the client's 45s abort; Batch E3); the 60s cap
-// leaves headroom for the daily-allowance check and also bounds the custom-provider
-// path, whose fetch has no timeout of its own.
+// leaves headroom for the daily-allowance check. The custom-provider path is bounded
+// by its own 20s deadline (DEFAULT_PROVIDER_TIMEOUT_MS, lib/llm/custom.ts).
 export const maxDuration = 60;
 const TOTAL_TIMEOUT_MS = 42000;
 

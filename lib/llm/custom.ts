@@ -3,7 +3,9 @@
 import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType, isAnthropicProvider } from './models';
-import { checkProviderUrl, safeProviderFetch } from '@/lib/security';
+import { checkProviderUrl, safeProviderFetch, ProviderTimeoutError } from '@/lib/security';
+// Import-safe: fallback.ts builds no provider client at import time.
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from './fallback';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -90,6 +92,16 @@ function buildHeaders(provider: CustomProvider): Record<string, string> {
 }
 
 /**
+ * A timeout leaves the same runtime-log line as an engine timeout
+ * (lib/llm/fallback.ts runAttempt); a custom provider's key is always the user's.
+ */
+function logTimeout(provider: CustomProvider, error: unknown): void {
+  if (error instanceof ProviderTimeoutError) {
+    console.error(`[llm] custom:${provider.id} ${provider.modelId} ${error.message.replace(/^Request /, '')} key=user`);
+  }
+}
+
+/**
  * Convert messages to Anthropic format
  */
 function convertToAnthropicFormat(messages: ChatMessage[]): {
@@ -142,10 +154,13 @@ async function callAnthropicApi(
   try {
     // Resolves and vets the host, connects only to the vetted address, and throws
     // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
+    // The budget is the engine's per-attempt cap: a custom provider gets the same
+    // 20s a built-in model gets before the chat route answers with a timeout.
     const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
+      timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS,
     });
 
     if (!response.ok) {
@@ -166,6 +181,7 @@ async function callAnthropicApi(
       responseTime: Date.now() - startTime,
     };
   } catch (error) {
+    logTimeout(provider, error);
     return {
       content: '',
       model: `custom:${provider.id}` as LLMProvider,
@@ -203,10 +219,13 @@ async function callOpenAIApi(
   try {
     // Resolves and vets the host, connects only to the vetted address, and throws
     // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
+    // The budget is the engine's per-attempt cap: a custom provider gets the same
+    // 20s a built-in model gets before the chat route answers with a timeout.
     const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
+      timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS,
     });
 
     if (!response.ok) {
@@ -228,6 +247,7 @@ async function callOpenAIApi(
       responseTime: Date.now() - startTime,
     };
   } catch (error) {
+    logTimeout(provider, error);
     return {
       content: '',
       model: `custom:${provider.id}` as LLMProvider,

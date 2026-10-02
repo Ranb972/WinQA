@@ -6,13 +6,17 @@ import {
   safeProviderFetch,
   ProviderRedirectError,
   ProviderUrlError,
+  ProviderTimeoutError,
   type PinnedAddress,
 } from '@/lib/security';
 import { isAnthropicProvider, normalizeBaseUrl } from '@/lib/llm/models';
 
-// Sends a real test message to a user's custom endpoint (no fetch timeout);
-// slow self-hosted models can legitimately take 10-20s.
+// Sends a real test message to a user's custom endpoint. Resolving the host and
+// the test request each get TEST_CONNECTION_TIMEOUT_MS, so the route answers
+// within ~20s worst case, inside maxDuration. A self-hosted model that needs more
+// than 10s for a 10-token reply shows "No response in time".
 export const maxDuration = 30;
+const TEST_CONNECTION_TIMEOUT_MS = 10_000;
 
 interface TestCustomProviderRequest {
   baseUrl: string;
@@ -48,6 +52,13 @@ function redactKey(text: string, apiKey: string): string {
     return text;
   }
   return text.split(apiKey).join('[key]');
+}
+
+/** A hung test leaves a runtime-log line shaped like the engine's timeout line. */
+function logTimeout(modelId: string, error: unknown): void {
+  if (error instanceof ProviderTimeoutError) {
+    console.error(`[llm] custom-test ${modelId} ${error.message.replace(/^Request /, '')} key=user`);
+  }
 }
 
 /**
@@ -105,6 +116,7 @@ async function testConnection(
           max_tokens: 10,
         }),
         pinned,
+        timeoutMs: TEST_CONNECTION_TIMEOUT_MS,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
@@ -138,6 +150,7 @@ async function testConnection(
           max_tokens: 10,
         }),
         pinned,
+        timeoutMs: TEST_CONNECTION_TIMEOUT_MS,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
@@ -171,6 +184,7 @@ async function testConnection(
         model: modelId,
       };
     }
+    logTimeout(modelId, error);
     const message = error instanceof Error ? error.message : 'Connection failed';
     return {
       valid: false,
@@ -210,12 +224,13 @@ export async function POST(request: NextRequest) {
     // to that address only (lib/security.ts safeProviderFetch).
     let pinned: PinnedAddress;
     try {
-      pinned = await resolveProviderAddress(baseUrl);
+      pinned = await resolveProviderAddress(baseUrl, TEST_CONNECTION_TIMEOUT_MS);
     } catch (error) {
       if (error instanceof ProviderUrlError) {
         return NextResponse.json({ valid: false, error: error.message }, { status: 400 });
       }
-      // The name did not resolve: report it like any unreachable provider.
+      // The name did not resolve (or not in time): report it like any unreachable provider.
+      logTimeout(modelId, error);
       const message = error instanceof Error ? error.message : 'Connection failed';
       return NextResponse.json({
         valid: false,

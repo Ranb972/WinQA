@@ -200,6 +200,21 @@ export class ProviderRedirectError extends Error {
   }
 }
 
+/**
+ * The provider call (DNS, connect, headers or body) used up its budget. The message
+ * is the fallback engine's own wording ("Request timed out after 20s", see
+ * runAttempt in lib/llm/fallback.ts), so friendlyErrorMessage and
+ * friendlyTestFailure treat it exactly like an engine timeout.
+ */
+export class ProviderTimeoutError extends Error {
+  readonly timeoutMs: number;
+  constructor(timeoutMs: number) {
+    super(`Request timed out after ${Math.round(timeoutMs / 100) / 10}s`);
+    this.name = 'ProviderTimeoutError';
+    this.timeoutMs = timeoutMs;
+  }
+}
+
 /** A host name and the one vetted address a request to it may connect to. */
 export interface PinnedAddress {
   hostname: string;
@@ -213,22 +228,42 @@ function hostOf(url: string): string {
   return hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
 }
 
-/**
- * Vet a custom-provider URL and resolve its host once: checkProviderUrl (length,
- * HTTPS, literal ranges), then every DNS answer through isPrivateAddress. Any
- * private answer rejects the host, so a name with one public and one internal
- * record cannot be steered. Throws ProviderUrlError with the user-facing message;
- * a resolver failure (ENOTFOUND) is rethrown as is.
- */
-export async function resolveProviderAddress(url: string): Promise<PinnedAddress> {
+/** Settle with `work`, or reject with the signal's reason as soon as it aborts. */
+function untilAborted<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener('abort', onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      }
+    );
+  });
+}
+
+/** An AbortSignal that fires with a ProviderTimeoutError after `timeoutMs`; call clear() when done. */
+function providerDeadline(timeoutMs: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new ProviderTimeoutError(timeoutMs)), timeoutMs);
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
+async function resolveVetted(url: string, signal: AbortSignal): Promise<PinnedAddress> {
   const urlError = checkProviderUrl(url);
   if (urlError) throw new ProviderUrlError(urlError);
 
   const hostname = hostOf(url);
   const literalFamily = isIP(hostname);
+  // dns.lookup cannot be cancelled; the race only stops waiting for it.
   const answers = literalFamily
     ? [{ address: hostname, family: literalFamily }]
-    : await dnsLookup(hostname, { all: true, verbatim: true });
+    : await untilAborted(dnsLookup(hostname, { all: true, verbatim: true }), signal);
 
   if (answers.length === 0) {
     console.warn(`[custom-provider] blocked ${hostname}: no address in the DNS answer`);
@@ -242,6 +277,23 @@ export async function resolveProviderAddress(url: string): Promise<PinnedAddress
 
   const first = answers[0];
   return { hostname, address: first.address, family: first.family === 6 ? 6 : 4 };
+}
+
+/**
+ * Vet a custom-provider URL and resolve its host once, within `timeoutMs`:
+ * checkProviderUrl (length, HTTPS, literal ranges), then every DNS answer through
+ * isPrivateAddress. Any private answer rejects the host, so a name with one public
+ * and one internal record cannot be steered. Throws ProviderUrlError with the
+ * user-facing message, ProviderTimeoutError when the resolver does not answer in
+ * time; a resolver failure (ENOTFOUND) is rethrown as is.
+ */
+export async function resolveProviderAddress(url: string, timeoutMs: number): Promise<PinnedAddress> {
+  const deadline = providerDeadline(timeoutMs);
+  try {
+    return await resolveVetted(url, deadline.signal);
+  } finally {
+    deadline.clear();
+  }
 }
 
 /**
@@ -260,8 +312,11 @@ export function pinnedLookup(pinned: PinnedAddress): LookupFunction {
 }
 
 export type ProviderFetchInit = Pick<RequestInit, 'method' | 'headers' | 'body'> & {
-  /** Abort the request (connect, headers and body) after this many ms. */
-  timeoutMs?: number;
+  /**
+   * Budget for the whole call (DNS, connect, headers and body), in ms. Required:
+   * a custom-provider request with no deadline holds its route until maxDuration.
+   */
+  timeoutMs: number;
   /** An address vetted earlier for this URL's host (resolveProviderAddress); skips a second lookup. */
   pinned?: PinnedAddress;
 };
@@ -279,30 +334,34 @@ const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
  *    resolution at connect time (DNS rebinding) cannot happen. The URL is passed
  *    unchanged, so the Host header and TLS SNI/certificate check use the name.
  * 3. redirect: 'manual'; a 3xx throws ProviderRedirectError and is never followed.
- * 4. The body is read in full here and returned as a plain Response, so the Agent
+ * 4. One deadline of `timeoutMs` covers resolution, connect, headers and body;
+ *    when it fires the request is aborted and ProviderTimeoutError is thrown.
+ * 5. The body is read in full here and returned as a plain Response, so the Agent
  *    (and its socket) is destroyed before this function returns; callers use
  *    .json()/.text() as on any Response and need no cleanup.
  */
-export async function safeProviderFetch(url: string, init: ProviderFetchInit = {}): Promise<Response> {
+export async function safeProviderFetch(url: string, init: ProviderFetchInit): Promise<Response> {
   const { timeoutMs, pinned: pinnedHint, method, headers, body } = init;
 
   const urlError = checkProviderUrl(url);
   if (urlError) throw new ProviderUrlError(urlError);
-  const pinned =
-    pinnedHint && pinnedHint.hostname === hostOf(url) && !isPrivateAddress(pinnedHint.address)
-      ? pinnedHint
-      : await resolveProviderAddress(url);
 
-  const agent = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
-  const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+  const deadline = providerDeadline(timeoutMs);
+  let agent: Agent | undefined;
   try {
+    const pinned =
+      pinnedHint && pinnedHint.hostname === hostOf(url) && !isPrivateAddress(pinnedHint.address)
+        ? pinnedHint
+        : await resolveVetted(url, deadline.signal);
+
+    agent = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
     const response = await undiciFetch(url, {
       method,
       headers,
       body,
       dispatcher: agent,
       redirect: 'manual',
-      signal,
+      signal: deadline.signal,
     } as UndiciRequestInit);
 
     if (response.status >= 300 && response.status < 400) {
@@ -316,7 +375,12 @@ export async function safeProviderFetch(url: string, init: ProviderFetchInit = {
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries()),
     });
+  } catch (error) {
+    // Whatever undici rejected with once the deadline fired, the cause is the deadline.
+    if (deadline.signal.aborted) throw deadline.signal.reason;
+    throw error;
   } finally {
-    await agent.destroy().catch(() => {});
+    deadline.clear();
+    if (agent) await agent.destroy().catch(() => {});
   }
 }

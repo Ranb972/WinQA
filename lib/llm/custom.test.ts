@@ -3,7 +3,8 @@ import type { LookupFunction } from 'node:net';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { COMMON_CUSTOM_PROVIDERS, getSuggestedModels } from '@/lib/llm/models';
 import { safeProviderFetch } from '@/lib/security';
-import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+import { REDIRECT_BLOCKED_ERROR, friendlyErrorMessage } from '@/lib/friendly-errors';
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import type { CustomProvider } from '@/lib/custom-providers';
 
 // The real lib/security runs; safeProviderFetch is wrapped in a spy so the tests
@@ -156,6 +157,56 @@ describe('custom path: resolved address is vetted and pinned (S4)', () => {
     const res = await callCustomProvider(openrouter, [{ role: 'user', content: 'hi' }]);
     expect(res.error).toBe(REDIRECT_BLOCKED_ERROR);
     expect(undiciMock.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('custom path: the provider call times out with the engine budget (S5)', () => {
+  const PENDING = Symbol('pending');
+  const settledOrPending = <T,>(p: Promise<T>) =>
+    Promise.race([p, new Promise<typeof PENDING>((resolve) => setImmediate(() => resolve(PENDING)))]);
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('passes DEFAULT_PROVIDER_TIMEOUT_MS (the engine\'s per-attempt cap) to safeProviderFetch', async () => {
+    undiciMock.fetch.mockResolvedValueOnce(jsonResponse(200, { id: 'x', choices: [] }));
+    await callCustomProvider(openrouter, [{ role: 'user', content: 'hi' }]);
+    expect(DEFAULT_PROVIDER_TIMEOUT_MS).toBe(20_000);
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({ timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS });
+  });
+
+  it.each([
+    ['OpenAI format', openrouter],
+    ['Anthropic format', anthropic],
+  ])('%s: a provider that never answers is aborted at 20 s with the timed-out error', async (_label, provider) => {
+    undiciMock.fetch.mockImplementationOnce(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)))
+    );
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const pending = callCustomProvider(provider, [{ role: 'user', content: 'hi' }]);
+    await vi.advanceTimersByTimeAsync(19_999);
+    expect(await settledOrPending(pending)).toBe(PENDING);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const res = await settledOrPending(pending);
+    expect(res).not.toBe(PENDING);
+    const { error, content } = res as Awaited<typeof pending>;
+    expect(content).toBe('');
+    expect(error).toBe('Request timed out after 20s');
+    // The chat route maps it to the same text as an engine timeout.
+    expect(friendlyErrorMessage(error)).toBe('This model took too long to respond. Try again.');
+    // Same log line shape as the engine's timeout ([llm] ... timed out after Ns key=...).
+    expect(errorLog).toHaveBeenCalledWith(
+      `[llm] custom:${provider.id} ${provider.modelId} timed out after 20s key=user`
+    );
+    errorLog.mockRestore();
   });
 });
 
