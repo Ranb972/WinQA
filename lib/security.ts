@@ -362,7 +362,9 @@ export async function safeProviderFetch(url: string, init: ProviderFetchInit): P
         ? pinnedHint
         : await resolveVetted(url, deadline.signal);
 
-    agent = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
+    // connect.timeout: undici's default is 10 s, shorter than a 20 s chat budget; a
+    // blackholed port must end on the deadline (timeout text), not as "fetch failed".
+    agent = new Agent({ connect: { lookup: pinnedLookup(pinned), timeout: timeoutMs } });
     const response = await undiciFetch(url, {
       method,
       headers,

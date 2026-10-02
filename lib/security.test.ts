@@ -485,3 +485,21 @@ describe('checkProviderUrl returns the shared guard constants (S11)', () => {
     expect(BASE_URL_TOO_LONG_ERROR).toContain(String(MAX_PROVIDER_URL_LENGTH));
   });
 });
+
+describe('safeProviderFetch: the connect timeout is the request deadline (S12)', () => {
+  beforeEach(() => {
+    dnsMock.lookup.mockReset();
+    undiciMock.fetch.mockReset();
+    undiciMock.agents.length = 0;
+  });
+
+  it.each([20_000, 10_000])('a %i ms budget gives the Agent the same connect timeout', async (timeoutMs) => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs });
+    const connect = undiciMock.agents[0].options.connect as { timeout?: number; lookup?: unknown };
+    // undici's own default is 10 s, which would cut a 20 s budget short with "fetch failed".
+    expect(connect.timeout).toBe(timeoutMs);
+    expect(connect.lookup).toBeTypeOf('function');
+  });
+});
