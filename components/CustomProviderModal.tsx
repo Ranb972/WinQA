@@ -159,8 +159,9 @@ export default function CustomProviderModal({
   };
 
   // The id that will be tested and saved: the typed one when the <Select> is on the
-  // sentinel, otherwise the selected or typed id.
-  const effectiveModelId = modelId === CUSTOM_MODEL ? customModelId.trim() : modelId;
+  // sentinel, otherwise the selected or typed id. Trimmed once here, because
+  // testFingerprint trims too: test, save and fingerprint must use this one string.
+  const effectiveModelId = (modelId === CUSTOM_MODEL ? customModelId : modelId).trim();
 
   // Save gate. The name is not part of the fingerprint, so a name-only edit of a
   // stored provider may save without a new test.
@@ -176,6 +177,8 @@ export default function CustomProviderModal({
   const canSave = canSaveProvider({ isValid, testPassed, nameOnlyChange });
 
   const handleTest = async () => {
+    // aria-disabled while testing (keeps keyboard focus): ignore the click.
+    if (testStatus === 'testing') return;
     requestSeq.current += 1;
     const seq = requestSeq.current;
     const fp = currentFingerprint;
@@ -436,8 +439,9 @@ export default function CustomProviderModal({
               type="button"
               variant="outline"
               onClick={handleTest}
-              disabled={testStatus === 'testing' || !isValid}
-              className={`h-11 w-full sm:w-auto transition-colors ${
+              disabled={!isValid}
+              aria-disabled={testStatus === 'testing'}
+              className={`h-11 w-full sm:w-auto transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed ${
                 buttonStatus === 'valid'
                   ? 'border-emerald-500/50 text-emerald-400'
                   : buttonStatus === 'invalid'

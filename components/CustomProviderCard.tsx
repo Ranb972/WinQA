@@ -16,6 +16,8 @@ import {
   CustomProviderTestResult,
   friendlyTestFailure,
   formatTestPassed,
+  toggleIntent,
+  MISSING_KEY_TEXT,
 } from '@/lib/custom-providers';
 
 interface CustomProviderCardProps {
@@ -23,7 +25,12 @@ interface CustomProviderCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onTest: () => Promise<CustomProviderTestResult>;
-  onToggle: () => void;
+  /**
+   * Sets the enabled state to `next` (a target, never a flip). The card passes
+   * false to turn off and true only after a passing test, and keeps the switch
+   * busy until the returned promise settles.
+   */
+  onToggle: (next: boolean) => void | Promise<void>;
 }
 
 type TestStatus = 'idle' | 'testing' | 'valid' | 'invalid';
@@ -44,9 +51,20 @@ export default function CustomProviderCard({
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testMessage, setTestMessage] = useState<TestMessage | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // One timer for every delayed reset; cleared on each new action and on unmount.
+  // A switch action (turn-on test or enabled-state write) is running. The ref is
+  // the same flag, read synchronously so a second click cannot slip through.
+  const [toggleBusy, setToggleBusy] = useState(false);
+  const toggleBusyRef = useRef(false);
+  // The enabled-state write in flight (never rejects). A Remove waits for it,
+  // because both rewrite the stored provider list.
+  const pendingWrite = useRef<Promise<void> | null>(null);
+  // Clears a shown test pass after RESET_MS. Test results only.
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Bumped by every test; a response from an older test is ignored.
+  // Hides the Remove confirmation after RESET_MS. Separate, so a test result can
+  // neither replace nor cancel it.
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped by every test and by a confirmed Remove; a response from an older
+  // test is ignored.
   const requestSeq = useRef(0);
 
   const clearResetTimer = () => {
@@ -64,21 +82,36 @@ export default function CustomProviderCard({
     }, RESET_MS);
   };
 
-  // On unmount: stop the timer and drop any in-flight test (no toggle after removal).
+  const hideDeleteConfirm = () => {
+    if (confirmTimer.current) {
+      clearTimeout(confirmTimer.current);
+      confirmTimer.current = null;
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  // On unmount: stop both timers and drop any in-flight test (no toggle after removal).
   useEffect(() => {
     const seqRef = requestSeq;
-    const timerRef = resetTimer;
+    const resetRef = resetTimer;
+    const confirmRef = confirmTimer;
     return () => {
       seqRef.current += 1;
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (resetRef.current) clearTimeout(resetRef.current);
+      if (confirmRef.current) clearTimeout(confirmRef.current);
     };
   }, []);
+
+  const testing = testStatus === 'testing';
+  const switchBusy = testing || toggleBusy;
+  // Off with no usable key (e.g. decryption failed): a test cannot pass.
+  const turnOnBlocked = !provider.enabled && !provider.apiKey;
 
   // Runs the server-side test and shows the result. A pass clears itself after
   // RESET_MS; a failure stays until the next action. Returns null when stale.
   const runTest = async (): Promise<CustomProviderTestResult | null> => {
     clearResetTimer();
-    setShowDeleteConfirm(false);
+    hideDeleteConfirm();
     requestSeq.current += 1;
     const seq = requestSeq.current;
     setTestStatus('testing');
@@ -108,39 +141,89 @@ export default function CustomProviderCard({
   };
 
   const handleTest = async () => {
+    // aria-disabled while testing (keeps keyboard focus): ignore the click.
+    if (testing) return;
     await runTest();
   };
 
+  // Writes the target state through onToggle. A failed write leaves the page
+  // state, and so the switch, on the stored value.
+  const writeEnabled = async (next: boolean) => {
+    const write = (async () => {
+      await onToggle(next);
+    })().catch(() => undefined);
+    pendingWrite.current = write;
+    await write;
+    if (pendingWrite.current === write) pendingWrite.current = null;
+  };
+
   // Turning off is immediate. Turning on tests first and stays off on failure.
+  // The switch stays busy (aria-disabled) until the test and the write settle.
   const handleToggle = async () => {
-    if (provider.enabled) {
-      // A new action: drop a shown test result and its pending reset.
+    const intent = toggleIntent({
+      enabled: provider.enabled,
+      hasKey: !!provider.apiKey,
+      busy: toggleBusyRef.current || testing,
+    });
+    if (intent === 'ignore') return;
+    if (intent === 'missing-key') {
       clearResetTimer();
-      setTestStatus('idle');
-      setTestMessage(null);
-      onToggle();
+      setTestStatus('invalid');
+      setTestMessage({ text: MISSING_KEY_TEXT, detail: null });
       return;
     }
-    const result = await runTest();
-    if (result?.valid) {
-      onToggle();
+
+    toggleBusyRef.current = true;
+    setToggleBusy(true);
+    try {
+      if (intent === 'turn-off') {
+        // A new action: drop a shown test result and its pending reset.
+        clearResetTimer();
+        setTestStatus('idle');
+        setTestMessage(null);
+        await writeEnabled(false);
+        return;
+      }
+      // runTest bumps requestSeq synchronously; a later bump (newer test, Remove,
+      // unmount) means this pass no longer counts.
+      const pending = runTest();
+      const seq = requestSeq.current;
+      const result = await pending;
+      if (result?.valid && seq === requestSeq.current) {
+        await writeEnabled(true);
+      }
+    } finally {
+      toggleBusyRef.current = false;
+      setToggleBusy(false);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (showDeleteConfirm) {
+      // Drop a running test first: the card stays mounted during its exit
+      // animation, so a late pass must not turn on a removed provider.
+      requestSeq.current += 1;
       clearResetTimer();
+      hideDeleteConfirm();
+      setTestStatus('idle');
+      setTestMessage(null);
+      // Let an enabled-state write land before the removal rewrites storage.
+      if (pendingWrite.current) await pendingWrite.current;
       onDelete();
-      setShowDeleteConfirm(false);
     } else {
       // A new action: drop a shown test result (an in-flight test keeps running).
-      if (testStatus !== 'testing') {
+      if (!testing) {
+        clearResetTimer();
         setTestStatus('idle');
         setTestMessage(null);
       }
       setShowDeleteConfirm(true);
-      // Auto-hide confirmation after RESET_MS
-      scheduleReset(() => setShowDeleteConfirm(false));
+      // Auto-hide the confirmation after RESET_MS, on its own timer.
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      confirmTimer.current = setTimeout(() => {
+        confirmTimer.current = null;
+        setShowDeleteConfirm(false);
+      }, RESET_MS);
     }
   };
 
@@ -174,12 +257,12 @@ export default function CustomProviderCard({
             </h3>
             {testStatus === 'valid' && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
-                <Check className="h-3 w-3" />
+                <Check className="h-3 w-3" aria-hidden="true" />
               </span>
             )}
             {testStatus === 'invalid' && (
               <span className="flex items-center gap-1 text-xs text-rose-400">
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3" aria-hidden="true" />
               </span>
             )}
           </div>
@@ -227,11 +310,13 @@ export default function CustomProviderCard({
             role="switch"
             aria-checked={provider.enabled}
             aria-label={`${provider.name} enabled`}
-            title={provider.enabled ? 'Turn off' : 'Turn on'}
+            title={turnOnBlocked ? MISSING_KEY_TEXT : provider.enabled ? 'Turn off' : 'Turn on'}
             onClick={handleToggle}
-            disabled={testStatus === 'testing'}
-            aria-busy={testStatus === 'testing'}
-            className="h-11 min-w-11 px-1 flex items-center justify-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 disabled:cursor-wait"
+            aria-disabled={switchBusy || turnOnBlocked}
+            aria-busy={switchBusy}
+            className={`h-11 min-w-11 px-1 flex items-center justify-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+              switchBusy ? 'cursor-wait' : turnOnBlocked ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             {testStatus === 'testing' && (
               <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-hidden="true" />
@@ -255,8 +340,9 @@ export default function CustomProviderCard({
             variant="ghost"
             size="icon"
             onClick={handleTest}
-            disabled={testStatus === 'testing' || !provider.apiKey}
-            className={`h-11 w-11 transition-colors ${
+            disabled={!provider.apiKey}
+            aria-disabled={testing}
+            className={`h-11 w-11 transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed ${
               testStatus === 'valid'
                 ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
                 : testStatus === 'invalid'

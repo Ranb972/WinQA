@@ -8,6 +8,8 @@ import {
   friendlyTestFailure,
   formatTestPassed,
   canSaveProvider,
+  toggleIntent,
+  MISSING_KEY_TEXT,
   TEST_DETAIL_MAX,
   type CustomProviderTestResult,
 } from '@/lib/custom-providers';
@@ -235,6 +237,22 @@ describe('testFingerprint', () => {
     const renamed = { ...stored, name: 'New name', enabled: true };
     expect(testFingerprint(stored)).toBe(testFingerprint(renamed));
   });
+
+  // Contract CustomProviderModal relies on: the fingerprint cannot tell a raw id
+  // from its trimmed form, so the modal trims effectiveModelId once and passes that
+  // one string to the test, the save and the fingerprint. If the modal tested or
+  // saved the raw "gpt-4 ", a pass on "gpt-4" would unlock saving it (and a stored
+  // "gpt-4" would count as a name-only edit).
+  it('maps a raw model id and its trimmed form to one fingerprint (the modal must test and save the trimmed id)', () => {
+    const raw = 'gpt-4 ';
+    const trimmed = raw.trim();
+    expect(trimmed).toBe('gpt-4');
+    expect(testFingerprint({ ...base, modelId: raw })).toBe(
+      testFingerprint({ ...base, modelId: trimmed })
+    );
+    const stored = { ...base, id: 'custom_1', name: 'Stored', enabled: true, modelId: trimmed };
+    expect(testFingerprint(stored)).toBe(testFingerprint({ ...base, modelId: raw }));
+  });
 });
 
 describe('friendlyTestFailure', () => {
@@ -356,7 +374,28 @@ describe('canSaveProvider', () => {
     [false, true, false, false],
     [false, false, true, false],
     [false, true, true, false],
+    [false, false, false, false],
   ])('isValid=%s testPassed=%s nameOnlyChange=%s -> %s', (isValid, testPassed, nameOnlyChange, want) => {
     expect(canSaveProvider({ isValid, testPassed, nameOnlyChange })).toBe(want);
+  });
+});
+
+describe('toggleIntent', () => {
+  // Full truth table: enabled, hasKey, busy -> intent.
+  it.each([
+    [false, true, false, 'test-then-turn-on'],
+    [false, false, false, 'missing-key'],
+    [true, true, false, 'turn-off'],
+    [true, false, false, 'turn-off'],
+    [false, true, true, 'ignore'],
+    [false, false, true, 'ignore'],
+    [true, true, true, 'ignore'],
+    [true, false, true, 'ignore'],
+  ] as const)('enabled=%s hasKey=%s busy=%s -> %s', (enabled, hasKey, busy, want) => {
+    expect(toggleIntent({ enabled, hasKey, busy })).toBe(want);
+  });
+
+  it('missing-key text is the agreed copy', () => {
+    expect(MISSING_KEY_TEXT).toBe('Edit the provider and add a key first');
   });
 });

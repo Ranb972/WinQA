@@ -51,7 +51,7 @@ import {
   getCustomProviders,
   saveCustomProviders,
   removeCustomProvider,
-  toggleCustomProvider,
+  updateCustomProvider,
   MAX_CUSTOM_PROVIDERS,
   testCustomProviderConnection,
   CustomProviderTestResult,
@@ -278,15 +278,17 @@ export default function SettingsPage() {
     setCustomProviders((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleToggleProvider = async (id: string) => {
-    await toggleCustomProvider(id, user?.id);
+  // Sets (never flips) the enabled state, so a repeated call cannot invert it.
+  // State changes only after the write, so the switch never shows an unsaved state.
+  const handleSetProviderEnabled = async (id: string, next: boolean) => {
+    await updateCustomProvider(id, { enabled: next }, user?.id);
     setCustomProviders((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
+      prev.map((p) => (p.id === id ? { ...p, enabled: next } : p))
     );
   };
 
-  // The card calls this before turning a provider on and only persists the toggle
-  // (handleToggleProvider) after a pass.
+  // The card calls this before turning a provider on and only persists the new
+  // state (handleSetProviderEnabled with true) after a pass.
   const handleTestCustomProvider = async (
     provider: CustomProvider
   ): Promise<CustomProviderTestResult> => {
@@ -717,7 +719,7 @@ export default function SettingsPage() {
                         onEdit={() => setEditingProvider(provider)}
                         onDelete={() => handleDeleteProvider(provider.id)}
                         onTest={() => handleTestCustomProvider(provider)}
-                        onToggle={() => handleToggleProvider(provider.id)}
+                        onToggle={(next) => handleSetProviderEnabled(provider.id, next)}
                       />
                     ))}
                   </AnimatePresence>

@@ -324,7 +324,12 @@ export async function testCustomProviderConnection(
 // Separator for testFingerprint: NUL cannot appear in a URL, key header or model id.
 const FINGERPRINT_SEP = '\u0000';
 
-/** Stable identity of what a connection test exercised (URL, key, model, header type; not the name). */
+/**
+ * Stable identity of what a connection test exercised (URL, key, model, header type; not the name).
+ * The model id is trimmed here, so a caller must test and save the trimmed id too
+ * (CustomProviderModal's effectiveModelId); otherwise "gpt-4 " would save under the
+ * fingerprint of a test that ran on "gpt-4".
+ */
 export function testFingerprint(input: {
   baseUrl: string;
   apiKey: string;
@@ -396,6 +401,29 @@ export function canSaveProvider(input: {
   nameOnlyChange: boolean;
 }): boolean {
   return input.isValid && (input.testPassed || input.nameOnlyChange);
+}
+
+/** Text shown (title and status line) when a provider without a usable key cannot be turned on. */
+export const MISSING_KEY_TEXT = 'Edit the provider and add a key first';
+
+/**
+ * What a click on a provider card's on/off switch does. Pure; the card acts on it.
+ * - `ignore`: a test or a write is still running for this card.
+ * - `turn-off`: set enabled to false (always allowed, key or not).
+ * - `missing-key`: off and no usable key (e.g. decryption failed); stays off.
+ * - `test-then-turn-on`: run the connection test; set enabled to true only on a pass.
+ */
+export type ToggleIntent = 'ignore' | 'turn-off' | 'missing-key' | 'test-then-turn-on';
+
+export function toggleIntent(input: {
+  enabled: boolean;
+  hasKey: boolean;
+  busy: boolean;
+}): ToggleIntent {
+  if (input.busy) return 'ignore';
+  if (input.enabled) return 'turn-off';
+  if (!input.hasKey) return 'missing-key';
+  return 'test-then-turn-on';
 }
 
 /**
