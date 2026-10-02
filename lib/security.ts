@@ -1,12 +1,15 @@
 /**
  * Shared security utilities for API routes.
  *
- * Server-only: imports node:net. Imported by API routes and by lib/llm/custom.ts
- * (itself imported only by app/api/chat/route.ts); never import it from a client
- * component.
+ * Server-only: imports node:net, node:dns and undici. Imported by API routes and by
+ * lib/llm/custom.ts (itself imported only by app/api/chat/route.ts); never import
+ * it from a client component.
  */
 
-import { BlockList, isIP } from 'node:net';
+import { BlockList, isIP, type LookupFunction } from 'node:net';
+import { lookup as dnsLookup } from 'node:dns/promises';
+import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from 'undici';
+import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
 
 /**
  * Strip Mongo operator-syntax characters ($ prefix and any . in the string)
@@ -173,5 +176,147 @@ export function isPrivateUrl(urlString: string): boolean {
     return false;
   } catch {
     return true; // Invalid URL = block it
+  }
+}
+
+/** Shown when a custom-provider host resolves to a private/internal address. */
+export const UNREACHABLE_PROVIDER_ERROR = 'The provider address is not reachable from WinQA';
+
+/** The base URL failed the URL guard or its host resolved to a blocked address. */
+export class ProviderUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProviderUrlError';
+  }
+}
+
+/** The provider answered with a 3xx. Never followed; `status` is the upstream status. */
+export class ProviderRedirectError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(REDIRECT_BLOCKED_ERROR);
+    this.name = 'ProviderRedirectError';
+    this.status = status;
+  }
+}
+
+/** A host name and the one vetted address a request to it may connect to. */
+export interface PinnedAddress {
+  hostname: string;
+  address: string;
+  family: 4 | 6;
+}
+
+/** URL host without IPv6 brackets, as the resolver and isIP expect it. */
+function hostOf(url: string): string {
+  const { hostname } = new URL(url);
+  return hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+}
+
+/**
+ * Vet a custom-provider URL and resolve its host once: checkProviderUrl (length,
+ * HTTPS, literal ranges), then every DNS answer through isPrivateAddress. Any
+ * private answer rejects the host, so a name with one public and one internal
+ * record cannot be steered. Throws ProviderUrlError with the user-facing message;
+ * a resolver failure (ENOTFOUND) is rethrown as is.
+ */
+export async function resolveProviderAddress(url: string): Promise<PinnedAddress> {
+  const urlError = checkProviderUrl(url);
+  if (urlError) throw new ProviderUrlError(urlError);
+
+  const hostname = hostOf(url);
+  const literalFamily = isIP(hostname);
+  const answers = literalFamily
+    ? [{ address: hostname, family: literalFamily }]
+    : await dnsLookup(hostname, { all: true, verbatim: true });
+
+  if (answers.length === 0) {
+    console.warn(`[custom-provider] blocked ${hostname}: no address in the DNS answer`);
+    throw new ProviderUrlError(UNREACHABLE_PROVIDER_ERROR);
+  }
+  const blocked = answers.find((answer) => isPrivateAddress(answer.address));
+  if (blocked) {
+    console.warn(`[custom-provider] blocked ${hostname}: resolves to private address ${blocked.address}`);
+    throw new ProviderUrlError(UNREACHABLE_PROVIDER_ERROR);
+  }
+
+  const first = answers[0];
+  return { hostname, address: first.address, family: first.family === 6 ? 6 : 4 };
+}
+
+/**
+ * A socket lookup that answers every query with the pinned address, in both
+ * callback forms net.connect uses (all: true since autoSelectFamily, single
+ * address otherwise). Given to an undici Agent as connect.lookup.
+ */
+export function pinnedLookup(pinned: PinnedAddress): LookupFunction {
+  return (_hostname, options, callback) => {
+    if (options?.all) {
+      callback(null, [{ address: pinned.address, family: pinned.family }]);
+    } else {
+      callback(null, pinned.address, pinned.family);
+    }
+  };
+}
+
+export type ProviderFetchInit = Pick<RequestInit, 'method' | 'headers' | 'body'> & {
+  /** Abort the request (connect, headers and body) after this many ms. */
+  timeoutMs?: number;
+  /** An address vetted earlier for this URL's host (resolveProviderAddress); skips a second lookup. */
+  pinned?: PinnedAddress;
+};
+
+// Statuses whose Response must be built with a null body.
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+
+/**
+ * The only way the server may call a user-supplied provider URL.
+ *
+ * 1. checkProviderUrl, then one DNS resolution with every answer vetted
+ *    (resolveProviderAddress), unless the caller passes `pinned` for this host.
+ * 2. The request runs on a fresh undici Agent whose connect.lookup returns the
+ *    vetted address, so the socket goes exactly where the check looked: a second
+ *    resolution at connect time (DNS rebinding) cannot happen. The URL is passed
+ *    unchanged, so the Host header and TLS SNI/certificate check use the name.
+ * 3. redirect: 'manual'; a 3xx throws ProviderRedirectError and is never followed.
+ * 4. The body is read in full here and returned as a plain Response, so the Agent
+ *    (and its socket) is destroyed before this function returns; callers use
+ *    .json()/.text() as on any Response and need no cleanup.
+ */
+export async function safeProviderFetch(url: string, init: ProviderFetchInit = {}): Promise<Response> {
+  const { timeoutMs, pinned: pinnedHint, method, headers, body } = init;
+
+  const urlError = checkProviderUrl(url);
+  if (urlError) throw new ProviderUrlError(urlError);
+  const pinned =
+    pinnedHint && pinnedHint.hostname === hostOf(url) && !isPrivateAddress(pinnedHint.address)
+      ? pinnedHint
+      : await resolveProviderAddress(url);
+
+  const agent = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
+  const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+  try {
+    const response = await undiciFetch(url, {
+      method,
+      headers,
+      body,
+      dispatcher: agent,
+      redirect: 'manual',
+      signal,
+    } as UndiciRequestInit);
+
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel().catch(() => {});
+      throw new ProviderRedirectError(response.status);
+    }
+
+    const buffered = NULL_BODY_STATUSES.has(response.status) ? null : await response.arrayBuffer();
+    return new Response(buffered, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
+  } finally {
+    await agent.destroy().catch(() => {});
   }
 }

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { checkProviderUrl } from '@/lib/security';
+import {
+  checkProviderUrl,
+  resolveProviderAddress,
+  safeProviderFetch,
+  ProviderRedirectError,
+  ProviderUrlError,
+  type PinnedAddress,
+} from '@/lib/security';
 import { isAnthropicProvider, normalizeBaseUrl } from '@/lib/llm/models';
 
 // Sends a real test message to a user's custom endpoint (no fetch timeout);
@@ -76,7 +83,8 @@ async function testConnection(
   baseUrl: string,
   apiKey: string,
   modelId: string,
-  headerType?: 'bearer' | 'x-api-key'
+  headerType: 'bearer' | 'x-api-key' | undefined,
+  pinned: PinnedAddress
 ): Promise<TestConnectionResult> {
   const normalizedUrl = normalizeBaseUrl(baseUrl);
   const headers = buildHeaders(apiKey, baseUrl, headerType);
@@ -87,7 +95,8 @@ async function testConnection(
   try {
     if (isAnthropicProvider(baseUrl)) {
       // Anthropic API format
-      const response = await fetch(`${normalizedUrl}/messages`, {
+      // Connects only to the vetted address; a 3xx throws (handled below).
+      const response = await safeProviderFetch(`${normalizedUrl}/messages`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -95,14 +104,9 @@ async function testConnection(
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
           max_tokens: 10,
         }),
-        // isPrivateUrl validates only the original URL — never follow redirects.
-        redirect: 'manual',
+        pinned,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
-
-      if (response.status >= 300 && response.status < 400) {
-        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.', ...meta };
-      }
 
       if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key', ...meta };
@@ -124,7 +128,8 @@ async function testConnection(
       return { valid: true, ...meta };
     } else {
       // OpenAI-compatible API format
-      const response = await fetch(`${normalizedUrl}/chat/completions`, {
+      // Connects only to the vetted address; a 3xx throws (handled below).
+      const response = await safeProviderFetch(`${normalizedUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -132,14 +137,9 @@ async function testConnection(
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
           max_tokens: 10,
         }),
-        // isPrivateUrl validates only the original URL — never follow redirects.
-        redirect: 'manual',
+        pinned,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
-
-      if (response.status >= 300 && response.status < 400) {
-        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.', ...meta };
-      }
 
       if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key', ...meta };
@@ -161,6 +161,16 @@ async function testConnection(
       return { valid: true, ...meta };
     }
   } catch (error) {
+    if (error instanceof ProviderRedirectError) {
+      // Never followed: a public host could 302 the server into a private address.
+      return {
+        valid: false,
+        error: 'Provider attempted an HTTP redirect — blocked for security.',
+        status: error.status,
+        latencyMs: elapsedMs(),
+        model: modelId,
+      };
+    }
     const message = error instanceof Error ? error.message : 'Connection failed';
     return {
       valid: false,
@@ -196,7 +206,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false, error: urlError }, { status: 400 });
     }
 
-    const result = await testConnection(baseUrl, apiKey, modelId, headerType);
+    // Resolve the host once and vet every answer; the test request then connects
+    // to that address only (lib/security.ts safeProviderFetch).
+    let pinned: PinnedAddress;
+    try {
+      pinned = await resolveProviderAddress(baseUrl);
+    } catch (error) {
+      if (error instanceof ProviderUrlError) {
+        return NextResponse.json({ valid: false, error: error.message }, { status: 400 });
+      }
+      // The name did not resolve: report it like any unreachable provider.
+      const message = error instanceof Error ? error.message : 'Connection failed';
+      return NextResponse.json({
+        valid: false,
+        error: redactKey(message, apiKey),
+        status: null,
+        latencyMs: 0,
+        model: modelId,
+      } satisfies TestConnectionResult);
+    }
+
+    const result = await testConnection(baseUrl, apiKey, modelId, headerType, pinned);
     return NextResponse.json(result);
   } catch (error) {
     // Never log the API key in error messages

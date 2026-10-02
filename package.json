@@ -37,7 +37,8 @@
         "react-markdown": "^10.1.0",
         "remark-gfm": "^4.0.1",
         "tailwind-merge": "^2.5.5",
-        "tailwindcss-animate": "^1.0.7"
+        "tailwindcss-animate": "^1.0.7",
+        "undici": "7.30.0"
     },
     "overrides": {
         "js-cookie": "^3.0.7"

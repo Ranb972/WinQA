@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { LookupFunction } from 'node:net';
 import { NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { POST } from '@/app/api/test-custom-provider/route';
+import { safeProviderFetch } from '@/lib/security';
 
 // auth() is mocked to a valid user so requests clear the auth gate; single
 // tests override it with mockResolvedValueOnce.
@@ -9,18 +11,54 @@ vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(async () => ({ userId: 'user_test' })),
 }));
 
-// checkProviderUrl (lib/security.ts) is pure string/URL parsing with no DNS,
-// so it runs for real; api.example.com is a public host and passes it.
+// The real lib/security runs (URL checks, DNS vetting, pinning); safeProviderFetch
+// is wrapped in a spy so the tests can see that the route goes through it.
+vi.mock('@/lib/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/security')>();
+  return { ...actual, safeProviderFetch: vi.fn(actual.safeProviderFetch) };
+});
+
+// No real DNS and no network: every host resolves to the public answer below
+// unless a test says otherwise, and undici's fetch is the upstream mock.
+const PUBLIC_ADDRESS = '93.184.216.34';
+const dnsMock = vi.hoisted(() => ({ lookup: vi.fn() }));
+vi.mock('node:dns/promises', () => ({ lookup: dnsMock.lookup, default: { lookup: dnsMock.lookup } }));
+
+const undiciMock = vi.hoisted(() => {
+  const agents: Array<{ options: { connect?: { lookup?: unknown } } }> = [];
+  class Agent {
+    options: { connect?: { lookup?: unknown } };
+    close = vi.fn(async () => {});
+    destroy = vi.fn(async () => {});
+    constructor(options: { connect?: { lookup?: unknown } }) {
+      this.options = options;
+      agents.push(this);
+    }
+  }
+  return { fetch: vi.fn(), Agent, agents };
+});
+vi.mock('undici', () => ({ fetch: undiciMock.fetch, Agent: undiciMock.Agent }));
+
 const BASE_URL = 'https://api.example.com/v1';
 // Fake, test-only key (long enough for redaction to apply).
 const API_KEY = 'sk-test-FAKEKEY-0123456789abcdef';
 const MODEL = 'test-model-1';
 
-const fetchMock = vi.fn();
+// The upstream call: undici's fetch through the pinned agent.
+const fetchMock = undiciMock.fetch;
+// The platform fetch must never carry a custom-provider request any more.
+const globalFetch = vi.fn(async () => {
+  throw new Error('global fetch must not be used for a custom provider');
+});
 
 beforeEach(() => {
   fetchMock.mockReset();
-  vi.stubGlobal('fetch', fetchMock);
+  globalFetch.mockClear();
+  undiciMock.agents.length = 0;
+  dnsMock.lookup.mockReset();
+  dnsMock.lookup.mockResolvedValue([{ address: PUBLIC_ADDRESS, family: 4 }]);
+  vi.mocked(safeProviderFetch).mockClear();
+  vi.stubGlobal('fetch', globalFetch);
 });
 
 afterEach(() => {
@@ -205,6 +243,63 @@ describe('POST /api/test-custom-provider — guards unchanged', () => {
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Unauthorized' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/test-custom-provider — resolved address is vetted and pinned (S4)', () => {
+  it('400 when the host resolves to 10.0.0.5; nothing is fetched', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '10.0.0.5', family: 4 }]);
+    const res = await POST(makeRequest({ ...validBody, baseUrl: 'https://evil.example/v1' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      valid: false,
+      error: 'The provider address is not reachable from WinQA',
+    });
+    expect(dnsMock.lookup).toHaveBeenCalledWith('evil.example', { all: true, verbatim: true });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
+
+  it('400 when the host resolves to fd00::1; nothing is fetched', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([{ address: 'fd00::1', family: 6 }]);
+    const res = await POST(makeRequest({ ...validBody, baseUrl: 'https://evil6.example/v1' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('The provider address is not reachable from WinQA');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
+
+  it('public answer: one lookup, then safeProviderFetch connects to exactly that address', async () => {
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json).toMatchObject({ valid: true, status: 200 });
+
+    expect(dnsMock.lookup).toHaveBeenCalledTimes(1);
+    expect(safeProviderFetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][0]).toBe(`${BASE_URL}/chat/completions`);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(url).hostname).toBe('api.example.com');
+    expect(init.dispatcher).toBe(undiciMock.agents[0]);
+    const lookup = undiciMock.agents[0].options.connect?.lookup as LookupFunction;
+    const cb = vi.fn();
+    lookup('api.example.com', { all: true }, cb);
+    expect(cb).toHaveBeenCalledWith(null, [{ address: PUBLIC_ADDRESS, family: 4 }]);
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
+
+  it('a host that does not resolve -> result with status null, nothing fetched', async () => {
+    dnsMock.lookup.mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND nope.example'));
+    const res = await POST(makeRequest({ ...validBody, baseUrl: 'https://nope.example/v1' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      valid: false,
+      error: 'getaddrinfo ENOTFOUND nope.example',
+      status: null,
+      latencyMs: expect.any(Number),
+      model: MODEL,
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

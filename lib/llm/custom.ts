@@ -3,8 +3,7 @@
 import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType, isAnthropicProvider } from './models';
-import { checkProviderUrl } from '@/lib/security';
-import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+import { checkProviderUrl, safeProviderFetch } from '@/lib/security';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -141,18 +140,13 @@ async function callAnthropicApi(
   };
 
   try {
-    const response = await fetch(endpoint, {
+    // Resolves and vets the host, connects only to the vetted address, and throws
+    // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
+    const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
-      // isPrivateUrl validates only the original URL — never follow redirects,
-      // or a public host could 302 the server into a private/metadata address.
-      redirect: 'manual',
     });
-
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error(REDIRECT_BLOCKED_ERROR);
-    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -207,18 +201,13 @@ async function callOpenAIApi(
   };
 
   try {
-    const response = await fetch(endpoint, {
+    // Resolves and vets the host, connects only to the vetted address, and throws
+    // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
+    const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
-      // isPrivateUrl validates only the original URL — never follow redirects,
-      // or a public host could 302 the server into a private/metadata address.
-      redirect: 'manual',
     });
-
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error(REDIRECT_BLOCKED_ERROR);
-    }
 
     if (!response.ok) {
       const errorText = await response.text();

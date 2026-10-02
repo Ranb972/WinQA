@@ -1,5 +1,43 @@
-import { describe, it, expect } from 'vitest';
-import { isPrivateUrl, isPrivateAddress, checkProviderUrl } from '@/lib/security';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo, LookupFunction } from 'node:net';
+import type * as Undici from 'undici';
+import {
+  isPrivateUrl,
+  isPrivateAddress,
+  checkProviderUrl,
+  safeProviderFetch,
+  resolveProviderAddress,
+  pinnedLookup,
+  ProviderUrlError,
+  ProviderRedirectError,
+} from '@/lib/security';
+import { REDIRECT_BLOCKED_ERROR } from '@/lib/friendly-errors';
+
+// No test touches the network: DNS answers and the undici fetch are mocked. The
+// one real-undici test below talks to a server on 127.0.0.1 that it starts itself.
+const dnsMock = vi.hoisted(() => ({ lookup: vi.fn() }));
+vi.mock('node:dns/promises', () => ({ lookup: dnsMock.lookup, default: { lookup: dnsMock.lookup } }));
+
+type FakeAgent = {
+  options: { connect?: { lookup?: unknown } };
+  close: () => Promise<void>;
+  destroy: () => Promise<void>;
+};
+const undiciMock = vi.hoisted(() => {
+  const agents: FakeAgent[] = [];
+  class Agent {
+    options: { connect?: { lookup?: unknown } };
+    close = vi.fn(async () => {});
+    destroy = vi.fn(async () => {});
+    constructor(options: { connect?: { lookup?: unknown } }) {
+      this.options = options;
+      agents.push(this);
+    }
+  }
+  return { fetch: vi.fn(), Agent, agents };
+});
+vi.mock('undici', () => ({ fetch: undiciMock.fetch, Agent: undiciMock.Agent }));
 
 describe('isPrivateUrl (SSRF guard)', () => {
   // Contract: true = private/internal (blocked), false = public (allowed).
@@ -181,5 +219,163 @@ describe('isPrivateAddress (shared classifier for literals and DNS answers)', ()
   it('fails closed on a string that is not an IP address', () => {
     expect(isPrivateAddress('example.com')).toBe(true);
     expect(isPrivateAddress('')).toBe(true);
+  });
+});
+
+describe('safeProviderFetch: resolve once, vet every answer, connect to the vetted address (S4)', () => {
+  const answer = (address: string, family: 4 | 6) => ({ address, family });
+
+  beforeEach(() => {
+    dnsMock.lookup.mockReset();
+    undiciMock.fetch.mockReset();
+    undiciMock.agents.length = 0;
+  });
+
+  it('rejects a host that resolves to 10.0.0.5 and never fetches', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
+    const err = await safeProviderFetch('https://evil.example/v1/chat/completions', { method: 'POST' }).catch((e) => e);
+    expect(err).toBeInstanceOf(ProviderUrlError);
+    expect(err.message).toBe('The provider address is not reachable from WinQA');
+    expect(dnsMock.lookup).toHaveBeenCalledWith('evil.example', { all: true, verbatim: true });
+    expect(undiciMock.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects a host that resolves to fd00::1 (IPv6 unique local)', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('fd00::1', 6)]);
+    await expect(resolveProviderAddress('https://evil.example/v1')).rejects.toThrow(
+      'The provider address is not reachable from WinQA'
+    );
+    expect(undiciMock.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects when ANY answer is private, even if the first is public', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('93.184.216.34', 4), answer('127.0.0.1', 4)]);
+    await expect(resolveProviderAddress('https://mixed.example/v1')).rejects.toBeInstanceOf(ProviderUrlError);
+  });
+
+  it('rejects an empty answer', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([]);
+    await expect(resolveProviderAddress('https://empty.example/v1')).rejects.toThrow(
+      'The provider address is not reachable from WinQA'
+    );
+  });
+
+  it('passes a resolver failure through unchanged', async () => {
+    dnsMock.lookup.mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND nope.example'));
+    await expect(resolveProviderAddress('https://nope.example/v1')).rejects.toThrow(
+      'getaddrinfo ENOTFOUND nope.example'
+    );
+  });
+
+  it('runs checkProviderUrl first: http, private literals and over-long URLs never reach DNS', async () => {
+    for (const url of ['http://api.example.com/v1', 'https://127.0.0.2/v1', 'https://x.com/' + 'a'.repeat(2100)]) {
+      await expect(safeProviderFetch(url, {})).rejects.toBeInstanceOf(ProviderUrlError);
+    }
+    expect(dnsMock.lookup).not.toHaveBeenCalled();
+    expect(undiciMock.fetch).not.toHaveBeenCalled();
+  });
+
+  it('a public IP literal is vetted without a DNS lookup', async () => {
+    await expect(resolveProviderAddress('https://93.184.216.34/v1')).resolves.toEqual({
+      hostname: '93.184.216.34',
+      address: '93.184.216.34',
+      family: 4,
+    });
+    expect(dnsMock.lookup).not.toHaveBeenCalled();
+  });
+
+  it('public answer: fetches the unchanged URL through an agent pinned to that address', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('93.184.216.34', 4), answer('2606:2800:220:1::1', 6)]);
+    undiciMock.fetch.mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }));
+
+    const url = 'https://api.example.com/v1/chat/completions';
+    const res = await safeProviderFetch(url, { method: 'POST', headers: { a: 'b' }, body: '{}' });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(undiciMock.fetch).toHaveBeenCalledTimes(1);
+    const [calledUrl, init] = undiciMock.fetch.mock.calls[0];
+    // URL (and so the Host header and TLS SNI) keeps the original host name.
+    expect(calledUrl).toBe(url);
+    expect(init).toMatchObject({ method: 'POST', headers: { a: 'b' }, body: '{}', redirect: 'manual' });
+    expect(undiciMock.agents).toHaveLength(1);
+    expect(init.dispatcher).toBe(undiciMock.agents[0]);
+
+    // The agent's lookup answers with exactly the vetted first address, in both
+    // the all-addresses and the single-address callback forms.
+    const lookup = undiciMock.agents[0].options.connect?.lookup as LookupFunction;
+    const all = vi.fn();
+    lookup('api.example.com', { all: true }, all);
+    expect(all).toHaveBeenCalledWith(null, [{ address: '93.184.216.34', family: 4 }]);
+    const single = vi.fn();
+    lookup('api.example.com', {}, single);
+    expect(single).toHaveBeenCalledWith(null, '93.184.216.34', 4);
+
+    // The agent is torn down once the body has been read.
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+  });
+
+  it('a 302 is a failure with the redirect reason and is never followed', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('93.184.216.34', 4)]);
+    undiciMock.fetch.mockResolvedValueOnce(
+      new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } })
+    );
+    const err = await safeProviderFetch('https://api.example.com/v1/x', {}).catch((e) => e);
+    expect(err).toBeInstanceOf(ProviderRedirectError);
+    expect(err.status).toBe(302);
+    expect(err.message).toBe(REDIRECT_BLOCKED_ERROR);
+    expect(undiciMock.fetch).toHaveBeenCalledTimes(1);
+    expect(undiciMock.fetch.mock.calls[0][1].redirect).toBe('manual');
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+  });
+
+  it('reuses a pinned address for the same host instead of resolving again', async () => {
+    undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const pinned = { hostname: 'api.example.com', address: '93.184.216.34', family: 4 as const };
+    await safeProviderFetch('https://api.example.com/v1/x', { pinned });
+    expect(dnsMock.lookup).not.toHaveBeenCalled();
+    expect(undiciMock.agents[0].options.connect?.lookup).toBeTypeOf('function');
+  });
+
+  it('resolves again when the pinned address belongs to another host', async () => {
+    dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
+    const pinned = { hostname: 'other.example', address: '93.184.216.34', family: 4 as const };
+    await expect(safeProviderFetch('https://evil.example/v1', { pinned })).rejects.toBeInstanceOf(ProviderUrlError);
+    expect(undiciMock.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('pinnedLookup with the real undici Agent (no external network)', () => {
+  let server: Server;
+  let port: number;
+  let seenHost: string | undefined;
+
+  beforeEach(async () => {
+    server = createServer((req, res) => {
+      seenHost = req.headers.host;
+      res.end('pinned');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it('connects a made-up host name to the pinned address and keeps the Host header', async () => {
+    const real = await vi.importActual<typeof Undici>('undici');
+    const agent = new real.Agent({
+      connect: { lookup: pinnedLookup({ hostname: 'provider.invalid', address: '127.0.0.1', family: 4 }) },
+    });
+    try {
+      // provider.invalid cannot resolve (RFC 2606); only the pinned lookup can
+      // make this request land on the local server.
+      const res = await real.fetch(`http://provider.invalid:${port}/v1`, { dispatcher: agent });
+      expect(await res.text()).toBe('pinned');
+      expect(seenHost).toBe(`provider.invalid:${port}`);
+    } finally {
+      await agent.close();
+    }
   });
 });
