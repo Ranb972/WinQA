@@ -233,13 +233,44 @@ export async function getEnabledCustomProviders(userId?: string): Promise<Custom
 }
 
 /**
+ * Result of a custom-provider connection test. `valid`/`error` keep their
+ * original meaning; `status`, `latencyMs` and `model` are additive.
+ * `status` is the upstream HTTP status when the route reached the provider, the
+ * route's own status when it refused the request (non-2xx), or null when no
+ * response was received.
+ */
+export interface CustomProviderTestResult {
+  valid: boolean;
+  error?: string;
+  status: number | null;
+  latencyMs: number;
+  model: string;
+}
+
+/**
+ * Replace every occurrence of `key` in `text` with `[key]`. Keys under 8 chars
+ * are left alone (too likely to match ordinary text). Pure; safe for the UI to
+ * reuse on any string it is about to display.
+ */
+export function redactKey(text: string, key: string): string {
+  if (typeof text !== 'string' || typeof key !== 'string' || key.length < 8) {
+    return text;
+  }
+  return text.split(key).join('[key]');
+}
+
+/**
  * Test a custom provider through the server route. The check used to run in the
  * browser, where CORS blocks most providers and Anthropic cannot be reached at all
  * (audit V04); the route speaks both API formats and applies the SSRF guard.
  */
 export async function testCustomProviderConnection(
   provider: Pick<CustomProvider, 'baseUrl' | 'apiKey' | 'modelId' | 'headerType'>
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<CustomProviderTestResult> {
+  // Own wall time, used only when the route does not report latencyMs.
+  const startedAt = performance.now();
+  const elapsedMs = () => Math.round(performance.now() - startedAt);
+
   try {
     const res = await fetch('/api/test-custom-provider', {
       method: 'POST',
@@ -251,15 +282,39 @@ export async function testCustomProviderConnection(
         headerType: provider.headerType,
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { valid?: boolean; error?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      valid?: boolean;
+      error?: string;
+      status?: number | null;
+      latencyMs?: number;
+      model?: string;
+    };
+    const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : elapsedMs();
+    const status =
+      typeof data.status === 'number' || data.status === null
+        ? data.status
+        : res.ok
+          ? null
+          : res.status;
+    const model = typeof data.model === 'string' && data.model ? data.model : provider.modelId;
+
     if (data.valid) {
-      return { valid: true };
+      return { valid: true, status, latencyMs, model };
     }
-    return { valid: false, error: data.error || `HTTP ${res.status}` };
+    return {
+      valid: false,
+      error: redactKey(data.error || `HTTP ${res.status}`, provider.apiKey),
+      status,
+      latencyMs,
+      model,
+    };
   } catch (error) {
     return {
       valid: false,
-      error: error instanceof Error ? error.message : 'Connection failed',
+      error: redactKey(error instanceof Error ? error.message : 'Connection failed', provider.apiKey),
+      status: null,
+      latencyMs: elapsedMs(),
+      model: provider.modelId,
     };
   }
 }

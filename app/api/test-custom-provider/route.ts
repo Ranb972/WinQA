@@ -14,9 +14,33 @@ interface TestCustomProviderRequest {
   headerType?: 'bearer' | 'x-api-key';
 }
 
-interface TestCustomProviderResponse {
+/**
+ * Result of one upstream connection test. `valid`/`error` keep their original
+ * meaning; `status`, `latencyMs` and `model` are additive so the UI can show
+ * "Connected · {model} · {latency}" or "{reason} · HTTP {status}".
+ */
+export interface TestConnectionResult {
   valid: boolean;
   error?: string;
+  /** Upstream HTTP status when a response arrived; null on network error, timeout or throw. */
+  status: number | null;
+  /** Wall time of the upstream attempt, in whole milliseconds. */
+  latencyMs: number;
+  /** The model id that was tested, echoed back. */
+  model: string;
+}
+
+/**
+ * Replace every occurrence of the API key in an outgoing error string with
+ * `[key]`, so an upstream body or runtime error that echoes the key never
+ * reaches the client. Keys under 8 chars are left alone (too likely to match
+ * ordinary text). Output hardening only; no check depends on it.
+ */
+function redactKey(text: string, apiKey: string): string {
+  if (typeof text !== 'string' || typeof apiKey !== 'string' || apiKey.length < 8) {
+    return text;
+  }
+  return text.split(apiKey).join('[key]');
 }
 
 /**
@@ -53,9 +77,12 @@ async function testConnection(
   apiKey: string,
   modelId: string,
   headerType?: 'bearer' | 'x-api-key'
-): Promise<TestCustomProviderResponse> {
+): Promise<TestConnectionResult> {
   const normalizedUrl = normalizeBaseUrl(baseUrl);
   const headers = buildHeaders(apiKey, baseUrl, headerType);
+  // Wall time of the upstream attempt, reported alongside the status.
+  const startedAt = performance.now();
+  const elapsedMs = () => Math.round(performance.now() - startedAt);
 
   try {
     if (isAnthropicProvider(baseUrl)) {
@@ -71,28 +98,30 @@ async function testConnection(
         // isPrivateUrl validates only the original URL — never follow redirects.
         redirect: 'manual',
       });
+      const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
       if (response.status >= 300 && response.status < 400) {
-        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.' };
+        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.', ...meta };
       }
 
       if (response.status === 401 || response.status === 403) {
-        return { valid: false, error: 'Invalid API key' };
+        return { valid: false, error: 'Invalid API key', ...meta };
       }
 
       if (response.status === 429) {
-        return { valid: true }; // Rate limited but key is valid
+        return { valid: true, ...meta }; // Rate limited but key is valid
       }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         return {
           valid: false,
-          error: data.error?.message || `HTTP ${response.status}: ${response.statusText}`,
+          error: redactKey(data.error?.message || `HTTP ${response.status}: ${response.statusText}`, apiKey),
+          ...meta,
         };
       }
 
-      return { valid: true };
+      return { valid: true, ...meta };
     } else {
       // OpenAI-compatible API format
       const response = await fetch(`${normalizedUrl}/chat/completions`, {
@@ -106,32 +135,40 @@ async function testConnection(
         // isPrivateUrl validates only the original URL — never follow redirects.
         redirect: 'manual',
       });
+      const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
       if (response.status >= 300 && response.status < 400) {
-        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.' };
+        return { valid: false, error: 'Provider attempted an HTTP redirect — blocked for security.', ...meta };
       }
 
       if (response.status === 401 || response.status === 403) {
-        return { valid: false, error: 'Invalid API key' };
+        return { valid: false, error: 'Invalid API key', ...meta };
       }
 
       if (response.status === 429) {
-        return { valid: true }; // Rate limited but key is valid
+        return { valid: true, ...meta }; // Rate limited but key is valid
       }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         return {
           valid: false,
-          error: data.error?.message || `HTTP ${response.status}: ${response.statusText}`,
+          error: redactKey(data.error?.message || `HTTP ${response.status}: ${response.statusText}`, apiKey),
+          ...meta,
         };
       }
 
-      return { valid: true };
+      return { valid: true, ...meta };
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Connection failed';
-    return { valid: false, error: message };
+    return {
+      valid: false,
+      error: redactKey(message, apiKey),
+      status: null,
+      latencyMs: elapsedMs(),
+      model: modelId,
+    };
   }
 }
 
