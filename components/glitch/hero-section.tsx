@@ -81,11 +81,7 @@ export function HeroSection() {
             <div className="relative bg-white/[0.015] border border-white/[0.06] rounded-lg overflow-hidden">
               {/* Header bar */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
-                <span className="font-mono text-white/60 text-xs tracking-wider uppercase">System Status</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500" />
-                  <span className="text-white/60 text-xs font-mono">ONLINE</span>
-                </div>
+                <span className="font-mono text-white/60 text-xs tracking-wider uppercase">Platform Overview</span>
               </div>
 
               {/* Stats grid */}

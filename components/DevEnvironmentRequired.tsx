@@ -64,7 +64,8 @@ export default function DevEnvironmentRequired({ code }: DevEnvironmentRequiredP
         </span>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        This code uses React, Vue, Node.js, or other frameworks that can&apos;t run in a browser sandbox.
+        This code uses a framework or Node.js modules (React, Vue, Angular, Svelte, Next.js, require(), process.env, fs, __dirname). The code runners and the
+        sandboxed preview have no project setup or installed packages, so it may not run as written.
         Open it in an online IDE to test.
       </p>
       <div className="flex gap-2 flex-wrap">

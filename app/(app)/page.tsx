@@ -72,7 +72,7 @@ const featureSections = [
       { icon: Trophy, text: 'Crown the champion for any task' },
       { icon: Repeat, text: 'Switch models mid-conversation with one click' },
       { icon: Timer, text: "See who's fastest to the answer" },
-      { icon: KeyRound, text: 'Unleash premium models with your own keys' },
+      { icon: KeyRound, text: 'Use your own provider quota or add a custom provider' },
     ],
     statsTemplate: () => 'Compare AI models side-by-side',
   },
