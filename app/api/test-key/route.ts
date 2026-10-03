@@ -6,15 +6,27 @@ import { LLMProvider } from '@/lib/llm/types';
 // list; the Groq probe used llama-3.1-8b-instant, shut down 2026-08-16).
 import { defaultModels } from '@/lib/llm/registry';
 import { friendlyErrorMessage } from '@/lib/friendly-errors';
+import dbConnect from '@/lib/mongodb';
+import ProviderCredential from '@/models/ProviderCredential';
+import { loadUserKeys } from '@/lib/server/user-keys';
 
 // Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
 // leaving ~5s headroom under maxDuration = 15.
 export const maxDuration = 15;
 
+/**
+ * `apiKey` is the key the user just typed. Without it the route tests the key
+ * saved for `provider` on the server (lib/server/user-keys.ts), so a saved key
+ * never has to travel from the browser to be checked.
+ */
 interface TestKeyRequest {
   provider: LLMProvider;
-  apiKey: string;
+  apiKey?: string;
 }
+
+// A Set, not `in`: 'toString' and other prototype names are not providers.
+const VALID_PROVIDERS: ReadonlySet<string> = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'mistral']);
+const NO_SAVED_KEY_ERROR = 'No saved key for this provider';
 
 interface TestKeyResponse {
   valid: boolean;
@@ -23,7 +35,7 @@ interface TestKeyResponse {
 
 const PROVIDER_TIMEOUT_MS = 10_000;
 const TIMEOUT_ERROR = 'Provider took too long to respond. Try again.';
-// Every key this route checks was typed by the user, so a rejection is theirs.
+// Every key this route checks is the user's (typed or saved), so a rejection is theirs.
 // Names match providerDisplayNames in lib/llm/index.ts, which is not imported
 // here to keep the SDKs on their dynamic imports.
 const USER_KEY = { keySource: 'user' as const };
@@ -199,6 +211,28 @@ async function testMistralKey(apiKey: string): Promise<TestKeyResponse> {
   }
 }
 
+/**
+ * Records the outcome on the user's saved record for this provider, if there is
+ * one (updateOne matches nothing otherwise and creates nothing). Fire-and-forget:
+ * the answer never waits for it, and a failure logs only the slot and the error
+ * class. Only lastTestedAt and lastTestOk are set; never userId, slot or kind.
+ */
+function recordTestResult(userId: string, provider: LLMProvider, ok: boolean): void {
+  void (async () => {
+    try {
+      await dbConnect();
+      await ProviderCredential.updateOne(
+        { userId, slot: provider, kind: 'builtin' },
+        { $set: { lastTestedAt: new Date(), lastTestOk: ok } },
+        { runValidators: true }
+      );
+    } catch (err) {
+      const name = err instanceof Error ? err.name : 'Error';
+      console.error(`[keys] record-test-failed slot=${provider} error=${name}`);
+    }
+  })();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -207,22 +241,37 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as TestKeyRequest;
-    const { provider, apiKey } = body;
+    const { provider } = body;
+    // No apiKey field (or null): test the saved key. A field that is present must
+    // be a typed key, as before.
+    const useSavedKey = body.apiKey === undefined || body.apiKey === null;
 
-    if (!provider || !apiKey) {
+    if (!provider || (!useSavedKey && !body.apiKey)) {
       return NextResponse.json(
         { valid: false, error: 'Provider and API key are required' },
         { status: 400 }
       );
     }
 
-    // Validate provider
-    const validProviders: LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
-    if (!validProviders.includes(provider)) {
+    // Validate provider (before any DB call)
+    if (typeof provider !== 'string' || !VALID_PROVIDERS.has(provider)) {
       return NextResponse.json(
         { valid: false, error: 'Invalid provider' },
         { status: 400 }
       );
+    }
+
+    let apiKey: string;
+    if (useSavedKey) {
+      // A record that does not decrypt is logged by the loader and counts as no key.
+      const { keys } = await loadUserKeys(userId, [provider]);
+      const saved = keys[provider];
+      if (!saved) {
+        return NextResponse.json({ valid: false, error: NO_SAVED_KEY_ERROR }, { status: 404 });
+      }
+      apiKey = saved;
+    } else {
+      apiKey = body.apiKey as string;
     }
 
     let result: TestKeyResponse;
@@ -243,6 +292,10 @@ export async function POST(request: NextRequest) {
       default:
         result = { valid: false, error: 'Unknown provider' };
     }
+
+    // Only a test of the saved key says anything about the saved record. A typed
+    // key may be a different key, and its row may not even decrypt here.
+    if (useSavedKey) recordTestResult(userId, provider, result.valid);
 
     return NextResponse.json(result);
   } catch {

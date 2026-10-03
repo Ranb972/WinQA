@@ -8,6 +8,9 @@ import { PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import { friendlyTestFailure } from '@/lib/custom-providers';
 import { consumeDailyAllowance, consumeProviderTestAllowance } from '@/lib/rate-limit';
+import dbConnect from '@/lib/mongodb';
+import { loadCustomProvider } from '@/lib/server/user-keys';
+import ProviderCredential from '@/models/ProviderCredential';
 
 // auth() is mocked to a valid user so requests clear the auth gate; single
 // tests override it with mockResolvedValueOnce.
@@ -36,6 +39,15 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => {
     consumeDailyAllowance: vi.fn(async () => ({ allowed: true })),
     consumeProviderTestAllowance: vi.fn(async () => ({ allowed: true })),
   };
+});
+
+// No DB: the connection is a no-op and the saved-provider loader is a mock (null =
+// not found, not this user's, or not decryptable). ProviderCredential.updateOne is
+// spied on in the saved-provider tests.
+vi.mock('@/lib/mongodb', () => ({ default: vi.fn(async () => ({})) }));
+vi.mock('@/lib/server/user-keys', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/user-keys')>();
+  return { ...actual, loadCustomProvider: vi.fn(async () => null) };
 });
 
 // No real DNS and no network: every host resolves to the public answer below
@@ -562,5 +574,286 @@ describe('POST /api/test-custom-provider — the provider answer is capped at 64
     const shown = friendlyTestFailure(json, API_KEY);
     expect(shown).toEqual({ reason: 'Response too large', statusText: null, detail: PROVIDER_BODY_TOO_LARGE_ERROR });
     expect(JSON.stringify(shown)).not.toContain('HTTP');
+  });
+});
+
+describe('POST /api/test-custom-provider — a saved provider ({ providerId })', () => {
+  const PROVIDER_ID = '0123456789abcdef01234567';
+  const SAVED_BASE_URL = 'https://saved.example/v1';
+  // Fake, test-only key, distinct from API_KEY.
+  const SAVED_KEY = 'sk-saved-FAKEKEY-fedcba9876543210';
+  const SAVED_MODEL = 'saved-model-1';
+  const saved = (overrides: Record<string, unknown> = {}) => ({
+    id: PROVIDER_ID,
+    name: 'Saved',
+    baseUrl: SAVED_BASE_URL,
+    apiKey: SAVED_KEY,
+    modelId: SAVED_MODEL,
+    enabled: true,
+    ...overrides,
+  });
+
+  let updateOne: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.mocked(loadCustomProvider).mockReset();
+    vi.mocked(loadCustomProvider).mockResolvedValue(null);
+    vi.mocked(dbConnect).mockClear();
+    updateOne = vi
+      .spyOn(ProviderCredential, 'updateOne')
+      .mockResolvedValue({ acknowledged: true, matchedCount: 1, modifiedCount: 1 } as never);
+  });
+
+  afterEach(() => {
+    updateOne.mockRestore();
+  });
+
+  it.each([
+    ['baseUrl', { providerId: PROVIDER_ID, baseUrl: 'https://attacker.example/v1' }],
+    ['apiKey', { providerId: PROVIDER_ID, apiKey: API_KEY }],
+    ['both', { providerId: PROVIDER_ID, baseUrl: BASE_URL, apiKey: API_KEY, modelId: MODEL }],
+  ])('providerId with %s -> 400 before any DB or network call', async (_label, body) => {
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      valid: false,
+      error: 'Send either providerId or baseUrl and apiKey, not both',
+    });
+    expect(loadCustomProvider).not.toHaveBeenCalled();
+    expect(dbConnect).not.toHaveBeenCalled();
+    expect(dnsMock.lookup).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+  });
+
+  it('fetches ONLY the saved host, with the saved key as Bearer, and the saved model', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    const text = await res.clone().text();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ valid: true, status: 200, latencyMs: expect.any(Number), model: SAVED_MODEL });
+    expect(text).not.toContain(SAVED_KEY);
+
+    expect(loadCustomProvider).toHaveBeenCalledWith('user_test', PROVIDER_ID);
+    expect(dnsMock.lookup).toHaveBeenCalledTimes(1);
+    expect(dnsMock.lookup).toHaveBeenCalledWith('saved.example', { all: true, verbatim: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${SAVED_BASE_URL}/chat/completions`);
+    expect(init.headers.Authorization).toBe(`Bearer ${SAVED_KEY}`);
+    expect(init.headers['x-api-key']).toBeUndefined();
+    expect(JSON.parse(init.body).model).toBe(SAVED_MODEL);
+    expect(init.redirect).toBe('manual');
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
+
+  it('a saved x-api-key provider sends the saved key in x-api-key; headerType is overridable', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved({ headerType: 'x-api-key' }));
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(fetchMock.mock.calls[0][1].headers['x-api-key']).toBe(SAVED_KEY);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBeUndefined();
+
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved({ headerType: 'x-api-key' }));
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID, headerType: 'bearer' }));
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe(`Bearer ${SAVED_KEY}`);
+    expect(fetchMock.mock.calls[1][1].headers['x-api-key']).toBeUndefined();
+  });
+
+  it('a modelId in the body overrides the saved one', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    const json = await (await POST(makeRequest({ providerId: PROVIDER_ID, modelId: 'override-model' }))).json();
+    expect(json).toMatchObject({ valid: true, model: 'override-model' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('override-model');
+    expect(fetchMock.mock.calls[0][0]).toBe(`${SAVED_BASE_URL}/chat/completions`);
+  });
+
+  it('an empty modelId override is validated as today (400, nothing fetched, nothing metered)', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID, modelId: '' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ valid: false, error: 'Base URL, API key, and model ID are required' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+  });
+
+  it('an upper-case id is looked up lower-case and its state recorded on the lower-case slot', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID.toUpperCase() }));
+    expect(loadCustomProvider).toHaveBeenCalledWith('user_test', PROVIDER_ID);
+    await vi.waitFor(() => expect(updateOne).toHaveBeenCalledTimes(1));
+    expect(updateOne.mock.calls[0][0]).toEqual({ userId: 'user_test', slot: `custom:${PROVIDER_ID}`, kind: 'custom' });
+  });
+
+  it('an unknown providerId (loader null) -> 404, nothing fetched, nothing metered, nothing recorded', async () => {
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ valid: false, error: 'Custom provider not found' });
+    expect(loadCustomProvider).toHaveBeenCalledTimes(1);
+    expect(dnsMock.lookup).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
+  it('a saved key that does not decrypt (loader null) -> the same 404, nothing fetched', async () => {
+    // The real loader logs `[keys] decrypt-failed` and returns null; the client
+    // cannot tell that apart from not found.
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(null);
+    const res = await POST(makeRequest({ providerId: 'abcdefabcdefabcdefabcdef', modelId: MODEL }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ valid: false, error: 'Custom provider not found' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(safeProviderFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['too short', 'abc'],
+    ['12 characters', 'aaaaaaaaaaaa'],
+    ['25 hex', `${PROVIDER_ID}0`],
+    ['non-hex', 'zzzzzzzzzzzzzzzzzzzzzzzz'],
+    ['a number', 123],
+    ['null', null],
+    ['an object', { $ne: null }],
+  ])('a malformed providerId (%s) -> 404 with no DB call and no fetch', async (_label, providerId) => {
+    const res = await POST(makeRequest({ providerId }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ valid: false, error: 'Custom provider not found' });
+    expect(loadCustomProvider).not.toHaveBeenCalled();
+    expect(dbConnect).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('metering is consumed exactly once, after the load and the guards, before the request', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(consumeProviderTestAllowance).toHaveBeenCalledTimes(1);
+    expect(consumeProviderTestAllowance).toHaveBeenCalledWith('user_test');
+    expect(consumeDailyAllowance).not.toHaveBeenCalled();
+
+    const order = (fn: unknown) => vi.mocked(fn as () => unknown).mock.invocationCallOrder[0];
+    expect(order(loadCustomProvider)).toBeLessThan(order(resolveProviderAddress));
+    expect(order(resolveProviderAddress)).toBeLessThan(order(consumeProviderTestAllowance));
+    expect(order(consumeProviderTestAllowance)).toBeLessThan(order(safeProviderFetch));
+  });
+
+  it('the saved base URL passes the same guards: resolving to a private address is a 400 that consumes nothing', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '10.0.0.5', family: 4 }]);
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ valid: false, error: 'The provider address is not reachable from WinQA' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
+  it('the saved test uses the same 20 s budget and the 64 KiB cap', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(resolveProviderAddress).toHaveBeenCalledWith(SAVED_BASE_URL, DEFAULT_PROVIDER_TIMEOUT_MS);
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({
+      maxBodyBytes: TEST_PROVIDER_MAX_BODY_BYTES,
+      timeoutMs: expect.any(Number),
+    });
+    const { timeoutMs } = vi.mocked(safeProviderFetch).mock.calls[0][1] as { timeoutMs: number };
+    expect(timeoutMs).toBeLessThanOrEqual(DEFAULT_PROVIDER_TIMEOUT_MS);
+    expect(timeoutMs).toBeGreaterThan(DEFAULT_PROVIDER_TIMEOUT_MS - 1_000);
+  });
+
+  it('the limit reached -> 429, no request, nothing recorded', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    vi.mocked(consumeProviderTestAllowance).mockResolvedValueOnce({ allowed: false });
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    expect(res.status).toBe(429);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
+  it('an upstream error that echoes the saved key -> [key], never the key', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(
+      upstream(400, { error: { message: `Incorrect API key provided: ${SAVED_KEY}. Check it.` } })
+    );
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    const text = await res.clone().text();
+    expect((await res.json()).error).toBe('Incorrect API key provided: [key]. Check it.');
+    expect(text).not.toContain(SAVED_KEY);
+  });
+
+  it('records lastTestOk true after a passing test (only lastTestedAt and lastTestOk are set)', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID }));
+    await vi.waitFor(() => expect(updateOne).toHaveBeenCalledTimes(1));
+    const [filter, update] = updateOne.mock.calls[0];
+    expect(filter).toEqual({ userId: 'user_test', slot: `custom:${PROVIDER_ID}`, kind: 'custom' });
+    expect(update).toEqual({ $set: { lastTestedAt: expect.any(Date), lastTestOk: true } });
+  });
+
+  it('records lastTestOk false after a rejected key', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved());
+    fetchMock.mockResolvedValueOnce(upstream(401));
+    const json = await (await POST(makeRequest({ providerId: PROVIDER_ID }))).json();
+    expect(json).toMatchObject({ valid: false, error: 'Invalid API key', status: 401 });
+    await vi.waitFor(() => expect(updateOne).toHaveBeenCalledTimes(1));
+    expect(updateOne.mock.calls[0][1]).toEqual({ $set: { lastTestedAt: expect.any(Date), lastTestOk: false } });
+  });
+
+  // Lets any fire-and-forget write run before asserting there was none.
+  const settleWrites = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+  it.each([
+    ['a different modelId', { modelId: 'trial-model' }, {}],
+    ['a different headerType', { headerType: 'x-api-key' }, {}],
+  ])('a test with %s is not recorded on the saved provider', async (_label, override, savedOverrides) => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved(savedOverrides));
+    fetchMock.mockResolvedValueOnce(upstream(404, { error: { message: 'model not found' } }));
+    const json = await (await POST(makeRequest({ providerId: PROVIDER_ID, ...override }))).json();
+    expect(json).toMatchObject({ valid: false, status: 404 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await settleWrites();
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
+  it('an override equal to the saved values is recorded like no override', async () => {
+    vi.mocked(loadCustomProvider).mockResolvedValueOnce(saved({ headerType: 'bearer' }));
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest({ providerId: PROVIDER_ID, modelId: SAVED_MODEL, headerType: 'bearer' }));
+    await vi.waitFor(() => expect(updateOne).toHaveBeenCalledTimes(1));
+    expect(updateOne.mock.calls[0][1]).toEqual({ $set: { lastTestedAt: expect.any(Date), lastTestOk: true } });
+  });
+
+  it('a loader that throws (DB down) -> 500 with the generic text; the DB message is neither sent nor logged', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const dbMessage = 'connect ECONNREFUSED cluster0-shard-00-01.secret-host.mongodb.net:27017';
+    vi.mocked(loadCustomProvider).mockRejectedValueOnce(new Error(dbMessage));
+    const res = await POST(makeRequest({ providerId: PROVIDER_ID }));
+    const text = await res.clone().text();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ valid: false, error: 'Something went wrong. Please try again.' });
+    expect(text).not.toContain('secret-host');
+    const logged = errorLog.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(logged).toContain('[keys] load-failed error=Error');
+    expect(logged).not.toContain('secret-host');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+    errorLog.mockRestore();
+  });
+
+  it('the typed form never loads a saved provider and records nothing', async () => {
+    fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
+    await POST(makeRequest(validBody));
+    await settleWrites();
+    expect(loadCustomProvider).not.toHaveBeenCalled();
+    expect(dbConnect).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE_URL}/chat/completions`);
   });
 });
