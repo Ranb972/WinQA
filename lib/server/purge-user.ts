@@ -5,6 +5,7 @@ import DailyUsage from '@/models/DailyUsage';
 import Insight from '@/models/Insight';
 import Leaderboard from '@/models/Leaderboard';
 import PromptLibrary from '@/models/PromptLibrary';
+import ProviderCredential from '@/models/ProviderCredential';
 import TestCase from '@/models/TestCase';
 import UserFavorite from '@/models/UserFavorite';
 
@@ -16,7 +17,7 @@ export const SYSTEM_OWNER_ID = 'system';
 type Filter = Record<string, unknown>;
 
 // The two statics the purge uses, typed structurally so one table can hold
-// all eight models.
+// all nine models.
 interface PurgeableModel {
   schema: { path(path: string): unknown };
   deleteMany(filter: Filter): PromiseLike<{ deletedCount: number }>;
@@ -40,9 +41,10 @@ interface PurgeTarget {
 // against the model's schema before any query, and
 // lib/server/purge-user.test.ts pins every entry.
 // Order is the purge order: keys and per-user state first, then content.
-// C6 adds the credential collection as the first entry:
-//   { collection: 'providercredentials', model: ProviderCredential, field: 'userId', hasPublicRows: false },
+// Saved API keys go first, so a run that stops part-way never leaves a
+// deleted user's credentials behind its content.
 export const PURGE_TARGETS: readonly PurgeTarget[] = [
+  { collection: 'providercredentials', model: ProviderCredential, field: 'userId', hasPublicRows: false },
   { collection: 'dailyusages', model: DailyUsage, field: 'userId', hasPublicRows: false },
   { collection: 'leaderboards', model: Leaderboard, field: 'odlUserId', hasPublicRows: false },
   { collection: 'battles', model: Battle, field: 'odlUserId', hasPublicRows: false },

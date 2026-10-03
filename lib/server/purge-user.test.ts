@@ -7,6 +7,7 @@ import DailyUsage from '@/models/DailyUsage';
 import Insight from '@/models/Insight';
 import Leaderboard from '@/models/Leaderboard';
 import PromptLibrary from '@/models/PromptLibrary';
+import ProviderCredential from '@/models/ProviderCredential';
 import TestCase from '@/models/TestCase';
 import UserFavorite from '@/models/UserFavorite';
 
@@ -20,6 +21,7 @@ const USER = 'user_2abcDEF123';
 // The expected user field per model, written out here independently of the
 // table in purge-user.ts. A wrong field is a silent no-op in Mongoose.
 const MODELS = [
+  { modelName: 'ProviderCredential', model: ProviderCredential, field: 'userId', collection: 'providercredentials', isPublic: false },
   { modelName: 'Battle', model: Battle, field: 'odlUserId', collection: 'battles', isPublic: false },
   { modelName: 'Leaderboard', model: Leaderboard, field: 'odlUserId', collection: 'leaderboards', isPublic: false },
   { modelName: 'DailyUsage', model: DailyUsage, field: 'userId', collection: 'dailyusages', isPublic: false },
@@ -76,7 +78,8 @@ describe('purgeUserData: the user field of each model', () => {
     }
   });
 
-  it('the table covers exactly the eight user-keyed models', () => {
+  it('the table covers exactly the nine user-keyed models', () => {
+    expect(PURGE_TARGETS).toHaveLength(9);
     expect(PURGE_TARGETS.map((t) => t.collection).sort()).toEqual(
       MODELS.map((m) => m.collection).sort()
     );
@@ -163,6 +166,13 @@ describe('purgeUserData: result and failure', () => {
     updateSpies.get('BugReport')!.mockImplementation((() => Promise.reject(new Error('db down'))) as never);
     await expect(purgeUserData(USER)).rejects.toThrow('db down');
     expect(deleteSpies.get('BugReport')).not.toHaveBeenCalled();
+  });
+
+  it('deletes saved API keys first, before any other collection', async () => {
+    await purgeUserData(USER);
+    expect(PURGE_TARGETS[0].collection).toBe('providercredentials');
+    expect(calls[0]).toBe('ProviderCredential.deleteMany');
+    expect(calls).toHaveLength(9 + 4); // nine deletes, four public reassignments
   });
 
   it('deletes per-user state and battles before any content', async () => {
