@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Loader2, Trash2, Bot } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
@@ -14,7 +14,16 @@ import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo
 import { cn } from '@/lib/utils';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import { getModelPreferences, setModelPreference } from '@/lib/model-preferences';
-import { CustomProvider, getEnabledCustomProviders } from '@/lib/custom-providers';
+import { getEnabledCustomProviders } from '@/lib/custom-providers';
+import {
+  PickerProvider,
+  buildChatBody,
+  createLatestGuard,
+  fetchServerProviders,
+  isStaleProviderError,
+  mergeProviders,
+  toSelectorProvider,
+} from '@/lib/provider-picker';
 
 interface Message extends ChatMessageType {
   id: string;
@@ -73,24 +82,52 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   } | null>(null);
   const [modelPreferences, setModelPreferences] = useState<Record<LLMProvider, SpecificModel>>(DEFAULT_MODEL_PREFERENCES);
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
-  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [pickerProviders, setPickerProviders] = useState<PickerProvider[]>([]);
   const [selectedCustomProviders, setSelectedCustomProviders] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load API keys and custom providers on mount and when user changes
+  // Saved providers come from the account (GET /api/keys, enabled only);
+  // providers still in this browser are merged in, marked "in this browser".
+  // Latest load wins: the run before Clerk has a user must not overwrite the
+  // list the run with the user id produced.
+  const loadGuard = useRef(createLatestGuard()).current;
+  const loadProviders = useCallback(async () => {
+    const isLatest = loadGuard.begin();
+    const [saved, inBrowser] = await Promise.all([
+      fetchServerProviders(),
+      getEnabledCustomProviders(user?.id),
+    ]);
+    if (!isLatest()) return;
+    setPickerProviders(mergeProviders(saved, inBrowser));
+  }, [user?.id, loadGuard]);
+
+  // Load the un-migrated local keys and the provider list on mount and when user changes
   useEffect(() => {
+    let cancelled = false;
     async function loadData() {
       const keys = await getApiKeys(user?.id);
+      if (cancelled) return;
       setCachedApiKeys(keys);
-
-      // Load enabled custom providers
-      const providers = await getEnabledCustomProviders(user?.id);
-      setCustomProviders(providers);
+      await loadProviders();
     }
     loadData();
-  }, [user?.id]);
+    return () => {
+      cancelled = true;
+      loadGuard.invalidate();
+    };
+  }, [user?.id, loadProviders, loadGuard]);
+
+  // Drop selections whose provider left the list (disabled or removed)
+  useEffect(() => {
+    setSelectedCustomProviders((prev) => {
+      const next = prev.filter((id) => pickerProviders.some((p) => p.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [pickerProviders]);
+
+  const selectorProviders = useMemo(() => pickerProviders.map(toSelectorProvider), [pickerProviders]);
 
   // Load model preferences from localStorage
   useEffect(() => {
@@ -154,15 +191,18 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
     }));
 
     try {
-      // Use cached API keys (already decrypted)
-      const customApiKeys = cachedApiKeys;
+      // Local keys (un-migrated browser blob only); buildChatBody attaches them
+      // to built-in requests only while the blob holds a key.
+      const localKeys = cachedApiKeys;
 
       if (mode === 'single') {
         // Single model: one request with loading indicator
         const response = await fetchWithTimeout('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: chatHistory, models: selectedModel, modelPreferences, customApiKeys }),
+          body: JSON.stringify(
+            buildChatBody({ messages: chatHistory, modelPreferences }, { model: selectedModel, localKeys })
+          ),
         });
 
         const data = await response.json() as ChatResponse;
@@ -180,7 +220,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       } else {
         // Compare Mode: Progressive loading with parallel requests
         // Get selected custom providers
-        const activeCustomProviders = customProviders.filter((p) =>
+        const activeCustomProviders = pickerProviders.filter((p) =>
           selectedCustomProviders.includes(p.id)
         );
 
@@ -212,15 +252,18 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             const response = await fetchWithTimeout('/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                messages: chatHistory,
-                models: model,
-                modelPreferences,
-                customApiKeys,
-                crossProviderFallback: false,
-                maxFallbackAttempts: 2,
-                fallbackDelay: 200,
-              }),
+              body: JSON.stringify(
+                buildChatBody(
+                  {
+                    messages: chatHistory,
+                    modelPreferences,
+                    crossProviderFallback: false,
+                    maxFallbackAttempts: 2,
+                    fallbackDelay: 200,
+                  },
+                  { model, localKeys }
+                )
+              ),
             });
 
             const data = await response.json() as ChatResponse;
@@ -263,14 +306,15 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             const response = await fetchWithTimeout('/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                messages: chatHistory,
-                models: `custom:${provider.id}`,
-                customProvider: provider,
-              }),
+              body: JSON.stringify(
+                buildChatBody({ messages: chatHistory }, { model: `custom:${provider.id}`, provider })
+              ),
             });
 
             const data = await response.json() as ChatResponse;
+            // Disabled or removed on the account: the message is shown as the card text;
+            // refresh the list so the provider leaves the picker. No retry.
+            if (isStaleProviderError(data.error)) void loadProviders();
 
             setMessages((prev) =>
               prev.map((msg) =>
@@ -354,7 +398,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
             selectedModel={selectedModel}
             selectedModels={selectedModels}
             modelPreferences={modelPreferences}
-            customProviders={customProviders}
+            customProviders={selectorProviders}
             selectedCustomProviders={selectedCustomProviders}
             onModelChange={setSelectedModel}
             onModelsChange={setSelectedModels}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import {
@@ -45,7 +45,15 @@ import {
 } from '@/lib/code-execution';
 import { LLMProvider, ChatResponse, providerDisplayNames, specificModelDisplayNames, defaultModels } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
-import { getEnabledCustomProviders, CustomProvider } from '@/lib/custom-providers';
+import { getEnabledCustomProviders } from '@/lib/custom-providers';
+import {
+  PickerProvider,
+  buildChatBody,
+  createLatestGuard,
+  fetchServerProviders,
+  isStaleProviderError,
+  mergeProviders,
+} from '@/lib/provider-picker';
 import { getModelPreferences } from '@/lib/model-preferences';
 
 type DebugMode = 'summary' | 'detailed';
@@ -133,7 +141,7 @@ export default function CodeTestingPage() {
   const [isAnalyzingSuccess, setIsAnalyzingSuccess] = useState(false);
   const [successAnalysisResult, setSuccessAnalysisResult] = useState<string | null>(null);
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
-  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [pickerProviders, setPickerProviders] = useState<PickerProvider[]>([]);
   const [debugSelectedModel, setDebugSelectedModel] = useState<string>('groq');
   const [debugMode, setDebugMode] = useState<DebugMode>('summary');
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
@@ -145,15 +153,43 @@ export default function CodeTestingPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Saved providers come from the account (GET /api/keys, enabled only);
+  // providers still in this browser are merged in, marked "in this browser".
+  // Latest load wins: the run before Clerk has a user must not overwrite the
+  // list the run with the user id produced.
+  const loadGuard = useRef(createLatestGuard()).current;
+  const loadProviders = useCallback(async () => {
+    const isLatest = loadGuard.begin();
+    const [saved, inBrowser] = await Promise.all([
+      fetchServerProviders(),
+      getEnabledCustomProviders(user?.id),
+    ]);
+    if (!isLatest()) return;
+    setPickerProviders(mergeProviders(saved, inBrowser));
+  }, [user?.id, loadGuard]);
+
   useEffect(() => {
+    let cancelled = false;
     async function loadData() {
       const keys = await getApiKeys(user?.id);
+      if (cancelled) return;
       setCachedApiKeys(keys);
-      const providers = await getEnabledCustomProviders(user?.id);
-      setCustomProviders(providers);
+      await loadProviders();
     }
     loadData();
-  }, [user?.id]);
+    return () => {
+      cancelled = true;
+      loadGuard.invalidate();
+    };
+  }, [user?.id, loadProviders, loadGuard]);
+
+  // A provider that left the list (disabled or removed) must not stay selected
+  useEffect(() => {
+    const gone = (m: string) =>
+      m.startsWith('custom:') && !pickerProviders.some((p) => p.id === m.replace('custom:', ''));
+    setSelectedModel((m) => (gone(m) ? 'groq' : m));
+    setDebugSelectedModel((m) => (gone(m) ? 'groq' : m));
+  }, [pickerProviders]);
 
   const runCode = async (codeToRun: string) => {
     setIsRunning(true);
@@ -201,13 +237,10 @@ export default function CodeTestingPage() {
 
     try {
       const modelPreferences = getModelPreferences();
-      const customApiKeys = cachedApiKeys;
-
-      let customProvider: CustomProvider | undefined;
-      if (selectedModel.startsWith('custom:')) {
-        const providerId = selectedModel.replace('custom:', '');
-        customProvider = customProviders.find((p) => p.id === providerId);
-      }
+      const localKeys = cachedApiKeys;
+      const provider = selectedModel.startsWith('custom:')
+        ? pickerProviders.find((p) => p.id === selectedModel.replace('custom:', ''))
+        : undefined;
 
       const systemPrompt = `You are a code generation assistant. Generate ${LANGUAGE_DISPLAY_NAMES[language]} code based on the user's request.
 IMPORTANT: Only output the code itself, no explanations, no markdown code blocks, no backticks. Just pure ${LANGUAGE_DISPLAY_NAMES[language]} code that can be executed directly.`;
@@ -215,20 +248,23 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          models: selectedModel,
-          modelPreferences,
-          customApiKeys,
-          ...(customProvider && { customProvider }),
-        }),
+        body: JSON.stringify(
+          buildChatBody(
+            {
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt },
+              ],
+              modelPreferences,
+            },
+            { model: selectedModel, localKeys, provider }
+          )
+        ),
       });
 
       const data = await response.json() as ChatResponse;
       setKeyNotice(keyNoticeFor(data));
+      if (isStaleProviderError(data.error)) void loadProviders();
       if (data.error) throw new Error(data.error);
 
       let cleanCode = data.content.trim();
@@ -295,13 +331,10 @@ IMPORTANT: Only output the code itself, no explanations, no markdown code blocks
 
     try {
       const modelPreferences = getModelPreferences();
-      const customApiKeys = cachedApiKeys;
-
-      let customProvider: CustomProvider | undefined;
-      if (model.startsWith('custom:')) {
-        const providerId = model.replace('custom:', '');
-        customProvider = customProviders.find((p) => p.id === providerId);
-      }
+      const localKeys = cachedApiKeys;
+      const provider = model.startsWith('custom:')
+        ? pickerProviders.find((p) => p.id === model.replace('custom:', ''))
+        : undefined;
 
       const summaryPrompt = `I have the following ${LANGUAGE_DISPLAY_NAMES[language]} code that produced an error:
 
@@ -338,17 +371,17 @@ Please analyze the error and explain:
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: debugPrompt }],
-          models: model,
-          modelPreferences,
-          customApiKeys,
-          ...(customProvider && { customProvider }),
-        }),
+        body: JSON.stringify(
+          buildChatBody(
+            { messages: [{ role: 'user', content: debugPrompt }], modelPreferences },
+            { model, localKeys, provider }
+          )
+        ),
       });
 
       const data = await response.json() as ChatResponse;
       setKeyNotice(keyNoticeFor(data));
+      if (isStaleProviderError(data.error)) void loadProviders();
       if (data.error) throw new Error(data.error);
       setDebugResult(data.content);
     } catch (error) {
@@ -368,13 +401,10 @@ Please analyze the error and explain:
 
     try {
       const modelPreferences = getModelPreferences();
-      const customApiKeys = cachedApiKeys;
-
-      let customProvider: CustomProvider | undefined;
-      if (model.startsWith('custom:')) {
-        const providerId = model.replace('custom:', '');
-        customProvider = customProviders.find((p) => p.id === providerId);
-      }
+      const localKeys = cachedApiKeys;
+      const provider = model.startsWith('custom:')
+        ? pickerProviders.find((p) => p.id === model.replace('custom:', ''))
+        : undefined;
 
       const summaryPrompt = `Analyze this working ${LANGUAGE_DISPLAY_NAMES[language]} code briefly in 3-5 bullet points:
 - What's good about this code
@@ -405,17 +435,17 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: analysisPrompt }],
-          models: model,
-          modelPreferences,
-          customApiKeys,
-          ...(customProvider && { customProvider }),
-        }),
+        body: JSON.stringify(
+          buildChatBody(
+            { messages: [{ role: 'user', content: analysisPrompt }], modelPreferences },
+            { model, localKeys, provider }
+          )
+        ),
       });
 
       const data = await response.json() as ChatResponse;
       setKeyNotice(keyNoticeFor(data));
+      if (isStaleProviderError(data.error)) void loadProviders();
       if (data.error) throw new Error(data.error);
       setSuccessAnalysisResult(data.content);
     } catch (error) {
@@ -442,7 +472,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
     }
   };
 
-  const enabledCustomProviders = customProviders.filter((p) => p.enabled);
+  const enabledCustomProviders = pickerProviders;
   const lineCount = code ? code.split('\n').length : 0;
 
   // Result helpers
@@ -512,7 +542,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
             {enabledCustomProviders.map((provider) => (
               <SelectItem key={provider.id} value={`custom:${provider.id}`} className="text-zinc-300 focus:bg-white/[0.04]">
                 <div className="flex flex-col">
-                  <span className="font-mono text-sm text-white">{provider.name}</span>
+                  <span className="font-mono text-sm text-white">{provider.label}</span>
                   <span className="font-mono text-[10px] text-orange-500">{provider.modelId}</span>
                 </div>
               </SelectItem>
@@ -725,7 +755,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
                               {enabledCustomProviders.map((provider) => (
                                 <SelectItem key={provider.id} value={`custom:${provider.id}`} className="text-zinc-400 focus:bg-white/[0.04]">
                                   <div className="flex flex-col">
-                                    <span className="font-mono text-sm text-white">{provider.name}</span>
+                                    <span className="font-mono text-sm text-white">{provider.label}</span>
                                     <span className="font-mono text-[10px] text-orange-500">{provider.modelId}</span>
                                   </div>
                                 </SelectItem>
