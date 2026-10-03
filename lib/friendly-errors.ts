@@ -2,6 +2,11 @@ import type { KeySource } from './llm/types';
 
 export const DAILY_LIMIT_ERROR = 'daily limit reached';
 export const REDIRECT_BLOCKED_ERROR = 'Provider attempted an HTTP redirect (blocked for security)';
+/**
+ * A custom provider's response body went over the cap WinQA reads (lib/security.ts
+ * safeProviderFetch, maxBodyBytes). WinQA's own text, matched exactly.
+ */
+export const PROVIDER_BODY_TOO_LARGE_ERROR = 'Provider response exceeded the size limit';
 /** A custom-provider host resolved to a private/internal address (lib/security.ts). */
 export const UNREACHABLE_PROVIDER_ERROR = 'The provider address is not reachable from WinQA';
 // checkProviderUrl's messages (lib/security.ts returns these constants). The length
@@ -68,6 +73,10 @@ export function friendlyErrorMessage(raw: string | undefined, context?: ErrorCon
 
   if (raw === REDIRECT_BLOCKED_ERROR) {
     return 'This provider attempted a redirect, which WinQA blocks for security. Check the provider URL.';
+  }
+
+  if (raw === PROVIDER_BODY_TOO_LARGE_ERROR) {
+    return 'This provider sent a response that was too large.';
   }
 
   // WinQA's own address guard (checkProviderUrl's texts and the DNS-vetting

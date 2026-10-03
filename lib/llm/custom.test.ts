@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { LookupFunction } from 'node:net';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { COMMON_CUSTOM_PROVIDERS, getSuggestedModels } from '@/lib/llm/models';
-import { safeProviderFetch } from '@/lib/security';
-import { REDIRECT_BLOCKED_ERROR, friendlyErrorMessage } from '@/lib/friendly-errors';
+import { safeProviderFetch, CHAT_PROVIDER_MAX_BODY_BYTES } from '@/lib/security';
+import { REDIRECT_BLOCKED_ERROR, PROVIDER_BODY_TOO_LARGE_ERROR, friendlyErrorMessage } from '@/lib/friendly-errors';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import type { CustomProvider } from '@/lib/custom-providers';
 
@@ -216,5 +216,42 @@ describe('OpenRouter preset', () => {
     expect(preset?.baseUrl).toBe('https://openrouter.ai/api/v1');
     expect(getSuggestedModels('https://openrouter.ai/api/v1/')).toEqual(preset?.models);
     expect(preset?.models[0]).toBe('nvidia/nemotron-3.5-lightning:free');
+  });
+});
+
+describe('custom path: the provider answer is capped at 4 MiB (S13)', () => {
+  it.each([
+    ['OpenAI format', openrouter],
+    ['Anthropic format', anthropic],
+  ])('%s: passes CHAT_PROVIDER_MAX_BODY_BYTES (4 MiB) to safeProviderFetch', async (_label, provider) => {
+    expect(CHAT_PROVIDER_MAX_BODY_BYTES).toBe(4 * 1024 * 1024);
+    undiciMock.fetch.mockResolvedValueOnce(jsonResponse(200, { id: 'x', choices: [], content: [] }));
+    await callCustomProvider(provider, [{ role: 'user', content: 'hi' }]);
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({
+      maxBodyBytes: CHAT_PROVIDER_MAX_BODY_BYTES,
+    });
+  });
+
+  it('an answer of exactly 4 MiB is read and returned', async () => {
+    const head = '{"id":"x","choices":[{"message":{"role":"assistant","content":"';
+    const tail = '"},"finish_reason":"stop"}]}';
+    const text = 'a'.repeat(CHAT_PROVIDER_MAX_BODY_BYTES - head.length - tail.length);
+    undiciMock.fetch.mockResolvedValueOnce(new Response(head + text + tail, { status: 200 }));
+    const res = await callCustomProvider(openrouter, [{ role: 'user', content: 'hi' }]);
+    expect(res.error).toBeUndefined();
+    expect(res.content.length).toBe(text.length);
+  });
+
+  it.each([
+    ['OpenAI format', openrouter],
+    ['Anthropic format', anthropic],
+  ])('%s: one byte more is the sentinel error, which chat shows in plain words', async (_label, provider) => {
+    undiciMock.fetch.mockResolvedValueOnce(
+      new Response(new Uint8Array(CHAT_PROVIDER_MAX_BODY_BYTES + 1), { status: 200 })
+    );
+    const res = await callCustomProvider(provider, [{ role: 'user', content: 'hi' }]);
+    expect(res.content).toBe('');
+    expect(res.error).toBe(PROVIDER_BODY_TOO_LARGE_ERROR);
+    expect(friendlyErrorMessage(res.error)).toBe('This provider sent a response that was too large.');
   });
 });

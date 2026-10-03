@@ -13,6 +13,7 @@ import {
   TEST_DETAIL_MAX,
   type CustomProviderTestResult,
 } from '@/lib/custom-providers';
+import { PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
 
 // Fake, test-only key (long enough for redaction to apply).
 const API_KEY = 'sk-test-FAKEKEY-0123456789abcdef';
@@ -489,6 +490,28 @@ describe('friendlyTestFailure: WinQA address block (S11)', () => {
 
   it('a provider 400 that merely begins with "Base URL" keeps "The provider rejected the request"', () => {
     const out = friendlyTestFailure(blocked('Base URL not configured for this deployment'));
+    expect(out.reason).toBe('The provider rejected the request');
+    expect(out.statusText).toBe('HTTP 400');
+  });
+});
+
+describe('friendlyTestFailure: an oversized provider answer (S13)', () => {
+  const tooLarge = (status: number | null, error: string): CustomProviderTestResult => ({
+    valid: false,
+    error,
+    status,
+    latencyMs: 12,
+    model: 'test-model-1',
+  });
+
+  it('the route result (sentinel, status null) reads "Response too large", no HTTP status', () => {
+    const out = friendlyTestFailure(tooLarge(null, PROVIDER_BODY_TOO_LARGE_ERROR), API_KEY);
+    expect(out).toEqual({ reason: 'Response too large', statusText: null, detail: PROVIDER_BODY_TOO_LARGE_ERROR });
+    expect(JSON.stringify(out)).not.toContain('HTTP');
+  });
+
+  it('a provider 400 carrying the same text stays the provider rejecting the request', () => {
+    const out = friendlyTestFailure(tooLarge(400, PROVIDER_BODY_TOO_LARGE_ERROR));
     expect(out.reason).toBe('The provider rejected the request');
     expect(out.statusText).toBe('HTTP 400');
   });

@@ -12,10 +12,12 @@ import {
   ProviderUrlError,
   ProviderRedirectError,
   ProviderTimeoutError,
+  ProviderBodyTooLargeError,
   MAX_PROVIDER_URL_LENGTH,
 } from '@/lib/security';
 import {
   REDIRECT_BLOCKED_ERROR,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
   ADDRESS_GUARD_ERRORS,
   BASE_URL_HTTPS_ERROR,
   BASE_URL_PRIVATE_ERROR,
@@ -46,6 +48,9 @@ const undiciMock = vi.hoisted(() => {
   return { fetch: vi.fn(), Agent, agents };
 });
 vi.mock('undici', () => ({ fetch: undiciMock.fetch, Agent: undiciMock.Agent }));
+
+// Body cap for the tests that are not about the cap (the connection test's 64 KiB).
+const MAX_BODY = 64 * 1024;
 
 describe('isPrivateUrl (SSRF guard)', () => {
   // Contract: true = private/internal (blocked), false = public (allowed).
@@ -243,7 +248,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
 
   it('rejects a host that resolves to 10.0.0.5 and never fetches', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
-    const err = await safeProviderFetch('https://evil.example/v1/chat/completions', { method: 'POST', timeoutMs: T }).catch((e) => e);
+    const err = await safeProviderFetch('https://evil.example/v1/chat/completions', { method: 'POST', timeoutMs: T, maxBodyBytes: MAX_BODY }).catch((e) => e);
     expect(err).toBeInstanceOf(ProviderUrlError);
     expect(err.message).toBe('The provider address is not reachable from WinQA');
     expect(dnsMock.lookup).toHaveBeenCalledWith('evil.example', { all: true, verbatim: true });
@@ -279,7 +284,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
 
   it('runs checkProviderUrl first: http, private literals and over-long URLs never reach DNS', async () => {
     for (const url of ['http://api.example.com/v1', 'https://127.0.0.2/v1', 'https://x.com/' + 'a'.repeat(2100)]) {
-      await expect(safeProviderFetch(url, { timeoutMs: T })).rejects.toBeInstanceOf(ProviderUrlError);
+      await expect(safeProviderFetch(url, { timeoutMs: T, maxBodyBytes: MAX_BODY })).rejects.toBeInstanceOf(ProviderUrlError);
     }
     expect(dnsMock.lookup).not.toHaveBeenCalled();
     expect(undiciMock.fetch).not.toHaveBeenCalled();
@@ -299,7 +304,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
     undiciMock.fetch.mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }));
 
     const url = 'https://api.example.com/v1/chat/completions';
-    const res = await safeProviderFetch(url, { method: 'POST', headers: { a: 'b' }, body: '{}', timeoutMs: T });
+    const res = await safeProviderFetch(url, { method: 'POST', headers: { a: 'b' }, body: '{}', timeoutMs: T, maxBodyBytes: MAX_BODY });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -330,7 +335,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
     undiciMock.fetch.mockResolvedValueOnce(
       new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } })
     );
-    const err = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: T }).catch((e) => e);
+    const err = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: T, maxBodyBytes: MAX_BODY }).catch((e) => e);
     expect(err).toBeInstanceOf(ProviderRedirectError);
     expect(err.status).toBe(302);
     expect(err.message).toBe(REDIRECT_BLOCKED_ERROR);
@@ -342,7 +347,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
   it('reuses a pinned address for the same host instead of resolving again', async () => {
     undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
     const pinned = { hostname: 'api.example.com', address: '93.184.216.34', family: 4 as const };
-    await safeProviderFetch('https://api.example.com/v1/x', { pinned, timeoutMs: T });
+    await safeProviderFetch('https://api.example.com/v1/x', { pinned, timeoutMs: T, maxBodyBytes: MAX_BODY });
     expect(dnsMock.lookup).not.toHaveBeenCalled();
     expect(undiciMock.agents[0].options.connect?.lookup).toBeTypeOf('function');
   });
@@ -350,7 +355,7 @@ describe('safeProviderFetch: resolve once, vet every answer, connect to the vett
   it('resolves again when the pinned address belongs to another host', async () => {
     dnsMock.lookup.mockResolvedValueOnce([answer('10.0.0.5', 4)]);
     const pinned = { hostname: 'other.example', address: '93.184.216.34', family: 4 as const };
-    await expect(safeProviderFetch('https://evil.example/v1', { pinned, timeoutMs: T })).rejects.toBeInstanceOf(ProviderUrlError);
+    await expect(safeProviderFetch('https://evil.example/v1', { pinned, timeoutMs: T, maxBodyBytes: MAX_BODY })).rejects.toBeInstanceOf(ProviderUrlError);
     expect(undiciMock.fetch).not.toHaveBeenCalled();
   });
 });
@@ -417,7 +422,7 @@ describe('safeProviderFetch: every provider call is bounded in time (S5)', () =>
     dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
     undiciMock.fetch.mockImplementationOnce(hangUntilAborted);
 
-    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 }).catch((e) => e);
+    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000, maxBodyBytes: MAX_BODY }).catch((e) => e);
 
     await vi.advanceTimersByTimeAsync(9_999);
     expect(await settledOrPending(result)).toBe(PENDING);
@@ -433,7 +438,7 @@ describe('safeProviderFetch: every provider call is bounded in time (S5)', () =>
   it('a hanging DNS answer is bounded by the same budget', async () => {
     dnsMock.lookup.mockImplementationOnce(() => new Promise(() => {}));
 
-    const result = safeProviderFetch('https://slow-dns.example/v1', { timeoutMs: 20_000 }).catch((e) => e);
+    const result = safeProviderFetch('https://slow-dns.example/v1', { timeoutMs: 20_000, maxBodyBytes: MAX_BODY }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(20_000);
     const err = await settledOrPending(result);
     expect(err).toBeInstanceOf(ProviderTimeoutError);
@@ -450,16 +455,19 @@ describe('safeProviderFetch: every provider call is bounded in time (S5)', () =>
 
   it('a body that stalls after the headers is aborted too', async () => {
     dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
-    undiciMock.fetch.mockImplementationOnce(async (_url: string, init: { signal: AbortSignal }) => ({
-      status: 200,
-      statusText: 'OK',
-      headers: new Headers(),
-      body: null,
-      arrayBuffer: () =>
-        new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason))),
-    }));
+    // Headers arrive, then one chunk, then nothing: the body stream never ends.
+    undiciMock.fetch.mockImplementationOnce(async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array(10));
+          },
+        }),
+        { status: 200 }
+      )
+    );
 
-    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 }).catch((e) => e);
+    const result = safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000, maxBodyBytes: MAX_BODY }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(await settledOrPending(result)).toBeInstanceOf(ProviderTimeoutError);
   });
@@ -467,7 +475,7 @@ describe('safeProviderFetch: every provider call is bounded in time (S5)', () =>
   it('a fast answer clears its timer', async () => {
     dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
     undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
-    const res = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000 });
+    const res = await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000, maxBodyBytes: MAX_BODY });
     expect(res.status).toBe(200);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -496,10 +504,118 @@ describe('safeProviderFetch: the connect timeout is the request deadline (S12)',
   it.each([20_000, 10_000])('a %i ms budget gives the Agent the same connect timeout', async (timeoutMs) => {
     dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
     undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
-    await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs });
+    await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs, maxBodyBytes: MAX_BODY });
     const connect = undiciMock.agents[0].options.connect as { timeout?: number; lookup?: unknown };
     // undici's own default is 10 s, which would cut a 20 s budget short with "fetch failed".
     expect(connect.timeout).toBe(timeoutMs);
     expect(connect.lookup).toBeTypeOf('function');
+  });
+});
+
+describe('safeProviderFetch: the response body is capped (S13)', () => {
+  const CAP = 1024;
+
+  // A body delivered in `sizes`-byte chunks; Content-Length only when a test sets it.
+  const streamed = (sizes: number[], headers: Record<string, string> = {}) => {
+    const cancel = vi.fn();
+    const pulled = vi.fn();
+    let i = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled();
+        if (i < sizes.length) controller.enqueue(new Uint8Array(sizes[i++]).fill(97));
+        else controller.close();
+      },
+      cancel,
+    });
+    return { response: new Response(body, { status: 200, headers }), body, cancel, pulled };
+  };
+
+  beforeEach(() => {
+    dnsMock.lookup.mockReset();
+    dnsMock.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockReset();
+    undiciMock.agents.length = 0;
+  });
+
+  const fetchCapped = () =>
+    safeProviderFetch('https://api.example.com/v1/x', { timeoutMs: 10_000, maxBodyBytes: CAP }).catch((e) => e);
+
+  it('a body of exactly maxBodyBytes is returned whole', async () => {
+    undiciMock.fetch.mockResolvedValueOnce(streamed([500, 500, 24]).response);
+    const res = await fetchCapped();
+    expect(res).toBeInstanceOf(Response);
+    expect((await (res as Response).arrayBuffer()).byteLength).toBe(CAP);
+  });
+
+  it('one byte over maxBodyBytes is rejected with the sentinel', async () => {
+    undiciMock.fetch.mockResolvedValueOnce(streamed([500, 500, 25]).response);
+    const err = await fetchCapped();
+    expect(err).toBeInstanceOf(ProviderBodyTooLargeError);
+    expect((err as Error).message).toBe(PROVIDER_BODY_TOO_LARGE_ERROR);
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+  });
+
+  it('a long body (1 MiB in 256-byte chunks) stops being read once it passes the cap', async () => {
+    const cancel = vi.fn();
+    // Bounded so the old, uncapped read finishes (and fails the test) instead of
+    // exhausting the test worker's heap.
+    const pull = vi.fn((controller: ReadableStreamDefaultController<Uint8Array>) => {
+      if (pull.mock.calls.length > 4096) controller.close();
+      else controller.enqueue(new Uint8Array(256));
+    });
+    undiciMock.fetch.mockResolvedValueOnce(new Response(new ReadableStream<Uint8Array>({ pull, cancel }), { status: 200 }));
+    const err = await fetchCapped();
+    expect(err).toBeInstanceOf(ProviderBodyTooLargeError);
+    expect(cancel).toHaveBeenCalled();
+    // Five 256-byte chunks pass 1024; a chunk may be queued ahead, never an unbounded number.
+    expect(pull.mock.calls.length).toBeLessThan(10);
+  });
+
+  it('a small Content-Length does not let a larger body through (headers lie)', async () => {
+    undiciMock.fetch.mockResolvedValueOnce(streamed([CAP, 1], { 'content-length': '10' }).response);
+    const err = await fetchCapped();
+    expect(err).toBeInstanceOf(ProviderBodyTooLargeError);
+    expect((err as Error).message).toBe(PROVIDER_BODY_TOO_LARGE_ERROR);
+  });
+
+  it('a Content-Length over the cap is rejected before the body is read', async () => {
+    const { response, pulled, cancel } = streamed([10], { 'content-length': String(CAP + 1) });
+    undiciMock.fetch.mockResolvedValueOnce(response);
+    const err = await fetchCapped();
+    expect(err).toBeInstanceOf(ProviderBodyTooLargeError);
+    expect(cancel).toHaveBeenCalled();
+    // The stream may prefill one chunk on its own; nothing is read past that.
+    expect(pulled.mock.calls.length).toBeLessThanOrEqual(1);
+  });
+
+  it('an error-status body is capped too', async () => {
+    const { body } = streamed([CAP + 1]);
+    undiciMock.fetch.mockResolvedValueOnce(new Response(body, { status: 500, statusText: 'Internal Server Error' }));
+    expect(await fetchCapped()).toBeInstanceOf(ProviderBodyTooLargeError);
+  });
+
+  it('the deadline firing during the body read is still a ProviderTimeoutError', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Some bytes under the cap, then the stream stalls.
+      undiciMock.fetch.mockImplementationOnce(async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array(100));
+            },
+          }),
+          { status: 200 }
+        )
+      );
+      const result = fetchCapped();
+      await vi.advanceTimersByTimeAsync(10_000);
+      const err = await result;
+      expect(err).toBeInstanceOf(ProviderTimeoutError);
+      expect((err as Error).message).toBe('Request timed out after 10s');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

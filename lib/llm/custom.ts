@@ -3,7 +3,12 @@
 import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType, isAnthropicProvider } from './models';
-import { checkProviderUrl, safeProviderFetch, ProviderTimeoutError } from '@/lib/security';
+import {
+  checkProviderUrl,
+  safeProviderFetch,
+  ProviderTimeoutError,
+  CHAT_PROVIDER_MAX_BODY_BYTES,
+} from '@/lib/security';
 // The same deadline the connection test uses (app/api/test-custom-provider/route.ts).
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from './provider-timeout';
 
@@ -155,12 +160,15 @@ async function callAnthropicApi(
     // Resolves and vets the host, connects only to the vetted address, and throws
     // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
     // The budget is the engine's per-attempt cap: a custom provider gets the same
-    // 20s a built-in model gets before the chat route answers with a timeout.
+    // 20s a built-in model gets before the chat route answers with a timeout. A
+    // body over 4 MiB throws PROVIDER_BODY_TOO_LARGE_ERROR, returned below as the
+    // error text so friendlyErrorMessage can name it.
     const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
       timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS,
+      maxBodyBytes: CHAT_PROVIDER_MAX_BODY_BYTES,
     });
 
     if (!response.ok) {
@@ -220,12 +228,15 @@ async function callOpenAIApi(
     // Resolves and vets the host, connects only to the vetted address, and throws
     // REDIRECT_BLOCKED_ERROR on a 3xx instead of following it (lib/security.ts).
     // The budget is the engine's per-attempt cap: a custom provider gets the same
-    // 20s a built-in model gets before the chat route answers with a timeout.
+    // 20s a built-in model gets before the chat route answers with a timeout. A
+    // body over 4 MiB throws PROVIDER_BODY_TOO_LARGE_ERROR, returned below as the
+    // error text so friendlyErrorMessage can name it.
     const response = await safeProviderFetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(body),
       timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS,
+      maxBodyBytes: CHAT_PROVIDER_MAX_BODY_BYTES,
     });
 
     if (!response.ok) {

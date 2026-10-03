@@ -8,9 +8,15 @@
 
 import { BlockList, isIP, type LookupFunction } from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from 'undici';
+import {
+  Agent,
+  fetch as undiciFetch,
+  type RequestInit as UndiciRequestInit,
+  type Response as UndiciResponse,
+} from 'undici';
 import {
   REDIRECT_BLOCKED_ERROR,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
   UNREACHABLE_PROVIDER_ERROR,
   BASE_URL_HTTPS_ERROR,
   BASE_URL_PRIVATE_ERROR,
@@ -223,6 +229,32 @@ export class ProviderTimeoutError extends Error {
   }
 }
 
+/**
+ * The provider's response body is longer than the caller's maxBodyBytes. The message
+ * is the PROVIDER_BODY_TOO_LARGE_ERROR sentinel; the body itself is never kept,
+ * logged or shown.
+ */
+export class ProviderBodyTooLargeError extends Error {
+  readonly maxBodyBytes: number;
+  constructor(maxBodyBytes: number) {
+    super(PROVIDER_BODY_TOO_LARGE_ERROR);
+    this.name = 'ProviderBodyTooLargeError';
+    this.maxBodyBytes = maxBodyBytes;
+  }
+}
+
+/**
+ * Most bytes of a custom provider's chat response safeProviderFetch buffers
+ * (lib/llm/custom.ts). A long chat answer is well under 1 MiB of JSON.
+ */
+export const CHAT_PROVIDER_MAX_BODY_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Most bytes of the connection test's response (app/api/test-custom-provider):
+ * a 10-token reply or a provider's error body is a few hundred bytes.
+ */
+export const TEST_PROVIDER_MAX_BODY_BYTES = 64 * 1024;
+
 /** A host name and the one vetted address a request to it may connect to. */
 export interface PinnedAddress {
   hostname: string;
@@ -325,12 +357,62 @@ export type ProviderFetchInit = Pick<RequestInit, 'method' | 'headers' | 'body'>
    * a custom-provider request with no deadline holds its route until maxDuration.
    */
   timeoutMs: number;
+  /**
+   * Most response-body bytes to read. Required, like timeoutMs: an uncapped body is
+   * buffered in full in server memory. Over it, ProviderBodyTooLargeError.
+   */
+  maxBodyBytes: number;
   /** An address vetted earlier for this URL's host (resolveProviderAddress); skips a second lookup. */
   pinned?: PinnedAddress;
 };
 
 // Statuses whose Response must be built with a null body.
 const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+
+/**
+ * Read a response body into memory, at most `maxBodyBytes` of it. A Content-Length
+ * above the cap fails before reading; the bytes are counted as they stream in either
+ * way (a header can understate the body, and undici decompresses), and the read is
+ * cancelled the moment the count passes the cap. Each read also races the deadline,
+ * so a stalled body ends on the deadline's reason. Nothing read is kept on failure.
+ */
+async function readCappedBody(
+  response: Pick<UndiciResponse, 'headers' | 'body'>,
+  maxBodyBytes: number,
+  signal: AbortSignal
+): Promise<ArrayBuffer> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBodyBytes) {
+    response.body?.cancel().catch(() => {});
+    throw new ProviderBodyTooLargeError(maxBodyBytes);
+  }
+  if (!response.body) return new ArrayBuffer(0);
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await untilAborted(reader.read(), signal);
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBodyBytes) throw new ProviderBodyTooLargeError(maxBodyBytes);
+      chunks.push(value);
+    }
+  } catch (error) {
+    // Not awaited: a stalled source may never settle its cancel.
+    reader.cancel().catch(() => {});
+    throw error;
+  }
+
+  const buffer = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return buffer.buffer;
+}
 
 /**
  * The only way the server may call a user-supplied provider URL.
@@ -344,12 +426,13 @@ const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
  * 3. redirect: 'manual'; a 3xx throws ProviderRedirectError and is never followed.
  * 4. One deadline of `timeoutMs` covers resolution, connect, headers and body;
  *    when it fires the request is aborted and ProviderTimeoutError is thrown.
- * 5. The body is read in full here and returned as a plain Response, so the Agent
+ * 5. The body is read in full here, at most `maxBodyBytes` of it (over the cap:
+ *    ProviderBodyTooLargeError), and returned as a plain Response, so the Agent
  *    (and its socket) is destroyed before this function returns; callers use
  *    .json()/.text() as on any Response and need no cleanup.
  */
 export async function safeProviderFetch(url: string, init: ProviderFetchInit): Promise<Response> {
-  const { timeoutMs, pinned: pinnedHint, method, headers, body } = init;
+  const { timeoutMs, maxBodyBytes, pinned: pinnedHint, method, headers, body } = init;
 
   const urlError = checkProviderUrl(url);
   if (urlError) throw new ProviderUrlError(urlError);
@@ -379,7 +462,9 @@ export async function safeProviderFetch(url: string, init: ProviderFetchInit): P
       throw new ProviderRedirectError(response.status);
     }
 
-    const buffered = NULL_BODY_STATUSES.has(response.status) ? null : await response.arrayBuffer();
+    const buffered = NULL_BODY_STATUSES.has(response.status)
+      ? null
+      : await readCappedBody(response, maxBodyBytes, deadline.signal);
     return new Response(buffered, {
       status: response.status,
       statusText: response.statusText,

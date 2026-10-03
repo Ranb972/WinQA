@@ -5,7 +5,7 @@ import { encryptApiKey, decryptApiKey, EncryptedData } from './crypto';
 // Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
 import { normalizeBaseUrl } from '@/lib/llm/models';
 // Client-safe: lib/friendly-errors has only a type import (erased at build).
-import { ADDRESS_GUARD_ERRORS } from '@/lib/friendly-errors';
+import { ADDRESS_GUARD_ERRORS, PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
 
 const STORAGE_KEY = 'winqa_custom_providers';
 export const MAX_CUSTOM_PROVIDERS = 6;
@@ -373,6 +373,12 @@ export function friendlyTestFailure(
   // is not the provider rejecting the request.
   if (status === 400 && ADDRESS_GUARD_ERRORS.has(rawError)) {
     return { reason: 'WinQA blocks this address', statusText: null, detail: rawError };
+  }
+
+  // WinQA stopped reading an oversized answer (lib/security.ts maxBodyBytes); the
+  // route reports it with status null. Not an HTTP failure, so no status text.
+  if (status === null && rawError === PROVIDER_BODY_TOO_LARGE_ERROR) {
+    return { reason: 'Response too large', statusText: null, detail: rawError };
   }
 
   let reason: string;

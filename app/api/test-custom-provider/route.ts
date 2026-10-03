@@ -7,6 +7,7 @@ import {
   ProviderRedirectError,
   ProviderUrlError,
   ProviderTimeoutError,
+  TEST_PROVIDER_MAX_BODY_BYTES,
   type PinnedAddress,
 } from '@/lib/security';
 import { isAnthropicProvider, normalizeBaseUrl } from '@/lib/llm/models';
@@ -140,6 +141,8 @@ async function testConnection(
         }),
         pinned,
         timeoutMs,
+        // 64 KiB: over it the result carries PROVIDER_BODY_TOO_LARGE_ERROR, status null.
+        maxBodyBytes: TEST_PROVIDER_MAX_BODY_BYTES,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
@@ -174,6 +177,8 @@ async function testConnection(
         }),
         pinned,
         timeoutMs,
+        // 64 KiB: over it the result carries PROVIDER_BODY_TOO_LARGE_ERROR, status null.
+        maxBodyBytes: TEST_PROVIDER_MAX_BODY_BYTES,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 

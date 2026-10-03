@@ -3,7 +3,8 @@ import type { LookupFunction } from 'node:net';
 import { NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { POST } from '@/app/api/test-custom-provider/route';
-import { resolveProviderAddress, safeProviderFetch } from '@/lib/security';
+import { resolveProviderAddress, safeProviderFetch, TEST_PROVIDER_MAX_BODY_BYTES } from '@/lib/security';
+import { PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import { friendlyTestFailure } from '@/lib/custom-providers';
 import { consumeDailyAllowance, consumeProviderTestAllowance } from '@/lib/rate-limit';
@@ -525,5 +526,41 @@ describe('POST /api/test-custom-provider — metered per user per day (S6)', () 
     vi.mocked(auth).mockResolvedValueOnce({ userId: null } as unknown as Awaited<ReturnType<typeof auth>>);
     await POST(makeRequest(validBody));
     expect(consumeProviderTestAllowance).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/test-custom-provider — the provider answer is capped at 64 KiB (S13)', () => {
+  it.each([
+    ['OpenAI format', BASE_URL],
+    ['Anthropic format', 'https://api.anthropic.com/v1'],
+  ])('%s: passes TEST_PROVIDER_MAX_BODY_BYTES (64 KiB) to safeProviderFetch', async (_label, baseUrl) => {
+    expect(TEST_PROVIDER_MAX_BODY_BYTES).toBe(64 * 1024);
+    fetchMock.mockResolvedValueOnce(upstream(200, {}));
+    await POST(makeRequest({ ...validBody, baseUrl }));
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({
+      maxBodyBytes: TEST_PROVIDER_MAX_BODY_BYTES,
+    });
+  });
+
+  it('an answer of exactly 64 KiB still passes', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(new Uint8Array(TEST_PROVIDER_MAX_BODY_BYTES), { status: 200 }));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json).toMatchObject({ valid: true, status: 200 });
+  });
+
+  it('one byte more -> invalid with the sentinel, status null; Settings says "Response too large", no HTTP', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(new Uint8Array(TEST_PROVIDER_MAX_BODY_BYTES + 1), { status: 200 }));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json).toEqual({
+      valid: false,
+      error: PROVIDER_BODY_TOO_LARGE_ERROR,
+      status: null,
+      latencyMs: expect.any(Number),
+      model: MODEL,
+    });
+
+    const shown = friendlyTestFailure(json, API_KEY);
+    expect(shown).toEqual({ reason: 'Response too large', statusText: null, detail: PROVIDER_BODY_TOO_LARGE_ERROR });
+    expect(JSON.stringify(shown)).not.toContain('HTTP');
   });
 });

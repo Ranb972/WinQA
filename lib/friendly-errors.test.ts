@@ -3,6 +3,7 @@ import {
   friendlyErrorMessage,
   DAILY_LIMIT_ERROR,
   REDIRECT_BLOCKED_ERROR,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
   UNREACHABLE_PROVIDER_ERROR,
   ADDRESS_GUARD_ERRORS,
 } from '@/lib/friendly-errors';
@@ -91,6 +92,19 @@ describe('friendlyErrorMessage: the address-guard match is an exact set (S11)', 
 
   it('a provider text that merely begins with "Base URL" is not treated as WinQA\'s block', () => {
     expect(friendlyErrorMessage('Base URL not configured for this deployment')).toBe(
+      'Something went wrong. Please try again.'
+    );
+  });
+});
+
+describe('friendlyErrorMessage: an oversized provider answer (S13)', () => {
+  it('maps the body-too-large sentinel to plain words', () => {
+    expect(PROVIDER_BODY_TOO_LARGE_ERROR).toBe('Provider response exceeded the size limit');
+    expect(friendlyErrorMessage(PROVIDER_BODY_TOO_LARGE_ERROR)).toBe('This provider sent a response that was too large.');
+  });
+
+  it('matches the sentinel exactly, not as a prefix', () => {
+    expect(friendlyErrorMessage(`${PROVIDER_BODY_TOO_LARGE_ERROR} of the upstream gateway`)).toBe(
       'Something went wrong. Please try again.'
     );
   });
