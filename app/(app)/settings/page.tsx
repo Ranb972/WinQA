@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings,
@@ -41,7 +41,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { getApiKeys, setApiKeys, maskApiKey, ApiKeys } from '@/lib/api-keys';
+import {
+  fetchKeys,
+  saveBuiltinKey,
+  deleteBuiltinKey,
+  testBuiltinKey,
+  formatKeyDate,
+  keyErrorText,
+  KeysApiError,
+  type BuiltinKeyInfo,
+} from '@/lib/keys-client';
 import { LLMProvider } from '@/lib/llm/types';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { specificModelDisplayNames, defaultModels } from '@/lib/llm/registry';
@@ -101,19 +110,33 @@ const providers: ProviderConfig[] = [
 
 type TestStatus = 'idle' | 'testing' | 'valid' | 'invalid';
 
+type RowFlag = Partial<Record<LLMProvider, boolean>>;
+
+// How long the first click on Remove stays armed.
+const CONFIRM_REMOVE_MS = 3000;
+
 export default function SettingsPage() {
   const { user, isLoaded } = useUser();
-  const [keys, setKeysState] = useState<ApiKeys>({});
+  // Saved built-in keys as the server describes them (last four characters and
+  // dates). The browser never holds a saved key.
+  const [saved, setSaved] = useState<Partial<Record<LLMProvider, BuiltinKeyInfo>>>({});
+  const [keysLoading, setKeysLoading] = useState(false);
+  const [keysError, setKeysError] = useState<string | null>(null);
+  // Keys the user is typing. Component state only: never written to browser storage.
+  const [typed, setTyped] = useState<Partial<Record<LLMProvider, string>>>({});
+  // A saved row whose input is open to replace the key.
+  const [replacing, setReplacing] = useState<RowFlag>({});
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
-  const [savedKeys, setSavedKeys] = useState<ApiKeys>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [busy, setBusy] = useState<Partial<Record<LLMProvider, 'save' | 'remove'>>>({});
+  const [confirmRemove, setConfirmRemove] = useState<RowFlag>({});
   const [isLoading, setIsLoading] = useState(true);
   const [securityExpanded, setSecurityExpanded] = useState(false);
   const { toast } = useToast();
 
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({});
   const [testErrors, setTestErrors] = useState<Record<string, string>>({});
-  const [editing, setEditing] = useState<Record<string, boolean>>({});
+  // Bumped by every test and every edit of a row, so an older answer is dropped.
+  const testSeq = useRef<Record<string, number>>({});
   const [modelPreferences, setModelPreferencesState] = useState<ModelPreferences>({});
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -123,118 +146,193 @@ export default function SettingsPage() {
   const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
   const [showReplaceWarning, setShowReplaceWarning] = useState(false);
 
+  // Reads the saved keys from the account. A failure is shown in place of the
+  // rows, because "no key saved" would be a guess.
+  const refreshKeys = useCallback(async () => {
+    setKeysLoading(true);
+    try {
+      const overview = await fetchKeys();
+      const next: Partial<Record<LLMProvider, BuiltinKeyInfo>> = {};
+      for (const info of overview.builtin) next[info.provider] = info;
+      setSaved(next);
+      setKeysError(null);
+    } catch (error) {
+      setKeysError(keyErrorText(error));
+    } finally {
+      setKeysLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     async function loadData() {
       if (!isLoaded) return;
 
       setIsLoading(true);
       try {
-        const stored = await getApiKeys(user?.id);
-        setKeysState(stored);
-        setSavedKeys(stored);
         const prefs = getModelPreferences();
         setModelPreferencesState(prefs);
         const providers = await getCustomProviders(user?.id);
         setCustomProviders(providers);
       } catch {
         // Error loading data, start fresh
-      } finally {
-        setIsLoading(false);
       }
+      await refreshKeys();
+      setIsLoading(false);
     }
     loadData();
-  }, [isLoaded, user?.id]);
+  }, [isLoaded, user?.id, refreshKeys]);
 
   const toggleVisibility = (provider: string) => {
     setVisibility((prev) => ({ ...prev, [provider]: !prev[provider] }));
   };
 
+  // A row was edited or acted on: drop its test status and error, and any test still in flight.
+  const resetRowFeedback = (provider: LLMProvider) => {
+    testSeq.current[provider] = (testSeq.current[provider] ?? 0) + 1;
+    setTestStatus((prev) => ({ ...prev, [provider]: 'idle' }));
+    setTestErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[provider];
+      return updated;
+    });
+  };
+
+  const setRowError = (provider: LLMProvider, message: string) => {
+    setTestErrors((prev) => ({ ...prev, [provider]: message }));
+  };
+
   const handleKeyChange = (provider: LLMProvider, value: string) => {
-    setKeysState((prev) => ({ ...prev, [provider]: value }));
-    setTestStatus((prev) => ({ ...prev, [provider]: 'idle' }));
-    setTestErrors((prev) => {
+    setTyped((prev) => ({ ...prev, [provider]: value }));
+    resetRowFeedback(provider);
+  };
+
+  const handleClearTyped = (provider: LLMProvider) => {
+    setTyped((prev) => {
       const updated = { ...prev };
       delete updated[provider];
       return updated;
     });
+    resetRowFeedback(provider);
   };
 
-  const handleClearKey = (provider: LLMProvider) => {
-    setKeysState((prev) => {
-      const updated = { ...prev };
-      delete updated[provider];
-      return updated;
-    });
-    setTestStatus((prev) => ({ ...prev, [provider]: 'idle' }));
-    setTestErrors((prev) => {
-      const updated = { ...prev };
-      delete updated[provider];
-      return updated;
-    });
+  const handleReplace = (provider: LLMProvider) => {
+    resetRowFeedback(provider);
+    setReplacing((prev) => ({ ...prev, [provider]: true }));
   };
 
-  const handleFocus = (provider: string) => {
-    setEditing((prev) => ({ ...prev, [provider]: true }));
+  const handleCancelReplace = (provider: LLMProvider) => {
+    handleClearTyped(provider);
+    setReplacing((prev) => ({ ...prev, [provider]: false }));
+    setVisibility((prev) => ({ ...prev, [provider]: false }));
   };
 
-  const handleBlur = (provider: string) => {
-    setEditing((prev) => ({ ...prev, [provider]: false }));
-  };
-
+  // Tests the key being typed, or, with nothing typed, the key saved on the account.
   const handleTestKey = async (provider: LLMProvider) => {
-    const apiKey = keys[provider];
-    if (!apiKey) return;
+    const typedKey = (typed[provider] ?? '').trim();
+    const testingTyped = typedKey !== '';
+    if (!testingTyped && !saved[provider]) return;
 
+    resetRowFeedback(provider);
+    const seq = testSeq.current[provider];
     setTestStatus((prev) => ({ ...prev, [provider]: 'testing' }));
-    setTestErrors((prev) => {
-      const updated = { ...prev };
-      delete updated[provider];
-      return updated;
-    });
 
     try {
-      const response = await fetch('/api/test-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, apiKey }),
-      });
+      const result = await testBuiltinKey(provider, testingTyped ? typedKey : undefined);
+      if (seq !== testSeq.current[provider]) return;
 
-      const result = await response.json();
+      // Only a 200 means the route ran the test and recorded the outcome on the saved
+      // record; a 401, 404 or 500 recorded nothing. Show it without waiting for a reload.
+      if (!testingTyped && result.status === 200) {
+        setSaved((prev) => {
+          const current = prev[provider];
+          return current
+            ? { ...prev, [provider]: { ...current, lastTestedAt: new Date().toISOString(), lastTestOk: result.valid } }
+            : prev;
+        });
+      }
 
       if (result.valid) {
         setTestStatus((prev) => ({ ...prev, [provider]: 'valid' }));
       } else {
         setTestStatus((prev) => ({ ...prev, [provider]: 'invalid' }));
-        setTestErrors((prev) => ({ ...prev, [provider]: result.error || 'Invalid key' }));
+        setRowError(provider, keyErrorText(new KeysApiError(result.error || 'Invalid key', result.status)));
+        // The saved key is gone (removed elsewhere): show the list as it is now.
+        if (!testingTyped && result.status === 404) void refreshKeys();
       }
     } catch {
+      if (seq !== testSeq.current[provider]) return;
       setTestStatus((prev) => ({ ...prev, [provider]: 'invalid' }));
-      setTestErrors((prev) => ({ ...prev, [provider]: 'Failed to test key' }));
+      setRowError(provider, 'Failed to test key');
     }
   };
 
-  const handleSaveAll = async () => {
-    setIsSaving(true);
+  const handleSaveKey = async (provider: LLMProvider, name: string) => {
+    const apiKey = (typed[provider] ?? '').trim();
+    if (!apiKey || busy[provider]) return;
+
+    resetRowFeedback(provider);
+    setBusy((prev) => ({ ...prev, [provider]: 'save' }));
     try {
-      await setApiKeys(keys, user?.id);
-      setSavedKeys(keys);
+      const info = await saveBuiltinKey(provider, apiKey);
+      setSaved((prev) => ({ ...prev, [provider]: info }));
+      // The typed key has done its job: it is not kept anywhere in the browser.
+      setTyped((prev) => {
+        const updated = { ...prev };
+        delete updated[provider];
+        return updated;
+      });
+      setReplacing((prev) => ({ ...prev, [provider]: false }));
+      setVisibility((prev) => ({ ...prev, [provider]: false }));
       toast({
-        title: 'Settings saved',
-        description: 'API keys saved in this browser.',
+        title: 'Key saved',
+        description: `Your ${name} key is saved to your account.`,
         variant: 'success',
       });
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to save keys',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      setRowError(provider, keyErrorText(error));
     } finally {
-      setIsSaving(false);
+      setBusy((prev) => {
+        const updated = { ...prev };
+        delete updated[provider];
+        return updated;
+      });
     }
   };
 
-  const hasChanges = JSON.stringify(keys) !== JSON.stringify(savedKeys);
+  // The first click arms the button for CONFIRM_REMOVE_MS; the second removes the key.
+  const handleRemoveKey = async (provider: LLMProvider, name: string) => {
+    if (busy[provider]) return;
+    if (!confirmRemove[provider]) {
+      setConfirmRemove((prev) => ({ ...prev, [provider]: true }));
+      setTimeout(() => setConfirmRemove((prev) => ({ ...prev, [provider]: false })), CONFIRM_REMOVE_MS);
+      return;
+    }
+
+    setConfirmRemove((prev) => ({ ...prev, [provider]: false }));
+    resetRowFeedback(provider);
+    setBusy((prev) => ({ ...prev, [provider]: 'remove' }));
+    try {
+      await deleteBuiltinKey(provider);
+      setSaved((prev) => {
+        const updated = { ...prev };
+        delete updated[provider];
+        return updated;
+      });
+      toast({
+        title: 'Key removed',
+        description: `Your ${name} key is removed. WinQA's shared key is used again.`,
+        variant: 'success',
+      });
+    } catch (error) {
+      setRowError(provider, keyErrorText(error));
+    } finally {
+      setBusy((prev) => {
+        const updated = { ...prev };
+        delete updated[provider];
+        return updated;
+      });
+    }
+  };
 
   const handleModelChange = (provider: LLMProvider, modelId: string) => {
     setModelPreference(provider, modelId);
@@ -399,22 +497,6 @@ export default function SettingsPage() {
     }
   };
 
-  const getDisplayValue = (provider: LLMProvider) => {
-    const value = keys[provider] || '';
-    const isEditing = editing[provider];
-    const isVisible = visibility[provider];
-
-    if (isEditing || isVisible) {
-      return value;
-    }
-
-    if (savedKeys[provider] && !isEditing) {
-      return maskApiKey(savedKeys[provider]!);
-    }
-
-    return value;
-  };
-
   if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
@@ -426,7 +508,7 @@ export default function SettingsPage() {
     );
   }
 
-  const calibratedCount = Object.values(savedKeys).filter((k) => k && k.trim()).length;
+  const calibratedCount = Object.keys(saved).length;
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
@@ -489,14 +571,37 @@ export default function SettingsPage() {
             </div>
 
             {/* Credential Rows */}
+            {keysError ? (
+              <div className="p-5" role="alert">
+                <p className="text-sm text-red-400 font-mono break-words">
+                  Could not load your saved keys. {keysError}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshKeys()}
+                  disabled={keysLoading}
+                  className="mt-3 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded border border-white/[0.1] text-zinc-300 hover:text-white hover:border-orange-500/40 text-xs font-mono uppercase tracking-[0.12em] transition-colors disabled:opacity-50"
+                >
+                  {keysLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  Retry
+                </button>
+              </div>
+            ) : (
             <div>
               {providers.map((provider, index) => {
-                const currentValue = keys[provider.key] || '';
-                const isSaved = savedKeys[provider.key] && savedKeys[provider.key]!.trim().length > 0;
+                const info = saved[provider.key];
+                const isSaved = !!info;
+                const isReplacing = !!replacing[provider.key];
+                const showInput = !isSaved || isReplacing;
+                const typedValue = typed[provider.key] || '';
                 const isVisible = visibility[provider.key];
                 const status = testStatus[provider.key] || 'idle';
                 const error = testErrors[provider.key];
-                const isEditing = editing[provider.key];
+                const rowBusy = busy[provider.key];
+                const inputId = `key-${provider.key}`;
+                const updated = formatKeyDate(info?.updatedAt);
+                const tested = formatKeyDate(info?.lastTestedAt);
+                const rejected = formatKeyDate(info?.lastRejectedAt);
 
                 return (
                   <motion.div
@@ -513,9 +618,9 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <label className="text-white font-medium text-sm">
+                            <span className="text-white font-medium text-sm">
                               {provider.name}
-                            </label>
+                            </span>
                             {isSaved && status === 'idle' && (
                               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                 <Check className="h-2.5 w-2.5" />
@@ -555,78 +660,198 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="mt-3">
-                      <label className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-1.5">Authentication Key</label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Input
-                            type={isVisible || isEditing ? 'text' : 'password'}
-                            value={isEditing ? currentValue : getDisplayValue(provider.key)}
-                            onChange={(e) => handleKeyChange(provider.key, e.target.value)}
-                            onFocus={() => handleFocus(provider.key)}
-                            onBlur={() => handleBlur(provider.key)}
-                            placeholder={provider.placeholder}
-                            className="pr-12 h-11 bg-black border-white/[0.08] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
-                          />
+                      {isSaved && (
+                        <div className={isReplacing ? 'mb-3' : ''}>
+                          <p className="text-sm text-white font-mono break-words">
+                            {info.last4 ? `Saved key ending in ${info.last4}` : 'Saved key'}
+                            {updated && <span className="text-zinc-500">{` · updated ${updated}`}</span>}
+                          </p>
+                          {(tested || rejected) && (
+                            <p className="text-xs font-mono mt-1 break-words">
+                              {tested && (
+                                <span className={info.lastTestOk === false ? 'text-red-400' : 'text-emerald-400'}>
+                                  {info.lastTestOk === false ? `Test failed ${tested}` : `Tested OK ${tested}`}
+                                </span>
+                              )}
+                              {tested && rejected && <span className="text-zinc-600">{' · '}</span>}
+                              {rejected && <span className="text-amber-400">{`Rejected on ${rejected}, check it`}</span>}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {!isSaved && (
+                        <p className="text-xs text-zinc-500 mb-3">Using WinQA&apos;s shared key (daily limit)</p>
+                      )}
+
+                      {showInput && (
+                        <>
+                          <label
+                            htmlFor={inputId}
+                            className="block text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 mb-1.5"
+                          >
+                            {isReplacing ? 'New Authentication Key' : 'Authentication Key'}
+                          </label>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                id={inputId}
+                                type={isVisible ? 'text' : 'password'}
+                                value={typedValue}
+                                onChange={(e) => handleKeyChange(provider.key, e.target.value)}
+                                placeholder={provider.placeholder}
+                                autoComplete="off"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                className="pr-12 h-11 bg-black border-white/[0.08] text-white font-mono text-sm placeholder:text-white/20 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => toggleVisibility(provider.key)}
+                                aria-label={`Show ${provider.name} key`}
+                                aria-pressed={!!isVisible}
+                                title={isVisible ? 'Hide key' : 'Show key'}
+                                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
+                              >
+                                {isVisible ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+
+                            {typedValue && (
+                              <button
+                                type="button"
+                                onClick={() => handleTestKey(provider.key)}
+                                aria-label={`Test ${provider.name} key`}
+                                disabled={status === 'testing'}
+                                className={`h-11 w-11 shrink-0 rounded flex items-center justify-center transition-colors ${
+                                  status === 'valid'
+                                    ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                    : status === 'invalid'
+                                    ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                                    : 'text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10'
+                                }`}
+                                title="Test API key"
+                              >
+                                {status === 'testing' ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                ) : (
+                                  <FlaskConical className="h-4 w-4" aria-hidden="true" />
+                                )}
+                              </button>
+                            )}
+
+                            {typedValue && (
+                              <button
+                                type="button"
+                                onClick={() => handleClearTyped(provider.key)}
+                                aria-label={`Clear ${provider.name} key`}
+                                className="h-11 w-11 shrink-0 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                title="Clear the typed key"
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveKey(provider.key, provider.name)}
+                              aria-label={`Save ${provider.name} key`}
+                              disabled={!typedValue.trim() || !!rowBusy}
+                              className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded bg-orange-500 hover:bg-orange-400 text-black text-xs font-mono uppercase tracking-[0.12em] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {rowBusy === 'save' ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Save className="h-4 w-4" aria-hidden="true" />
+                              )}
+                              Save
+                            </button>
+                            {isReplacing && (
+                              <button
+                                type="button"
+                                onClick={() => handleCancelReplace(provider.key)}
+                                aria-label={`Cancel replacing ${provider.name} key`}
+                                disabled={!!rowBusy}
+                                className="inline-flex items-center justify-center min-h-11 px-4 rounded border border-white/[0.1] text-zinc-400 hover:text-white text-xs font-mono uppercase tracking-[0.12em] transition-colors disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {isSaved && !isReplacing && (
+                        <div className="flex flex-wrap gap-2 mt-3">
                           <button
                             type="button"
-                            onClick={() => toggleVisibility(provider.key)}
-                            aria-label={`Show ${provider.name} key`}
-                            aria-pressed={!!isVisible}
-                            title={isVisible ? 'Hide key' : 'Show key'}
-                            className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
+                            onClick={() => handleReplace(provider.key)}
+                            aria-label={`Replace ${provider.name} key`}
+                            disabled={!!rowBusy}
+                            className="inline-flex items-center justify-center min-h-11 px-4 rounded border border-white/[0.1] text-zinc-300 hover:text-white hover:border-orange-500/40 text-xs font-mono uppercase tracking-[0.12em] transition-colors disabled:opacity-50"
                           >
-                            {isVisible ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
+                            Replace
                           </button>
-                        </div>
-
-                        {currentValue && (
                           <button
                             type="button"
                             onClick={() => handleTestKey(provider.key)}
                             aria-label={`Test ${provider.name} key`}
-                            disabled={status === 'testing'}
-                            className={`h-11 w-11 shrink-0 rounded flex items-center justify-center transition-colors ${
+                            disabled={status === 'testing' || !!rowBusy}
+                            className={`inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded border text-xs font-mono uppercase tracking-[0.12em] transition-colors disabled:opacity-50 ${
                               status === 'valid'
-                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                ? 'border-emerald-500/40 text-emerald-400'
                                 : status === 'invalid'
-                                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                                : 'text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10'
+                                ? 'border-red-500/40 text-red-400'
+                                : 'border-white/[0.1] text-zinc-300 hover:text-white hover:border-orange-500/40'
                             }`}
-                            title="Test API key"
                           >
                             {status === 'testing' ? (
                               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                             ) : (
                               <FlaskConical className="h-4 w-4" aria-hidden="true" />
                             )}
+                            Test
                           </button>
-                        )}
-
-                        {currentValue && (
                           <button
                             type="button"
-                            onClick={() => handleClearKey(provider.key)}
-                            aria-label={`Clear ${provider.name} key`}
-                            className="h-11 w-11 shrink-0 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                            title="Clear API key"
+                            onClick={() => handleRemoveKey(provider.key, provider.name)}
+                            aria-label={
+                              confirmRemove[provider.key]
+                                ? `Click again to remove ${provider.name} key`
+                                : `Remove ${provider.name} key`
+                            }
+                            disabled={!!rowBusy}
+                            className={`inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded border text-xs font-mono uppercase tracking-[0.12em] transition-colors disabled:opacity-50 ${
+                              confirmRemove[provider.key]
+                                ? 'border-red-500/50 bg-red-500/15 text-red-300'
+                                : 'border-white/[0.1] text-zinc-400 hover:text-red-400 hover:border-red-500/40'
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            {rowBusy === 'remove' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            )}
+                            {confirmRemove[provider.key] ? 'Confirm' : 'Remove'}
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
 
                     <AnimatePresence>
                       {error && (
                         <motion.p
+                          role="alert"
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="text-xs text-red-400 mt-2 font-mono"
+                          className="text-xs text-red-400 mt-2 font-mono break-words"
                         >
                           {error}
                         </motion.p>
@@ -666,27 +891,7 @@ export default function SettingsPage() {
                 );
               })}
             </div>
-
-            {/* Save Button */}
-            <div className="flex justify-center pt-6 px-5 pb-5">
-              <button
-                onClick={handleSaveAll}
-                disabled={!hasChanges || isSaving}
-                className="inline-flex items-center justify-center gap-2 min-h-11 px-5 py-2.5 rounded bg-orange-500 hover:bg-orange-400 text-black text-xs font-mono uppercase tracking-[0.15em] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Securing...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Credentials
-                  </>
-                )}
-              </button>
-            </div>
+            )}
           </div>
         </MotionWrapper>
 
@@ -962,9 +1167,9 @@ export default function SettingsPage() {
             </div>
             <ul className="text-xs text-zinc-500 space-y-1 ml-4">
               <li>Click the <FlaskConical className="h-3 w-3 inline" /> button to test if your API key is valid</li>
-              <li>Keys are sent with each request to use your own rate limits</li>
+              <li>A key you save is used on our server for your requests, so you get your own rate limits</li>
               <li>If no custom key is set, the app uses default shared keys (with lower limits)</li>
-              <li>Keys are masked by default - click the eye icon or focus the field to reveal</li>
+              <li>A saved key shows only its last four characters; use the eye icon to check a key while you type it</li>
             </ul>
           </div>
         </MotionWrapper>
