@@ -202,9 +202,7 @@ export default function AboutPage() {
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
                 <span>
-                  API keys encrypted with{' '}
-                  <span className="text-white font-mono">AES-256-GCM</span>{' '}
-                  &mdash; never stored in plaintext
+                  Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
                 </span>
               </li>
             </ul>

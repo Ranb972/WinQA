@@ -40,7 +40,7 @@ Two models go head to head in nine formats: Escalation, The Interrogation, Chine
 
 ### Code Testing Lab
 
-Write JavaScript, TypeScript, or Python in the editor and hit run. Or ask an AI to write it for you and check if it actually runs. Code executes through Piston API, output lands below the editor, and there's a "what worked?" analysis when you want a second opinion.
+Write JavaScript, TypeScript, or Python in the editor and hit run. Or ask an AI to write it for you and check if it actually runs. Code runs on third-party runners (Judge0 CE, with the Piston public API and, when configured, Judge0 via RapidAPI as fallbacks) through the server, output lands below the editor, and there's a "what worked?" analysis when you want a second opinion.
 
 ![Code Testing](public/images/screenshots/code-testing.jpg)
 
@@ -62,8 +62,8 @@ Test Cases is a library of scenarios you keep reusing to probe models. Insights 
 | Backend | Next.js API Routes, MongoDB Atlas, Mongoose |
 | Auth | Clerk (Google + GitHub OAuth) |
 | LLM Providers | Cohere, Google Gemini, Groq, Mistral (Ministral 3) |
-| Code Execution | Piston API |
-| Security | AES-256-GCM encryption for stored API keys, HSTS, CSP headers |
+| Code Execution | Judge0 CE, Judge0 via RapidAPI, Piston public API |
+| Security | HSTS and CSP headers; saved API keys stay in the browser, obfuscated, and are not stored on the server |
 | Deployment | Vercel |
 
 ---
@@ -87,7 +87,6 @@ Open [http://localhost:3000](http://localhost:3000).
 MONGODB_URI=mongodb+srv://user:password@cluster.xxxxx.mongodb.net/winqa?retryWrites=true&w=majority
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  # 32 bytes hex, used to encrypt stored API keys — generate with `openssl rand -hex 32`
 
 # optional — users can add their own keys in Settings
 COHERE_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

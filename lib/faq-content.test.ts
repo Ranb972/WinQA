@@ -43,6 +43,16 @@ describe('faq content', () => {
     for (const { answer } of faqs) expect(answer).not.toMatch(/no sign-?up/i);
   });
 
+  it('no answer contains AES-256-GCM (true until keys move to server-side custody)', () => {
+    for (const { question, answer } of faqs) {
+      expect(answer, `FAQ "${question}"`).not.toContain('AES-256-GCM');
+    }
+  });
+
+  it('the security answer says keys are kept in this browser', () => {
+    expect(answerTo('Is my data private and secure?')).toMatch(/in this browser/i);
+  });
+
   it('the FAQPage JSON-LD has the same count and order as the array', () => {
     const ld = buildFaqJsonLd(faqs);
     expect(ld['@type']).toBe('FAQPage');

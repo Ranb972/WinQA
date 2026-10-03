@@ -220,7 +220,7 @@ export default function SettingsPage() {
       setSavedKeys(keys);
       toast({
         title: 'Settings saved',
-        description: 'API keys saved and encrypted!',
+        description: 'API keys saved in this browser.',
         variant: 'success',
       });
     } catch {
@@ -460,7 +460,7 @@ export default function SettingsPage() {
               <div>
                 <p className="text-zinc-400 text-sm">
                   <span className="text-orange-500 font-medium">Configure your authentication credentials</span> for higher rate limits and better reliability.
-                  Your credentials are <span className="text-orange-500 font-medium">encrypted</span> before being stored locally in your browser.
+                  Credentials you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
                 </p>
               </div>
             </div>
@@ -924,11 +924,7 @@ export default function SettingsPage() {
                     <ul className="text-xs text-zinc-400 space-y-2">
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are encrypted with <span className="text-green-400">AES-256-GCM</span> before storage</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span>Encryption key is derived from your unique user ID using <span className="text-green-400">PBKDF2</span></span>
+                        <span>Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />

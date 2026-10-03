@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
             Privacy Policy
           </h1>
           <p className="text-zinc-500 text-sm font-mono mt-3">
-            Last updated: March 31, 2026
+            Last updated: October 3, 2026
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                 <h3 className="text-sm font-medium text-orange-500 font-mono uppercase tracking-wider mb-2">API Keys</h3>
                 <p className="text-sm">
-                  If you provide API keys for AI providers (Cohere, Google Gemini, Groq, Mistral), they are <span className="text-white">encrypted using AES-256-GCM</span> before storage. Keys are only decrypted server-side when making requests to AI providers on your behalf and are never logged or exposed in plaintext.
+                  If you save API keys for AI providers (Cohere, Google Gemini, Groq, Mistral, or a custom provider): Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
@@ -98,7 +98,7 @@ export default function PrivacyPolicyPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>To make API calls to AI providers using your encrypted keys</span>
+                <span>To make API calls to AI providers using the keys you save</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
@@ -121,7 +121,7 @@ export default function PrivacyPolicyPage() {
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span>API keys are encrypted at rest using <span className="text-white font-mono">AES-256-GCM</span> with unique initialization vectors</span>
+                  <span>Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
@@ -147,24 +147,44 @@ export default function PrivacyPolicyPage() {
             <div className="p-4 rounded-lg border border-orange-500/20 bg-orange-500/[0.03]">
               <p className="text-sm font-medium text-white mb-2">We do not sell your data.</p>
               <p className="text-sm">
-                We do not sell, rent, or trade your personal information or content to third parties. Your data is shared only with the following service providers necessary to operate the platform:
+                We do not sell, rent, or trade your personal information or content to third parties. Your data is shared only with the following service providers, each for the purpose and with the data listed:
               </p>
               <ul className="space-y-2 mt-3 ml-4 text-sm">
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span><span className="text-white">Clerk</span> — Authentication and user management</span>
+                  <span><span className="text-white">Clerk</span> — Account and authentication: your email address and sign-in credentials, and the account ID we use to key your content.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span><span className="text-white">MongoDB Atlas</span> — Database hosting</span>
+                  <span><span className="text-white">Cloudflare Turnstile</span> — Bot check during sign-up (loaded by Clerk): browser signals from your device.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span><span className="text-white">Vercel</span> — Hosting and analytics</span>
+                  <span><span className="text-white">MongoDB Atlas</span> — Database hosting: everything you create and store on WinQA (prompts, bug reports, test cases, insights, battles, usage counters).</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span><span className="text-white">AI Providers</span> — Your prompts are sent to the AI providers you select (Cohere, Google, Groq, Mistral) to generate responses. Refer to each provider&apos;s privacy policy for their data handling practices.</span>
+                  <span><span className="text-white">Vercel</span> — Hosting and request logs. Analytics is described under Usage Analytics above.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-orange-500 mt-0.5">&bull;</span>
+                  <span><span className="text-white">Cohere, Google Gemini API, Groq, Mistral</span> — AI providers: your prompts and conversation, plus your own API key for that provider if you saved one.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-orange-500 mt-0.5">&bull;</span>
+                  <span><span className="text-white">Judge0 CE (ce.judge0.com)</span> — Code execution: the code you run and its standard input.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-orange-500 mt-0.5">&bull;</span>
+                  <span><span className="text-white">Piston public API (emkc.org)</span> — Code execution fallback when Judge0 CE fails: the code you run and its standard input.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-orange-500 mt-0.5">&bull;</span>
+                  <span><span className="text-white">Judge0 via RapidAPI (judge0-ce.p.rapidapi.com)</span> — Code execution fallback, used when configured: the code you run and its standard input.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-orange-500 mt-0.5">&bull;</span>
+                  <span><span className="text-white">Custom providers you configure</span> — They receive what you send to them, including your key for that provider, under your own account with that provider. Check their privacy policy.</span>
                 </li>
               </ul>
             </div>
@@ -189,11 +209,16 @@ export default function PrivacyPolicyPage() {
             <ul className="space-y-2 ml-4 text-sm">
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>Access, update, or delete your account and associated data</span>
+                <span>Access or update your account details through Manage account in your profile menu.</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>Remove your API keys from the platform at any time via Settings</span>
+                <span>Delete your account. Deleting your account deletes your content, battles and usage counters from our database within minutes. Saved API keys are never on our servers; remove them from this browser in Settings. Public library items you contributed stay, re-attributed to WinQA. To delete, use Manage account in your profile menu, or email{' '}
+                  <a href="mailto:privacy@winqa.ai" className="text-orange-500 hover:text-orange-400 underline underline-offset-4">privacy@winqa.ai</a>.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-orange-500 mt-0.5">&bull;</span>
+                <span>Remove saved API keys from this browser at any time via Settings</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
@@ -201,7 +226,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>Request a complete export or deletion of your data by contacting us</span>
+                <span>Export your bug reports, prompts, test cases and insights from Settings. Other data, such as battles and usage counters, is not part of that export; email{' '}
+                  <a href="mailto:privacy@winqa.ai" className="text-orange-500 hover:text-orange-400 underline underline-offset-4">privacy@winqa.ai</a>{' '}to request it.</span>
               </li>
             </ul>
           </section>
@@ -222,7 +248,9 @@ export default function PrivacyPolicyPage() {
               Contact
             </h2>
             <p className="text-sm">
-              For questions about this Privacy Policy or your data, please open an issue on our{' '}
+              For questions about this Privacy Policy, or to request deletion or access to your data, email{' '}
+              <a href="mailto:privacy@winqa.ai" className="text-orange-500 hover:text-orange-400 underline underline-offset-4">privacy@winqa.ai</a>.
+              For bugs and feature requests, open an issue on our{' '}
               <a
                 href="https://github.com/Ranb972/WinQA"
                 target="_blank"
