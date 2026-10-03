@@ -14,6 +14,7 @@ import {
   ProviderTimeoutError,
   ProviderBodyTooLargeError,
   MAX_PROVIDER_URL_LENGTH,
+  CONNECT_TIMEOUT_MARGIN_MS,
 } from '@/lib/security';
 import {
   REDIRECT_BLOCKED_ERROR,
@@ -494,21 +495,83 @@ describe('checkProviderUrl returns the shared guard constants (S11)', () => {
   });
 });
 
-describe('safeProviderFetch: the connect timeout is the request deadline (S12)', () => {
+describe('safeProviderFetch: the connect timeout is longer than the request deadline (S12)', () => {
+  const PENDING = Symbol('pending');
+  const settledOrPending = <T,>(p: Promise<T>) =>
+    Promise.race([p, new Promise<typeof PENDING>((resolve) => setImmediate(() => resolve(PENDING)))]);
+
+  // undici 7 runs a connect timeout above 1000 ms on its fast timers
+  // (node_modules/undici/lib/util/timers.js): a 499 ms tick (TICK_MS). When other
+  // fast timers are active, one can fire early by less than one tick.
+  const UNDICI_TICK_MS = 499;
+
+  // A blackholed port as undici would serve it: no answer, the connect timer set from
+  // the Agent's connect.timeout (firing a full tick early, a bound on how early it
+  // can be), and the request's abort
+  // honoured. The timer rejects the way undici does: "fetch failed" with
+  // UND_ERR_CONNECT_TIMEOUT as the cause.
+  const blackholedConnect = (
+    _url: string,
+    init: { signal?: AbortSignal; dispatcher?: { options: { connect?: { timeout?: number } } } }
+  ) =>
+    new Promise((_resolve, reject) => {
+      const connectTimeout = init.dispatcher?.options.connect?.timeout ?? 10_000;
+      const firesAfter = connectTimeout > 1000 ? connectTimeout - UNDICI_TICK_MS : connectTimeout;
+      const timer = setTimeout(() => {
+        const cause = Object.assign(new Error('Connect Timeout Error'), { code: 'UND_ERR_CONNECT_TIMEOUT' });
+        reject(new TypeError('fetch failed', { cause }));
+      }, firesAfter);
+      init.signal?.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(init.signal?.reason);
+      });
+    });
+
   beforeEach(() => {
     dnsMock.lookup.mockReset();
     undiciMock.fetch.mockReset();
     undiciMock.agents.length = 0;
   });
 
-  it.each([20_000, 10_000])('a %i ms budget gives the Agent the same connect timeout', async (timeoutMs) => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([20_000, 10_000])('a %i ms budget gives the Agent a connect timeout of the budget plus the margin', async (timeoutMs) => {
     dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
     undiciMock.fetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
     await safeProviderFetch('https://api.example.com/v1/x', { timeoutMs, maxBodyBytes: MAX_BODY });
     const connect = undiciMock.agents[0].options.connect as { timeout?: number; lookup?: unknown };
-    // undici's own default is 10 s, which would cut a 20 s budget short with "fetch failed".
-    expect(connect.timeout).toBe(timeoutMs);
+    // undici's own default is 10 s, which would cut a 20 s budget short with "fetch failed";
+    // a value equal to the budget races the deadline.
+    expect(CONNECT_TIMEOUT_MARGIN_MS).toBeGreaterThan(UNDICI_TICK_MS);
+    expect(connect.timeout).toBe(timeoutMs + CONNECT_TIMEOUT_MARGIN_MS);
     expect(connect.lookup).toBeTypeOf('function');
+  });
+
+  // 15300 ms is what the connection-test route had left in production after cold DNS
+  // and metering; 20000 and 10000 are the chat and the old test budgets.
+  it.each([
+    [15_300, 'Request timed out after 15.3s'],
+    [20_000, 'Request timed out after 20s'],
+    [10_000, 'Request timed out after 10s'],
+  ])('a blackholed port with a %i ms budget ends on the deadline, not "fetch failed"', async (timeoutMs, text) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    dnsMock.lookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockImplementationOnce(blackholedConnect);
+
+    const result = safeProviderFetch('https://example.com:81/v1', { timeoutMs, maxBodyBytes: MAX_BODY }).catch((e) => e);
+
+    await vi.advanceTimersByTimeAsync(timeoutMs - 1);
+    expect(await settledOrPending(result)).toBe(PENDING);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const err = await settledOrPending(result);
+    expect(err).toBeInstanceOf(ProviderTimeoutError);
+    expect((err as Error).message).toBe(text);
+    expect(undiciMock.fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 

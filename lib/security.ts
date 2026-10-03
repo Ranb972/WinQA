@@ -255,6 +255,22 @@ export const CHAT_PROVIDER_MAX_BODY_BYTES = 4 * 1024 * 1024;
  */
 export const TEST_PROVIDER_MAX_BODY_BYTES = 64 * 1024;
 
+/**
+ * How much longer than the request deadline the undici Agent's connect timeout is.
+ * The two must not be equal: two timers of the same length race, and whichever
+ * fires first decides the error. The deadline gives ProviderTimeoutError ("Request
+ * timed out after Ns", shown as "No response in time"); undici's connect timer gives
+ * UND_ERR_CONNECT_TIMEOUT, surfaced as "fetch failed" ("Could not reach the
+ * provider"). undici runs connect timeouts over 1 s on its coarse fast timers
+ * (lib/util/timers.js, 499 ms ticks); when other fast timers are active, one can
+ * fire early by less than one tick, so equal values let undici win. The margin is
+ * longer than a tick, so the deadline always fires first. Its abort ends the
+ * request at the deadline, so the response is never delayed; the TCP connect is not
+ * torn down by it, and the pending socket is closed by the connect timer up to
+ * about 1.5 s later.
+ */
+export const CONNECT_TIMEOUT_MARGIN_MS = 1000;
+
 /** A host name and the one vetted address a request to it may connect to. */
 export interface PinnedAddress {
   hostname: string;
@@ -447,7 +463,12 @@ export async function safeProviderFetch(url: string, init: ProviderFetchInit): P
 
     // connect.timeout: undici's default is 10 s, shorter than a 20 s chat budget; a
     // blackholed port must end on the deadline (timeout text), not as "fetch failed".
-    agent = new Agent({ connect: { lookup: pinnedLookup(pinned), timeout: timeoutMs } });
+    // Strictly longer than the deadline (CONNECT_TIMEOUT_MARGIN_MS): equal timers race
+    // and undici's can win. The abort ends the request at the deadline; a pending
+    // socket is closed by the connect timer up to about 1.5 s later.
+    agent = new Agent({
+      connect: { lookup: pinnedLookup(pinned), timeout: timeoutMs + CONNECT_TIMEOUT_MARGIN_MS },
+    });
     const response = await undiciFetch(url, {
       method,
       headers,
