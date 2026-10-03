@@ -41,7 +41,7 @@ const features = [
     icon: Code,
     title: 'Code Testing Lab',
     description:
-      'Paste AI-generated code and run it right in the browser. JavaScript, Python, TypeScript. See the output, see the errors, get AI help debugging.',
+      'Paste AI-generated code and run it on third-party code runners. JavaScript, Python, TypeScript. See the output, see the errors, get AI help debugging.',
   },
   {
     icon: Bug,
@@ -187,7 +187,7 @@ export default function AboutPage() {
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
                 <span>
-                  Real-time code execution in the browser for JavaScript,
+                  Code execution on third-party runners for JavaScript,
                   Python, and TypeScript
                 </span>
               </li>

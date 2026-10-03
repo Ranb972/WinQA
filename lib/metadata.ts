@@ -73,7 +73,7 @@ export const pageMetadata = {
   },
   codeTesting: {
     title: 'Code Testing Lab - Run & Debug Code',
-    description: 'Execute and debug code snippets with AI assistance. Test your code in an interactive browser environment.',
+    description: 'Execute and debug code snippets with AI assistance. Run your code on hosted code runners, with HTML previews in the browser.',
     canonical: '/code-testing',
   },
   testCases: {

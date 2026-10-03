@@ -99,7 +99,7 @@ export function HeroSection() {
 
                 {/* Providers list */}
                 <div>
-                  <p className="font-mono text-white/60 text-xs mb-4 tracking-wider uppercase">Connected Providers</p>
+                  <p className="font-mono text-white/60 text-xs mb-4 tracking-wider uppercase">Supported Providers</p>
                   <div className="space-y-2">
                     {['Cohere', 'Gemini', 'Groq', 'Mistral'].map((provider, i) => (
                       <motion.div
@@ -110,7 +110,6 @@ export function HeroSection() {
                         transition={{ delay: 0.4 + i * 0.08 }}
                       >
                         <span className="text-white/70 text-sm">{provider}</span>
-                        <span className="text-orange-500/60 text-xs font-mono">READY</span>
                       </motion.div>
                     ))}
                   </div>

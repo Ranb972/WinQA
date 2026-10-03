@@ -83,13 +83,13 @@ const featureSections = [
     href: '/code-testing',
     images: ['/images/dashboard/code-testing.png', '/images/dashboard/code-testing-2.png'],
     bullets: [
-      { icon: Zap, text: 'Run code instantly in your browser' },
+      { icon: Zap, text: 'Run code with no local setup' },
       { icon: Wrench, text: 'Let AI find and fix your bugs' },
       { icon: BrainCircuit, text: 'Discover why your code works or fails' },
       { icon: Terminal, text: 'Command JavaScript, Python & TypeScript' },
       { icon: Gamepad2, text: 'Watch your creations come alive' },
     ],
-    statsTemplate: () => 'Run code instantly in your browser',
+    statsTemplate: () => 'Run code with no local setup',
   },
   {
     id: 'battle',

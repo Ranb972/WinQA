@@ -64,7 +64,7 @@ export function CTASection() {
             viewport={{ once: true, margin: '-10%', amount: 0.3 }}
             transition={{ delay: 0.2 }}
           >
-            No signup &middot; Free forever &middot; Open to all
+            Free forever &middot; Free account &middot; No credit card
           </motion.p>
         </motion.div>
       </div>
