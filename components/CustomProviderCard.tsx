@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  CustomProvider,
+  CustomProviderView,
   CustomProviderTestResult,
   friendlyTestFailure,
   formatTestPassed,
@@ -21,7 +21,7 @@ import {
 } from '@/lib/custom-providers';
 
 interface CustomProviderCardProps {
-  provider: CustomProvider;
+  provider: CustomProviderView;
   onEdit: () => void;
   onDelete: () => void;
   onTest: () => Promise<CustomProviderTestResult>;
@@ -56,7 +56,7 @@ export default function CustomProviderCard({
   const [toggleBusy, setToggleBusy] = useState(false);
   const toggleBusyRef = useRef(false);
   // The enabled-state write in flight (never rejects). A Remove waits for it,
-  // because both rewrite the stored provider list.
+  // so the delete never overtakes the write and finds nothing to update.
   const pendingWrite = useRef<Promise<void> | null>(null);
   // Clears a shown test pass after RESET_MS. Test results only.
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,7 +105,7 @@ export default function CustomProviderCard({
   const testing = testStatus === 'testing';
   const switchBusy = testing || toggleBusy;
   // Off with no usable key (e.g. decryption failed): a test cannot pass.
-  const turnOnBlocked = !provider.enabled && !provider.apiKey;
+  const turnOnBlocked = !provider.enabled && !provider.hasKey;
 
   // Runs the server-side test and shows the result. A pass clears itself after
   // RESET_MS; a failure stays until the next action. Returns null when stale.
@@ -130,7 +130,7 @@ export default function CustomProviderCard({
         setTestMessage(null);
       });
     } else {
-      const failure = friendlyTestFailure(result, provider.apiKey);
+      const failure = friendlyTestFailure(result);
       setTestStatus('invalid');
       setTestMessage({
         text: failure.statusText ? `${failure.reason} · ${failure.statusText}` : failure.reason,
@@ -162,7 +162,7 @@ export default function CustomProviderCard({
   const handleToggle = async () => {
     const intent = toggleIntent({
       enabled: provider.enabled,
-      hasKey: !!provider.apiKey,
+      hasKey: provider.hasKey,
       busy: toggleBusyRef.current || testing,
     });
     if (intent === 'ignore') return;
@@ -207,7 +207,7 @@ export default function CustomProviderCard({
       hideDeleteConfirm();
       setTestStatus('idle');
       setTestMessage(null);
-      // Let an enabled-state write land before the removal rewrites storage.
+      // Let an enabled-state write land before the removal.
       if (pendingWrite.current) await pendingWrite.current;
       onDelete();
     } else {
@@ -277,6 +277,12 @@ export default function CustomProviderCard({
             </code>
           </div>
 
+          {provider.hasKey && (
+            <p className="mt-0.5 text-xs text-slate-500">
+              {provider.last4 ? `Key ending in ${provider.last4}` : 'Key saved'}
+            </p>
+          )}
+
           {/* Always rendered so screen readers announce every change */}
           <p
             role="status"
@@ -340,7 +346,7 @@ export default function CustomProviderCard({
             variant="ghost"
             size="icon"
             onClick={handleTest}
-            disabled={!provider.apiKey}
+            disabled={!provider.hasKey}
             aria-disabled={testing}
             className={`h-11 w-11 transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed ${
               testStatus === 'valid'

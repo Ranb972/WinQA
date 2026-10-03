@@ -1,15 +1,33 @@
-// Custom providers storage with encryption for API keys
-// Uses the same encryption pattern as api-keys.ts
+// Custom providers: the account-backed client view, the form helpers Settings
+// uses, and the read-only readers for the old browser store (winqa_custom_providers).
+//
+// Providers live on the server, one document each (/api/custom-providers); this
+// module never writes the browser store. The readers stay for the migration banner
+// (C14) and for chat while a browser still holds un-migrated providers.
 
-import { encryptApiKey, decryptApiKey, EncryptedData } from './crypto';
+import { decryptApiKey, EncryptedData } from './crypto';
 // Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
-import { normalizeBaseUrl } from '@/lib/llm/models';
+import { getHeaderType, normalizeBaseUrl } from '@/lib/llm/models';
 // Client-safe: lib/friendly-errors has only a type import (erased at build).
 import { ADDRESS_GUARD_ERRORS, PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import {
+  KeysApiError,
+  keyErrorText,
+  testCustomProvider,
+  type CustomProviderInfo,
+  type TestCustomProviderPayload,
+  type UpdateCustomProviderBody,
+} from '@/lib/keys-client';
 
 const STORAGE_KEY = 'winqa_custom_providers';
 export const MAX_CUSTOM_PROVIDERS = 6;
 
+/**
+ * A provider together with its key. This is the shape of the old browser store
+ * (decrypted in memory by getCustomProviders) and of the provider object the chat
+ * path and the engine resolve on the server. Settings never holds a key: it uses
+ * CustomProviderView.
+ */
 export interface CustomProvider {
   id: string;
   name: string;
@@ -18,6 +36,35 @@ export interface CustomProvider {
   modelId: string;
   enabled: boolean;
   headerType?: 'bearer' | 'x-api-key';
+}
+
+/**
+ * A custom provider as Settings sees it: what the account stores, with no key.
+ * `last4` is the saved key's last four characters ('' for a short key).
+ */
+export interface CustomProviderView {
+  id: string;
+  name: string;
+  baseUrl: string;
+  modelId: string;
+  enabled: boolean;
+  headerType: 'bearer' | 'x-api-key';
+  hasKey: boolean;
+  last4: string;
+}
+
+/** The server's record as a view. A missing header type is what the base URL implies. */
+export function toCustomProviderView(info: CustomProviderInfo): CustomProviderView {
+  return {
+    id: info.id,
+    name: info.name,
+    baseUrl: info.baseUrl,
+    modelId: info.modelId,
+    enabled: info.enabled,
+    headerType: info.headerType ?? getHeaderType(info.baseUrl),
+    hasKey: info.hasKey,
+    last4: info.last4,
+  };
 }
 
 interface StoredCustomProvider {
@@ -40,14 +87,7 @@ interface LegacyStorage {
 }
 
 /**
- * Generate a unique ID for a custom provider
- */
-function generateId(): string {
-  return `custom_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Get all custom providers from localStorage (decrypted)
+ * Get all custom providers from the old browser store (decrypted). Read-only.
  */
 export async function getCustomProviders(userId?: string): Promise<CustomProvider[]> {
   if (typeof window === 'undefined') {
@@ -84,7 +124,7 @@ export async function getCustomProviders(userId?: string): Promise<CustomProvide
       return providers;
     }
 
-    // Handle legacy unencrypted format (migrate on next save)
+    // Handle legacy unencrypted format
     if (isLegacyFormat(parsed)) {
       return parsed.providers.map((p) => ({
         ...p,
@@ -96,136 +136,6 @@ export async function getCustomProviders(userId?: string): Promise<CustomProvide
   } catch {
     return [];
   }
-}
-
-/**
- * Save all custom providers to localStorage (encrypted)
- */
-export async function saveCustomProviders(
-  providers: CustomProvider[],
-  userId?: string
-): Promise<void> {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  if (providers.length > MAX_CUSTOM_PROVIDERS) {
-    throw new Error(`Maximum ${MAX_CUSTOM_PROVIDERS} custom providers allowed`);
-  }
-
-  // If we have a userId, encrypt the API keys
-  if (userId) {
-    const storedProviders: StoredCustomProvider[] = [];
-    const encryptedKeys: Record<string, EncryptedData> = {};
-
-    for (const provider of providers) {
-      storedProviders.push({
-        id: provider.id,
-        name: provider.name,
-        baseUrl: provider.baseUrl,
-        modelId: provider.modelId,
-        enabled: provider.enabled,
-        headerType: provider.headerType,
-      });
-
-      if (provider.apiKey) {
-        encryptedKeys[provider.id] = await encryptApiKey(provider.apiKey, userId);
-      }
-    }
-
-    const storage: EncryptedStorage = {
-      encrypted: true,
-      providers: storedProviders,
-      keys: encryptedKeys,
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
-  } else {
-    // Fallback: store without encryption (not recommended)
-    const storage: LegacyStorage = {
-      providers: providers.map((p) => ({
-        id: p.id,
-        name: p.name,
-        baseUrl: p.baseUrl,
-        apiKey: p.apiKey,
-        modelId: p.modelId,
-        enabled: p.enabled,
-        headerType: p.headerType,
-      })),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
-  }
-}
-
-/**
- * Add a new custom provider
- */
-export async function addCustomProvider(
-  provider: Omit<CustomProvider, 'id'>,
-  userId?: string
-): Promise<CustomProvider> {
-  const providers = await getCustomProviders(userId);
-
-  if (providers.length >= MAX_CUSTOM_PROVIDERS) {
-    throw new Error(`Maximum ${MAX_CUSTOM_PROVIDERS} custom providers allowed`);
-  }
-
-  const newProvider: CustomProvider = {
-    ...provider,
-    id: generateId(),
-  };
-
-  providers.push(newProvider);
-  await saveCustomProviders(providers, userId);
-
-  return newProvider;
-}
-
-/**
- * Update an existing custom provider
- */
-export async function updateCustomProvider(
-  id: string,
-  updates: Partial<Omit<CustomProvider, 'id'>>,
-  userId?: string
-): Promise<void> {
-  const providers = await getCustomProviders(userId);
-  const index = providers.findIndex((p) => p.id === id);
-
-  if (index === -1) {
-    throw new Error(`Provider with id ${id} not found`);
-  }
-
-  providers[index] = {
-    ...providers[index],
-    ...updates,
-  };
-
-  await saveCustomProviders(providers, userId);
-}
-
-/**
- * Remove a custom provider
- */
-export async function removeCustomProvider(id: string, userId?: string): Promise<void> {
-  const providers = await getCustomProviders(userId);
-  const filtered = providers.filter((p) => p.id !== id);
-  await saveCustomProviders(filtered, userId);
-}
-
-/**
- * Toggle a custom provider's enabled status
- */
-export async function toggleCustomProvider(id: string, userId?: string): Promise<void> {
-  const providers = await getCustomProviders(userId);
-  const index = providers.findIndex((p) => p.id === id);
-
-  if (index === -1) {
-    throw new Error(`Provider with id ${id} not found`);
-  }
-
-  providers[index].enabled = !providers[index].enabled;
-  await saveCustomProviders(providers, userId);
 }
 
 /**
@@ -264,35 +174,44 @@ export function redactKey(text: string, key: string): string {
 }
 
 /**
+ * What a connection test runs on: a saved provider (the server holds its base URL
+ * and key; `modelId` and `headerType` may override the saved ones) or the typed form.
+ */
+export type CustomProviderTestInput =
+  | { providerId: string; modelId?: string; headerType?: 'bearer' | 'x-api-key' }
+  | Pick<CustomProvider, 'baseUrl' | 'apiKey' | 'modelId' | 'headerType'>;
+
+/**
  * Test a custom provider through the server route. The check used to run in the
  * browser, where CORS blocks most providers and Anthropic cannot be reached at all
  * (audit V04); the route speaks both API formats and applies the SSRF guard.
  */
 export async function testCustomProviderConnection(
-  provider: Pick<CustomProvider, 'baseUrl' | 'apiKey' | 'modelId' | 'headerType'>
+  provider: CustomProviderTestInput
 ): Promise<CustomProviderTestResult> {
   // Own wall time, used only when the route does not report latencyMs.
   const startedAt = performance.now();
   const elapsedMs = () => Math.round(performance.now() - startedAt);
+  // Only a typed key can appear in the route's error text.
+  const typedKey = 'apiKey' in provider ? provider.apiKey : '';
+  const testedModel = provider.modelId ?? '';
 
   try {
-    const res = await fetch('/api/test-custom-provider', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        baseUrl: provider.baseUrl,
-        apiKey: provider.apiKey,
-        modelId: provider.modelId,
-        headerType: provider.headerType,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as {
-      valid?: boolean;
-      error?: string;
-      status?: number | null;
-      latencyMs?: number;
-      model?: string;
-    };
+    const payload: TestCustomProviderPayload =
+      'providerId' in provider
+        ? {
+            providerId: provider.providerId,
+            modelId: provider.modelId,
+            headerType: provider.headerType,
+          }
+        : {
+            baseUrl: provider.baseUrl,
+            apiKey: provider.apiKey,
+            modelId: provider.modelId,
+            headerType: provider.headerType,
+          };
+    const res = await testCustomProvider(payload);
+    const data = res.data;
     const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : elapsedMs();
     const status =
       typeof data.status === 'number' || data.status === null
@@ -300,14 +219,14 @@ export async function testCustomProviderConnection(
         : res.ok
           ? null
           : res.status;
-    const model = typeof data.model === 'string' && data.model ? data.model : provider.modelId;
+    const model = typeof data.model === 'string' && data.model ? data.model : testedModel;
 
     if (data.valid) {
       return { valid: true, status, latencyMs, model };
     }
     return {
       valid: false,
-      error: redactKey(data.error || `HTTP ${res.status}`, provider.apiKey),
+      error: redactKey(data.error || `HTTP ${res.status}`, typedKey),
       status,
       latencyMs,
       model,
@@ -315,10 +234,10 @@ export async function testCustomProviderConnection(
   } catch (error) {
     return {
       valid: false,
-      error: redactKey(error instanceof Error ? error.message : 'Connection failed', provider.apiKey),
+      error: redactKey(error instanceof Error ? error.message : 'Connection failed', typedKey),
       status: null,
       latencyMs: elapsedMs(),
-      model: provider.modelId,
+      model: testedModel,
     };
   }
 }
@@ -331,16 +250,23 @@ const FINGERPRINT_SEP = '\u0000';
  * The model id is trimmed here, so a caller must test and save the trimmed id too
  * (CustomProviderModal's effectiveModelId); otherwise "gpt-4 " would save under the
  * fingerprint of a test that ran on "gpt-4".
+ *
+ * The key part is the typed key. When the key field is blank on an edit, the test
+ * ran on the key saved on the server, which the browser never has: `savedId` then
+ * stands for it as `saved:<id>`, so a name-only edit matches the stored
+ * fingerprint and a new key never does.
  */
 export function testFingerprint(input: {
   baseUrl: string;
   apiKey: string;
   modelId: string;
   headerType?: 'bearer' | 'x-api-key';
+  savedId?: string;
 }): string {
+  const keyPart = input.apiKey === '' && input.savedId ? `saved:${input.savedId}` : input.apiKey;
   return [
     normalizeBaseUrl(input.baseUrl),
-    input.apiKey,
+    keyPart,
     input.modelId.trim(),
     input.headerType ?? 'bearer',
   ].join(FINGERPRINT_SEP);
@@ -425,8 +351,107 @@ export function canSaveProvider(input: {
   isValid: boolean;
   testPassed: boolean;
   nameOnlyChange: boolean;
+  /** An edit moved the base URL. The saved key is bound to the old host, so a blank key field cannot save. */
+  baseUrlChanged?: boolean;
+  keyBlank?: boolean;
 }): boolean {
+  if (input.baseUrlChanged && input.keyBlank) return false;
   return input.isValid && (input.testPassed || input.nameOnlyChange);
+}
+
+/** True when the form's base URL names another address than the saved one. */
+export function hasBaseUrlChanged(savedBaseUrl: string, formBaseUrl: string): boolean {
+  return normalizeBaseUrl(savedBaseUrl) !== normalizeBaseUrl(formBaseUrl);
+}
+
+/**
+ * Whether the form relies on the key saved on the server: an edit of a provider
+ * that has a key, with the key field blank and the base URL unchanged.
+ */
+export function usesSavedKey(
+  form: { apiKey: string; baseUrl: string },
+  saved: Pick<CustomProviderView, 'baseUrl' | 'hasKey'> | null
+): boolean {
+  return (
+    saved !== null &&
+    saved.hasKey &&
+    form.apiKey === '' &&
+    !hasBaseUrlChanged(saved.baseUrl, form.baseUrl)
+  );
+}
+
+/** The fields of the modal's form that a save or a test reads. */
+export interface CustomProviderForm {
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  modelId: string;
+  headerType: 'bearer' | 'x-api-key';
+}
+
+/** What the modal hands to Settings on Save: the form, the enabled state and, on an edit, the provider's id. */
+export interface CustomProviderSubmit extends CustomProviderForm {
+  id?: string;
+  enabled: boolean;
+}
+
+/**
+ * What the modal's Test sends: the saved provider's id (with the form's model and
+ * header) when the form relies on the saved key, otherwise the full typed form.
+ */
+export function customTestInput(
+  form: CustomProviderForm,
+  saved: Pick<CustomProviderView, 'id' | 'baseUrl' | 'hasKey'> | null
+): CustomProviderTestInput {
+  if (saved && usesSavedKey(form, saved)) {
+    return { providerId: saved.id, modelId: form.modelId, headerType: form.headerType };
+  }
+  return {
+    baseUrl: form.baseUrl,
+    apiKey: form.apiKey,
+    modelId: form.modelId,
+    headerType: form.headerType,
+  };
+}
+
+/**
+ * The PATCH body for an edit: only the fields that changed. A new base URL goes
+ * with the form's key and the header type for that host (the server refuses a base
+ * URL without a key); a typed key alone replaces the key. `enabled` is the card's
+ * switch, never part of an edit. A header type that differs from the saved one is
+ * sent too, so the header tested is the header saved. An empty result means nothing changed.
+ */
+export function buildProviderPatch(
+  saved: Pick<CustomProviderView, 'name' | 'baseUrl' | 'modelId' | 'headerType'>,
+  form: CustomProviderForm
+): UpdateCustomProviderBody {
+  const patch: UpdateCustomProviderBody = {};
+  const name = form.name.trim();
+  const modelId = form.modelId.trim();
+  if (name !== saved.name) patch.name = name;
+  if (modelId !== saved.modelId) patch.modelId = modelId;
+  if (hasBaseUrlChanged(saved.baseUrl, form.baseUrl)) {
+    patch.baseUrl = normalizeBaseUrl(form.baseUrl);
+    patch.headerType = getHeaderType(form.baseUrl);
+    patch.apiKey = form.apiKey;
+  } else {
+    if (form.apiKey !== '') patch.apiKey = form.apiKey;
+    // The header the form tested with is the one that gets saved.
+    if (form.headerType !== saved.headerType) patch.headerType = form.headerType;
+  }
+  return patch;
+}
+
+/**
+ * The text a failed save, edit, delete or toggle shows. The four address-guard
+ * texts read as WinQA's own refusal (as in friendlyTestFailure); every other
+ * server text passes through, with the sign-in and key-storage wordings of keys-client.
+ */
+export function customProviderErrorText(error: unknown): string {
+  if (error instanceof KeysApiError && error.status === 400 && ADDRESS_GUARD_ERRORS.has(error.message)) {
+    return `WinQA blocks this address. ${error.message}`;
+  }
+  return keyErrorText(error);
 }
 
 /** Text shown (title and status line) when a provider without a usable key cannot be turned on. */

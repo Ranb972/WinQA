@@ -20,13 +20,17 @@ import {
 } from '@/components/ui/select';
 import { Eye, EyeOff, Loader2, FlaskConical, Check, X } from 'lucide-react';
 import {
-  CustomProvider,
+  CustomProviderView,
+  CustomProviderSubmit,
   CustomProviderTestResult,
   testCustomProviderConnection,
   testFingerprint,
   friendlyTestFailure,
   formatTestPassed,
   canSaveProvider,
+  customTestInput,
+  hasBaseUrlChanged,
+  usesSavedKey,
 } from '@/lib/custom-providers';
 import {
   COMMON_CUSTOM_PROVIDERS,
@@ -46,8 +50,9 @@ const LABEL_CLASS = 'text-sm font-medium text-slate-300 mb-1.5 block';
 interface CustomProviderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  provider: CustomProvider | null; // null = add mode, provider = edit mode
-  onSave: (provider: Omit<CustomProvider, 'id'> & { id?: string }) => void;
+  provider: CustomProviderView | null; // null = add mode, provider = edit mode
+  /** Resolves to null when the provider was saved, otherwise to the text to show; the dialog stays open on text. */
+  onSave: (provider: CustomProviderSubmit) => Promise<string | null>;
 }
 
 type TestStatus = 'idle' | 'testing' | 'valid' | 'invalid';
@@ -68,6 +73,8 @@ export default function CustomProviderModal({
   // The id typed into "Enter custom model" when the <Select> is on the sentinel.
   const [customModelId, setCustomModelId] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState<TestFailure | null>(null);
   // Last passing test and the fingerprint (URL, key, model, header) it ran on.
@@ -87,6 +94,7 @@ export default function CustomProviderModal({
   const baseUrlId = `${uid}-base-url`;
   const baseUrlHelpId = `${uid}-base-url-help`;
   const apiKeyId = `${uid}-api-key`;
+  const apiKeyHelpId = `${uid}-api-key-help`;
   const modelFieldId = `${uid}-model`;
   const customModelFieldId = `${uid}-custom-model`;
   const quickFillLabelId = `${uid}-quick-fill`;
@@ -104,7 +112,8 @@ export default function CustomProviderModal({
         // custom one: show it in the free-text input instead of an empty <Select>.
         setName(provider.name);
         setBaseUrl(provider.baseUrl);
-        setApiKey(provider.apiKey);
+        // The saved key never reaches the browser: a blank field keeps it.
+        setApiKey('');
         const suggestions = getSuggestedModels(provider.baseUrl);
         if (suggestions.length > 0 && !suggestions.includes(provider.modelId)) {
           setModelId(CUSTOM_MODEL);
@@ -122,6 +131,8 @@ export default function CustomProviderModal({
         setCustomModelId('');
       }
       setShowApiKey(false);
+      setSaving(false);
+      setSaveError(null);
       setTestStatus('idle');
       setTestError(null);
       setPassed(null);
@@ -163,18 +174,29 @@ export default function CustomProviderModal({
   // testFingerprint trims too: test, save and fingerprint must use this one string.
   const effectiveModelId = (modelId === CUSTOM_MODEL ? customModelId : modelId).trim();
 
+  const isEditMode = !!provider;
+  const headerType = getHeaderType(baseUrl);
+  const baseUrlChanged = !!provider && hasBaseUrlChanged(provider.baseUrl, baseUrl);
+  const keyBlank = apiKey === '';
+  // A blank key field on an edit means "keep the saved key", unless the base URL
+  // moved: the saved key is bound to its old host, so that edit needs the key again.
+  const savedKeyInUse = usesSavedKey({ apiKey, baseUrl }, provider);
+
   // Save gate. The name is not part of the fingerprint, so a name-only edit of a
-  // stored provider may save without a new test.
+  // stored provider may save without a new test. A blank key stands for the saved
+  // one as `saved:<id>`, so a model change on the saved key still needs a test.
   const currentFingerprint = testFingerprint({
     baseUrl,
     apiKey,
     modelId: effectiveModelId,
-    headerType: getHeaderType(baseUrl),
+    headerType,
+    savedId: savedKeyInUse ? provider?.id : undefined,
   });
   const testPassed = passed !== null && passed.fingerprint === currentFingerprint;
-  const nameOnlyChange = !!provider && testFingerprint(provider) === currentFingerprint;
-  const isValid = !!(name && baseUrl && apiKey && effectiveModelId);
-  const canSave = canSaveProvider({ isValid, testPassed, nameOnlyChange });
+  const nameOnlyChange =
+    !!provider && testFingerprint({ ...provider, apiKey: '', savedId: provider.id }) === currentFingerprint;
+  const isValid = !!(name.trim() && baseUrl && effectiveModelId && (apiKey || savedKeyInUse));
+  const canSave = canSaveProvider({ isValid, testPassed, nameOnlyChange, baseUrlChanged, keyBlank });
 
   const handleTest = async () => {
     // aria-disabled while testing (keeps keyboard focus): ignore the click.
@@ -183,7 +205,7 @@ export default function CustomProviderModal({
     const seq = requestSeq.current;
     const fp = currentFingerprint;
 
-    if (!baseUrl || !apiKey || !effectiveModelId) {
+    if (!baseUrl || !effectiveModelId || !(apiKey || savedKeyInUse)) {
       setTestError({ reason: 'Please fill in all required fields', statusText: null, detail: null });
       setTestStatus('invalid');
       return;
@@ -193,17 +215,14 @@ export default function CustomProviderModal({
     setTestError(null);
     setPassed(null);
 
-    const testProvider: CustomProvider = {
-      id: 'test',
-      name: name || 'Test',
-      baseUrl,
-      apiKey,
-      modelId: effectiveModelId,
-      enabled: true,
-      headerType: getHeaderType(baseUrl),
-    };
-
-    const result = await testCustomProviderConnection(testProvider);
+    // The saved provider's id when the key field is blank and the base URL is
+    // unchanged (the server tests its saved key); otherwise the typed form.
+    const result = await testCustomProviderConnection(
+      customTestInput(
+        { name, baseUrl, apiKey, modelId: effectiveModelId, headerType },
+        provider
+      )
+    );
 
     // A newer test, an edit of a tested field, or a reopen happened meanwhile.
     if (seq !== requestSeq.current) {
@@ -220,25 +239,31 @@ export default function CustomProviderModal({
     }
   };
 
-  const handleSave = () => {
-    if (!name || !baseUrl || !apiKey || !effectiveModelId || !canSave) {
+  const handleSave = async () => {
+    if (!isValid || !canSave || saving) {
       return;
     }
 
-    onSave({
+    setSaving(true);
+    setSaveError(null);
+    const error = await onSave({
       ...(provider?.id && { id: provider.id }),
-      name,
+      name: name.trim(),
       baseUrl: normalizeBaseUrl(baseUrl),
       apiKey,
       modelId: effectiveModelId,
       enabled: provider?.enabled ?? true,
-      headerType: getHeaderType(baseUrl),
+      headerType,
     });
+    setSaving(false);
 
+    if (error) {
+      setSaveError(error);
+      return;
+    }
     onOpenChange(false);
   };
 
-  const isEditMode = !!provider;
   const showSaveHelp = isValid && !canSave;
 
   // The button keeps its four labels; after an edit that returns to the tested
@@ -338,9 +363,10 @@ export default function CustomProviderModal({
                   setApiKey(e.target.value);
                   resetTest();
                 }}
-                placeholder="Enter your API key"
+                placeholder={isEditMode ? 'Leave blank to keep the saved key' : 'Enter your API key'}
                 autoCapitalize="none"
                 spellCheck={false}
+                aria-describedby={provider ? apiKeyHelpId : undefined}
                 className={`pr-11 ${FIELD_CLASS}`}
               />
               <button
@@ -358,6 +384,15 @@ export default function CustomProviderModal({
                 )}
               </button>
             </div>
+            {provider && (
+              <p id={apiKeyHelpId} className="text-xs text-slate-400 mt-1">
+                {baseUrlChanged
+                  ? 'You changed the base URL, so enter the key again.'
+                  : provider.last4
+                  ? `Saved key ending in ${provider.last4}`
+                  : 'A key is saved'}
+              </p>
+            )}
           </div>
 
           {/* Model ID */}
@@ -509,16 +544,21 @@ export default function CustomProviderModal({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || saving}
             aria-describedby={showSaveHelp ? saveHelpId : undefined}
             className="h-11 w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white"
           >
-            {isEditMode ? 'Save changes' : 'Add provider'}
+            {saving ? 'Saving…' : isEditMode ? 'Save changes' : 'Add provider'}
           </Button>
         </DialogFooter>
         {showSaveHelp && (
           <p id={saveHelpId} className="-mt-2 text-xs text-slate-400 sm:text-right">
             Test the connection before saving.
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="-mt-2 text-xs text-rose-400 sm:text-right break-words">
+            {saveError}
           </p>
         )}
       </DialogContent>

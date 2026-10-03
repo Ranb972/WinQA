@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 // Import-safe in node: the module (and ./crypto) touch window/localStorage
 // only inside functions, never at top level.
 import {
@@ -11,9 +13,18 @@ import {
   toggleIntent,
   MISSING_KEY_TEXT,
   TEST_DETAIL_MAX,
+  hasBaseUrlChanged,
+  usesSavedKey,
+  customTestInput,
+  buildProviderPatch,
+  customProviderErrorText,
+  toCustomProviderView,
   type CustomProviderTestResult,
+  type CustomProviderView,
 } from '@/lib/custom-providers';
-import { PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import { ADDRESS_GUARD_ERRORS, PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import { KeysApiError, type CustomProviderInfo } from '@/lib/keys-client';
+import { getHeaderType } from '@/lib/llm/models';
 
 // Fake, test-only key (long enough for redaction to apply).
 const API_KEY = 'sk-test-FAKEKEY-0123456789abcdef';
@@ -514,5 +525,342 @@ describe('friendlyTestFailure: an oversized provider answer (S13)', () => {
     const out = friendlyTestFailure(tooLarge(400, PROVIDER_BODY_TOO_LARGE_ERROR));
     expect(out.reason).toBe('The provider rejected the request');
     expect(out.statusText).toBe('HTTP 400');
+  });
+});
+
+// A saved provider as Settings holds it: the account's record, no key.
+const savedView: CustomProviderView = {
+  id: 'a'.repeat(24),
+  name: 'Mine',
+  baseUrl: 'https://api.example.com/v1',
+  modelId: 'test-model-1',
+  enabled: true,
+  headerType: 'bearer',
+  hasKey: true,
+  last4: 'cdef',
+};
+
+describe('testFingerprint: the key saved on the server', () => {
+  const base = {
+    baseUrl: 'https://api.example.com/v1',
+    modelId: 'test-model-1',
+    headerType: 'bearer' as const,
+  };
+
+  it('a blank key on an edit stands for the saved key as saved:<id>', () => {
+    const fp = testFingerprint({ ...base, apiKey: '', savedId: 'abc123' });
+    expect(fp).toContain('saved:abc123');
+    expect(fp).not.toContain(API_KEY);
+  });
+
+  it('a typed key is the key itself, with or without a saved id', () => {
+    const typed = testFingerprint({ ...base, apiKey: API_KEY, savedId: 'abc123' });
+    expect(typed).toContain(API_KEY);
+    expect(typed).not.toContain('saved:');
+    expect(typed).toBe(testFingerprint({ ...base, apiKey: API_KEY }));
+  });
+
+  it('a blank key without a saved id (add mode) stays blank', () => {
+    expect(testFingerprint({ ...base, apiKey: '' })).not.toContain('saved:');
+  });
+
+  it('a name-only edit on the saved key keeps the stored fingerprint', () => {
+    const stored = testFingerprint({ ...savedView, apiKey: '', savedId: savedView.id });
+    const renamedView = { ...savedView, name: 'Renamed' };
+    const renamed = testFingerprint({ ...renamedView, apiKey: '', savedId: renamedView.id });
+    expect(renamed).toBe(stored);
+  });
+
+  it('a model change on the saved key changes it, so the 8510abe gate asks for a test', () => {
+    const stored = testFingerprint({ ...savedView, apiKey: '', savedId: savedView.id });
+    const changed = testFingerprint({
+      ...savedView,
+      modelId: 'test-model-2',
+      apiKey: '',
+      savedId: savedView.id,
+    });
+    expect(changed).not.toBe(stored);
+  });
+
+  it('a new typed key never matches the saved fingerprint', () => {
+    const stored = testFingerprint({ ...savedView, apiKey: '', savedId: savedView.id });
+    expect(testFingerprint({ ...savedView, apiKey: API_KEY, savedId: savedView.id })).not.toBe(stored);
+  });
+});
+
+describe('canSaveProvider: base URL change needs the key again', () => {
+  it('a base-URL change with a blank key cannot save, even after a pass', () => {
+    expect(
+      canSaveProvider({
+        isValid: true,
+        testPassed: true,
+        nameOnlyChange: false,
+        baseUrlChanged: true,
+        keyBlank: true,
+      })
+    ).toBe(false);
+  });
+
+  it('a base-URL change with a typed key saves after a pass', () => {
+    expect(
+      canSaveProvider({
+        isValid: true,
+        testPassed: true,
+        nameOnlyChange: false,
+        baseUrlChanged: true,
+        keyBlank: false,
+      })
+    ).toBe(true);
+  });
+
+  it('a blank key with the base URL unchanged still follows the old gate', () => {
+    expect(
+      canSaveProvider({
+        isValid: true,
+        testPassed: false,
+        nameOnlyChange: true,
+        baseUrlChanged: false,
+        keyBlank: true,
+      })
+    ).toBe(true);
+  });
+});
+
+describe('toggleIntent: reads hasKey', () => {
+  it('hasKey false, off, idle -> missing-key', () => {
+    expect(toggleIntent({ enabled: false, hasKey: false, busy: false })).toBe('missing-key');
+  });
+});
+
+describe('hasBaseUrlChanged and usesSavedKey', () => {
+  it('ignores a trailing slash and case, sees another address', () => {
+    expect(hasBaseUrlChanged('https://api.example.com/v1', 'https://API.example.com/v1/')).toBe(false);
+    expect(hasBaseUrlChanged('https://api.example.com/v1', 'https://api.other.com/v1')).toBe(true);
+  });
+
+  it('relies on the saved key only for an edit with a blank key and the same address', () => {
+    const same = { baseUrl: 'https://api.example.com/v1/', apiKey: '' };
+    expect(usesSavedKey(same, savedView)).toBe(true);
+    expect(usesSavedKey({ ...same, apiKey: API_KEY }, savedView)).toBe(false);
+    expect(usesSavedKey({ ...same, baseUrl: 'https://api.other.com/v1' }, savedView)).toBe(false);
+    expect(usesSavedKey(same, null)).toBe(false);
+    expect(usesSavedKey(same, { ...savedView, hasKey: false })).toBe(false);
+  });
+});
+
+describe('customTestInput: which form the modal tests', () => {
+  const form = {
+    name: 'Mine',
+    baseUrl: 'https://api.example.com/v1',
+    apiKey: '',
+    modelId: 'test-model-2',
+    headerType: 'bearer' as const,
+  };
+
+  it('blank key and unchanged address: the saved id with the form model and header, no baseUrl or key', () => {
+    const input = customTestInput(form, savedView);
+    expect(input).toEqual({
+      providerId: savedView.id,
+      modelId: 'test-model-2',
+      headerType: 'bearer',
+    });
+    expect(Object.keys(input)).not.toContain('baseUrl');
+    expect(Object.keys(input)).not.toContain('apiKey');
+  });
+
+  it('a typed key: the full typed form', () => {
+    expect(customTestInput({ ...form, apiKey: API_KEY }, savedView)).toEqual({
+      baseUrl: form.baseUrl,
+      apiKey: API_KEY,
+      modelId: 'test-model-2',
+      headerType: 'bearer',
+    });
+  });
+
+  it('a changed address: the full typed form', () => {
+    const input = customTestInput(
+      { ...form, baseUrl: 'https://api.other.com/v1', apiKey: API_KEY },
+      savedView
+    );
+    expect(input).toMatchObject({ baseUrl: 'https://api.other.com/v1', apiKey: API_KEY });
+    expect(Object.keys(input)).not.toContain('providerId');
+  });
+
+  it('add mode: the full typed form', () => {
+    expect(Object.keys(customTestInput({ ...form, apiKey: API_KEY }, null))).not.toContain('providerId');
+  });
+});
+
+describe('buildProviderPatch: only what changed', () => {
+  const form = {
+    name: 'Mine',
+    baseUrl: 'https://api.example.com/v1',
+    apiKey: '',
+    modelId: 'test-model-1',
+    headerType: 'bearer' as const,
+  };
+
+  it('nothing changed: an empty patch', () => {
+    expect(buildProviderPatch(savedView, form)).toEqual({});
+  });
+
+  it('a name-only edit sends only the name (and never an empty key)', () => {
+    const patch = buildProviderPatch(savedView, { ...form, name: '  Renamed ' });
+    expect(patch).toEqual({ name: 'Renamed' });
+    expect(Object.keys(patch)).not.toContain('apiKey');
+  });
+
+  it('a model change sends only the model', () => {
+    expect(buildProviderPatch(savedView, { ...form, modelId: 'test-model-2' })).toEqual({
+      modelId: 'test-model-2',
+    });
+  });
+
+  it('a typed key alone replaces the key and nothing else', () => {
+    expect(buildProviderPatch(savedView, { ...form, apiKey: API_KEY })).toEqual({ apiKey: API_KEY });
+  });
+
+  it('a trailing slash is not a base-URL change', () => {
+    expect(buildProviderPatch(savedView, { ...form, baseUrl: 'https://api.example.com/v1/' })).toEqual({});
+  });
+
+  it('a new base URL goes with the key and the header type for that host', () => {
+    const baseUrl = 'https://api.other.com/v1/';
+    expect(buildProviderPatch(savedView, { ...form, baseUrl, apiKey: API_KEY })).toEqual({
+      baseUrl: 'https://api.other.com/v1',
+      headerType: getHeaderType(baseUrl),
+      apiKey: API_KEY,
+    });
+  });
+
+  it('a header type that differs from the saved one is sent, also on a key-only edit', () => {
+    expect(
+      buildProviderPatch(
+        { ...savedView, headerType: 'x-api-key' },
+        { ...form, apiKey: API_KEY, headerType: 'bearer' }
+      )
+    ).toEqual({ apiKey: API_KEY, headerType: 'bearer' });
+  });
+
+  it('never carries enabled', () => {
+    expect(Object.keys(buildProviderPatch(savedView, { ...form, name: 'x', apiKey: API_KEY }))).not.toContain(
+      'enabled'
+    );
+  });
+});
+
+describe('customProviderErrorText', () => {
+  it('names each address-guard text as WinQA refusing the address and keeps the text', () => {
+    for (const text of ADDRESS_GUARD_ERRORS) {
+      const shown = customProviderErrorText(new KeysApiError(text, 400));
+      expect(shown.startsWith('WinQA blocks this address.')).toBe(true);
+      expect(shown).toContain(text);
+    }
+  });
+
+  it('passes another 400 text through as is', () => {
+    expect(customProviderErrorText(new KeysApiError('You can save up to 6 custom providers.', 400))).toBe(
+      'You can save up to 6 custom providers.'
+    );
+  });
+
+  it('keeps the sign-in and key-storage wordings', () => {
+    expect(customProviderErrorText(new KeysApiError('Unauthorized', 401))).toMatch(/sign in/i);
+    expect(customProviderErrorText(new KeysApiError('Key storage is not configured', 500))).toMatch(
+      /not configured/i
+    );
+  });
+});
+
+describe('toCustomProviderView', () => {
+  const info: CustomProviderInfo = {
+    id: 'b'.repeat(24),
+    name: 'Mine',
+    baseUrl: 'https://api.example.com/v1',
+    modelId: 'm',
+    headerType: null,
+    enabled: false,
+    last4: '',
+    hasKey: true,
+    updatedAt: null,
+    lastTestedAt: null,
+    lastTestOk: null,
+    lastRejectedAt: null,
+  };
+
+  it('has hasKey and last4 and no key field', () => {
+    const view = toCustomProviderView(info);
+    expect(view).toMatchObject({ hasKey: true, last4: '' });
+    expect(Object.keys(view)).not.toContain('apiKey');
+  });
+
+  it('a missing header type is the one the base URL implies', () => {
+    expect(toCustomProviderView(info).headerType).toBe(getHeaderType(info.baseUrl));
+    expect(toCustomProviderView({ ...info, headerType: 'x-api-key' }).headerType).toBe('x-api-key');
+  });
+});
+
+describe('testCustomProviderConnection: a saved provider', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('posts the id with model and header and no baseUrl or apiKey field', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ valid: true, status: 200, latencyMs: 5, model: 'test-model-2' }), {
+        status: 200,
+      })
+    );
+    const result = await testCustomProviderConnection({
+      providerId: savedView.id,
+      modelId: 'test-model-2',
+      headerType: 'bearer',
+    });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({ providerId: savedView.id, modelId: 'test-model-2', headerType: 'bearer' });
+    expect(Object.keys(body)).not.toContain('baseUrl');
+    expect(Object.keys(body)).not.toContain('apiKey');
+    expect(result).toEqual({ valid: true, status: 200, latencyMs: 5, model: 'test-model-2' });
+  });
+
+  it('with only the id, the body is just the id', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ valid: false, error: 'Invalid API key', status: 401 }), { status: 200 })
+    );
+    const result = await testCustomProviderConnection({ providerId: savedView.id });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ providerId: savedView.id });
+    expect(result.valid).toBe(false);
+    expect(result.status).toBe(401);
+    expect(result.model).toBe('');
+  });
+});
+
+describe('the whole-list browser writers are gone (the race fix)', () => {
+  const source = readFileSync(fileURLToPath(new URL('./custom-providers.ts', import.meta.url)), 'utf8');
+
+  it.each([
+    'saveCustomProviders',
+    'addCustomProvider',
+    'updateCustomProvider',
+    'toggleCustomProvider',
+    'removeCustomProvider',
+  ])('lib/custom-providers.ts no longer mentions %s', (name) => {
+    expect(source).not.toMatch(new RegExp(`\\b${name}\\b`));
+  });
+
+  it('does not write the browser store at all', () => {
+    expect(source).not.toMatch(/localStorage\.setItem/);
+  });
+
+  it('keeps the legacy readers C14 needs', () => {
+    expect(source).toMatch(/export async function getCustomProviders/);
+    expect(source).toMatch(/export function clearCustomProviders/);
   });
 });

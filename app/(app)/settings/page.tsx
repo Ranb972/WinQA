@@ -46,6 +46,9 @@ import {
   saveBuiltinKey,
   deleteBuiltinKey,
   testBuiltinKey,
+  createCustomProvider,
+  updateCustomProvider,
+  deleteCustomProvider,
   formatKeyDate,
   keyErrorText,
   KeysApiError,
@@ -56,11 +59,11 @@ import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { specificModelDisplayNames, defaultModels } from '@/lib/llm/registry';
 import { getModelPreferences, setModelPreference, ModelPreferences } from '@/lib/model-preferences';
 import {
-  CustomProvider,
-  getCustomProviders,
-  saveCustomProviders,
-  removeCustomProvider,
-  updateCustomProvider,
+  CustomProviderView,
+  CustomProviderSubmit,
+  toCustomProviderView,
+  buildProviderPatch,
+  customProviderErrorText,
   MAX_CUSTOM_PROVIDERS,
   testCustomProviderConnection,
   CustomProviderTestResult,
@@ -138,16 +141,16 @@ export default function SettingsPage() {
   // Bumped by every test and every edit of a row, so an older answer is dropped.
   const testSeq = useRef<Record<string, number>>({});
   const [modelPreferences, setModelPreferencesState] = useState<ModelPreferences>({});
-  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [customProviders, setCustomProviders] = useState<CustomProviderView[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(null);
+  const [editingProvider, setEditingProvider] = useState<CustomProviderView | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
   const [showReplaceWarning, setShowReplaceWarning] = useState(false);
 
-  // Reads the saved keys from the account. A failure is shown in place of the
-  // rows, because "no key saved" would be a guess.
+  // Reads the saved keys and custom providers from the account. A failure is
+  // shown in place of the rows, because "no key saved" would be a guess.
   const refreshKeys = useCallback(async () => {
     setKeysLoading(true);
     try {
@@ -155,6 +158,7 @@ export default function SettingsPage() {
       const next: Partial<Record<LLMProvider, BuiltinKeyInfo>> = {};
       for (const info of overview.builtin) next[info.provider] = info;
       setSaved(next);
+      setCustomProviders(overview.custom.map(toCustomProviderView));
       setKeysError(null);
     } catch (error) {
       setKeysError(keyErrorText(error));
@@ -171,8 +175,6 @@ export default function SettingsPage() {
       try {
         const prefs = getModelPreferences();
         setModelPreferencesState(prefs);
-        const providers = await getCustomProviders(user?.id);
-        setCustomProviders(providers);
       } catch {
         // Error loading data, start fresh
       }
@@ -339,58 +341,102 @@ export default function SettingsPage() {
     setModelPreferencesState((prev) => ({ ...prev, [provider]: modelId }));
   };
 
-  const handleSaveProvider = async (
-    providerData: Omit<CustomProvider, 'id'> & { id?: string }
-  ) => {
-    if (providerData.id) {
-      const updated = customProviders.map((p) =>
-        p.id === providerData.id ? { ...p, ...providerData } : p
-      );
-      await saveCustomProviders(updated as CustomProvider[], user?.id);
-      setCustomProviders(updated as CustomProvider[]);
-      toast({
-        title: 'Provider updated',
-        description: `${providerData.name} has been updated`,
-        variant: 'success',
-      });
-    } else {
-      const newProvider: CustomProvider = {
-        ...providerData,
-        id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      };
-      const updated = [...customProviders, newProvider];
-      await saveCustomProviders(updated, user?.id);
-      setCustomProviders(updated);
-      toast({
-        title: 'Provider added',
-        description: `${providerData.name} has been added`,
-        variant: 'success',
-      });
+  // A 404 from the provider routes means it is gone (deleted in another tab):
+  // show the list as it is now.
+  const refreshIfGone = (error: unknown) => {
+    if (error instanceof KeysApiError && error.status === 404) void refreshKeys();
+  };
+
+  // Creates or edits one provider and writes only that provider. Resolves to null
+  // when it was saved, otherwise to the text the dialog shows (it stays open).
+  const handleSaveProvider = async (data: CustomProviderSubmit): Promise<string | null> => {
+    try {
+      if (data.id) {
+        const current = customProviders.find((p) => p.id === data.id);
+        if (!current) {
+          void refreshKeys();
+          return 'This provider no longer exists. The list has been refreshed.';
+        }
+        const patch = buildProviderPatch(current, data);
+        if (Object.keys(patch).length === 0) return null;
+        const updated = toCustomProviderView(await updateCustomProvider(data.id, patch));
+        setCustomProviders((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        toast({
+          title: 'Provider updated',
+          description: `${updated.name} has been updated`,
+          variant: 'success',
+        });
+      } else {
+        const created = toCustomProviderView(
+          await createCustomProvider({
+            name: data.name,
+            baseUrl: data.baseUrl,
+            modelId: data.modelId,
+            headerType: data.headerType,
+            enabled: data.enabled,
+            apiKey: data.apiKey,
+          })
+        );
+        setCustomProviders((prev) => [...prev, created]);
+        toast({
+          title: 'Provider added',
+          description: `${created.name} has been added`,
+          variant: 'success',
+        });
+      }
+      return null;
+    } catch (error) {
+      refreshIfGone(error);
+      return error instanceof KeysApiError && error.status === 404
+        ? 'This provider no longer exists. The list has been refreshed.'
+        : customProviderErrorText(error);
     }
-    setShowAddModal(false);
-    setEditingProvider(null);
   };
 
   const handleDeleteProvider = async (id: string) => {
-    await removeCustomProvider(id, user?.id);
-    setCustomProviders((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteCustomProvider(id);
+      setCustomProviders((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      refreshIfGone(error);
+      toast({
+        title: 'Could not remove provider',
+        description: customProviderErrorText(error),
+        variant: 'destructive',
+      });
+    }
   };
 
   // Sets (never flips) the enabled state, so a repeated call cannot invert it.
   // State changes only after the write, so the switch never shows an unsaved state.
+  // Only `enabled` is written, so a toggle cannot undo an edit saved meanwhile.
   const handleSetProviderEnabled = async (id: string, next: boolean) => {
-    await updateCustomProvider(id, { enabled: next }, user?.id);
-    setCustomProviders((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled: next } : p))
-    );
+    try {
+      const updated = toCustomProviderView(await updateCustomProvider(id, { enabled: next }));
+      setCustomProviders((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    } catch (error) {
+      refreshIfGone(error);
+      toast({
+        title: 'Could not update provider',
+        description: customProviderErrorText(error),
+        variant: 'destructive',
+      });
+      throw error;
+    }
   };
 
   // The card calls this before turning a provider on and only persists the new
-  // state (handleSetProviderEnabled with true) after a pass.
+  // state (handleSetProviderEnabled with true) after a pass. The server tests the
+  // saved key against the saved base URL; no key leaves the account.
   const handleTestCustomProvider = async (
-    provider: CustomProvider
+    provider: CustomProviderView
   ): Promise<CustomProviderTestResult> => {
-    return testCustomProviderConnection(provider);
+    const result = await testCustomProviderConnection({ providerId: provider.id });
+    // The route's own "Custom provider not found": the provider is gone.
+    if (!result.valid && result.status === 404 && result.error === 'Custom provider not found') {
+      void refreshKeys();
+    }
+    return result;
   };
 
   const handleExport = async () => {
@@ -912,7 +958,7 @@ export default function SettingsPage() {
                 <div className="w-1 h-5 bg-orange-500 rounded-full" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Connected Sources</h2>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{customProviders.length}/{MAX_CUSTOM_PROVIDERS} Active</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{keysError ? '–' : customProviders.length}/{MAX_CUSTOM_PROVIDERS} Active</span>
             </div>
 
             <div className="px-5 py-4">
@@ -939,12 +985,18 @@ export default function SettingsPage() {
               )}
 
               {customProviders.length === 0 && (
-                <p className="font-mono text-xs uppercase tracking-[0.15em] leading-relaxed text-zinc-400 text-center px-2 py-4 mb-4 break-words">
-                  No intelligence sources connected
+                <p
+                  role={keysError ? 'alert' : undefined}
+                  className={`font-mono text-xs uppercase tracking-[0.15em] leading-relaxed text-center px-2 py-4 mb-4 break-words ${
+                    keysError ? 'text-red-400' : 'text-zinc-400'
+                  }`}
+                >
+                  {keysError ? 'Could not load your providers' : 'No intelligence sources connected'}
                 </p>
               )}
 
-              {customProviders.length < MAX_CUSTOM_PROVIDERS && (
+              {/* Not offered while the list failed to load: a new provider could sit next to ones this page has not seen. */}
+              {!keysError && customProviders.length < MAX_CUSTOM_PROVIDERS && (
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="w-full h-11 flex items-center justify-center gap-2 rounded border border-dashed border-white/[0.08] text-zinc-400 hover:text-white hover:border-orange-500/30 font-mono text-xs uppercase tracking-[0.15em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
