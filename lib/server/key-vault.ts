@@ -154,6 +154,7 @@ export function credentialAad(userId: string, slot: string): string {
   if (typeof slot !== 'string' || slot === '') {
     throw new TypeError('slot must be a non-empty string');
   }
+  // The "v1" here is the AAD format version, not a key-ring version.
   return `winqa-key:v1:${userId}:${slot}`;
 }
 

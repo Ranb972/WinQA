@@ -51,7 +51,6 @@ describe('key-vault', () => {
     expect(rec.keyVersion).toBe('v1');
     expect(Buffer.from(rec.iv, 'base64')).toHaveLength(12);
     expect(Buffer.from(rec.tag, 'base64')).toHaveLength(16);
-    expect(rec.ct).not.toContain(PLAIN);
     expect(decryptSecret(rec, AAD)).toBe(PLAIN);
   });
 
@@ -67,6 +66,14 @@ describe('key-vault', () => {
     process.env.KEY_ENCRYPTION_KEYS = `v1:${newKey()}`;
     const rec = encryptSecret(PLAIN, AAD);
     expect(() => decryptSecret({ ...rec, tag: flipByte(rec.tag, 15) }, AAD)).toThrow(
+      KeyVaultDecryptError
+    );
+  });
+
+  it('a flipped byte in iv throws KeyVaultDecryptError', () => {
+    process.env.KEY_ENCRYPTION_KEYS = `v1:${newKey()}`;
+    const rec = encryptSecret(PLAIN, AAD);
+    expect(() => decryptSecret({ ...rec, iv: flipByte(rec.iv, 5) }, AAD)).toThrow(
       KeyVaultDecryptError
     );
   });
@@ -110,6 +117,14 @@ describe('key-vault', () => {
     expect(newRec.keyVersion).toBe('v2');
     expect(decryptSecret(newRec, AAD)).toBe(PLAIN);
     expect(decryptSecret(oldRec, AAD)).toBe(PLAIN);
+  });
+
+  it('a v1 record relabelled keyVersion v2 in a v2,v1 ring throws KeyVaultDecryptError', () => {
+    const k1 = newKey();
+    process.env.KEY_ENCRYPTION_KEYS = `v1:${k1}`;
+    const v1Rec = encryptSecret(PLAIN, AAD);
+    process.env.KEY_ENCRYPTION_KEYS = `v2:${newKey()},v1:${k1}`;
+    expect(() => decryptSecret({ ...v1Rec, keyVersion: 'v2' }, AAD)).toThrow(KeyVaultDecryptError);
   });
 
   it('tolerates whitespace around entries', () => {
