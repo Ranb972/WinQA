@@ -4,7 +4,11 @@ import { NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { POST } from '@/app/api/test-custom-provider/route';
 import { resolveProviderAddress, safeProviderFetch, TEST_PROVIDER_MAX_BODY_BYTES } from '@/lib/security';
-import { PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import {
+  PROVIDER_BODY_TOO_LARGE_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+} from '@/lib/friendly-errors';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import { friendlyTestFailure } from '@/lib/custom-providers';
 import { consumeDailyAllowance, consumeProviderTestAllowance } from '@/lib/rate-limit';
@@ -574,6 +578,81 @@ describe('POST /api/test-custom-provider — the provider answer is capped at 64
     const shown = friendlyTestFailure(json, API_KEY);
     expect(shown).toEqual({ reason: 'Response too large', statusText: null, detail: PROVIDER_BODY_TOO_LARGE_ERROR });
     expect(JSON.stringify(shown)).not.toContain('HTTP');
+  });
+});
+
+describe('POST /api/test-custom-provider — a failed connect names its cause', () => {
+  const PENDING = Symbol('pending');
+  const settledOrPending = <T,>(p: Promise<T>) =>
+    Promise.race([p, new Promise<typeof PENDING>((resolve) => setImmediate(() => resolve(PENDING)))]);
+
+  // undici's rejection when connect() fails: the opaque "fetch failed", the code in the cause.
+  const fetchFailed = (code: string, text: string) =>
+    new TypeError('fetch failed', { cause: Object.assign(new Error(text), { code }) });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('the kernel gives up on the SYN at 15.4 s, inside the 20 s budget -> the timeout sentinel, "No response in time"', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // A blackholed port as production saw it: ETIMEDOUT after ~15.4 s, before the deadline.
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) =>
+          setTimeout(() => reject(fetchFailed('ETIMEDOUT', 'connect ETIMEDOUT 93.184.216.34:81')), 15_400)
+        )
+    );
+
+    const pending = POST(makeRequest({ ...validBody, baseUrl: 'https://example.com:81/v1' }));
+    await vi.advanceTimersByTimeAsync(15_400);
+    const res = await settledOrPending(pending);
+    expect(res).not.toBe(PENDING);
+    const json = await (res as Response).json();
+    expect(json).toEqual({
+      valid: false,
+      error: PROVIDER_CONNECT_TIMEOUT_ERROR,
+      status: null,
+      latencyMs: 15_400,
+      model: MODEL,
+    });
+    expect(friendlyTestFailure(json, API_KEY)).toEqual({
+      reason: 'No response in time',
+      statusText: null,
+      detail: PROVIDER_CONNECT_TIMEOUT_ERROR,
+    });
+
+    const lines = errorLog.mock.calls.map((call) => call.join(' '));
+    expect(lines).toContain(`[llm] custom-test ${MODEL} ${PROVIDER_CONNECT_TIMEOUT_ERROR} code=ETIMEDOUT key=user`);
+    for (const line of lines) {
+      expect(line).not.toContain(API_KEY);
+      expect(line).not.toContain('Say "OK"');
+      expect(line).not.toContain('93.184.216.34');
+    }
+  });
+
+  it('a refused connection -> the refused sentinel, "Could not reach the provider", code in the log', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchMock.mockRejectedValueOnce(fetchFailed('ECONNREFUSED', 'connect ECONNREFUSED 93.184.216.34:443'));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json).toMatchObject({ valid: false, error: PROVIDER_CONNECT_REFUSED_ERROR, status: null });
+    expect(friendlyTestFailure(json).reason).toBe('Could not reach the provider');
+    expect(errorLog.mock.calls.map((call) => call.join(' '))).toContain(
+      `[llm] custom-test ${MODEL} ${PROVIDER_CONNECT_REFUSED_ERROR} code=ECONNREFUSED key=user`
+    );
+  });
+
+  it('"fetch failed" with a code WinQA does not name stays "fetch failed", "Could not reach the provider"', async () => {
+    fetchMock.mockRejectedValueOnce(fetchFailed('ERR_TLS_CERT_ALTNAME_INVALID', 'Hostname/IP does not match'));
+    const json = await (await POST(makeRequest(validBody))).json();
+    expect(json).toMatchObject({ valid: false, error: 'fetch failed', status: null });
+    expect(friendlyTestFailure(json)).toEqual({
+      reason: 'Could not reach the provider',
+      statusText: null,
+      detail: 'fetch failed',
+    });
   });
 });
 

@@ -22,7 +22,14 @@ import {
   type CustomProviderTestResult,
   type CustomProviderView,
 } from '@/lib/custom-providers';
-import { ADDRESS_GUARD_ERRORS, PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import {
+  ADDRESS_GUARD_ERRORS,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  PROVIDER_CONNECT_RESET_ERROR,
+} from '@/lib/friendly-errors';
 import { KeysApiError, type CustomProviderInfo } from '@/lib/keys-client';
 import { getHeaderType } from '@/lib/llm/models';
 
@@ -525,6 +532,57 @@ describe('friendlyTestFailure: an oversized provider answer (S13)', () => {
     const out = friendlyTestFailure(tooLarge(400, PROVIDER_BODY_TOO_LARGE_ERROR));
     expect(out.reason).toBe('The provider rejected the request');
     expect(out.statusText).toBe('HTTP 400');
+  });
+});
+
+describe('friendlyTestFailure: a failed connect names its cause', () => {
+  const connectFail = (status: number | null, error: string): CustomProviderTestResult => ({
+    valid: false,
+    error,
+    status,
+    latencyMs: 15_406,
+    model: 'test-model-1',
+  });
+
+  it('the connect-timeout sentinel (status null) reads "No response in time", the sentinel as detail', () => {
+    expect(PROVIDER_CONNECT_TIMEOUT_ERROR).toBe('The provider did not accept a connection in time');
+    expect(friendlyTestFailure(connectFail(null, PROVIDER_CONNECT_TIMEOUT_ERROR), API_KEY)).toEqual({
+      reason: 'No response in time',
+      statusText: null,
+      detail: PROVIDER_CONNECT_TIMEOUT_ERROR,
+    });
+  });
+
+  it.each([
+    [PROVIDER_CONNECT_REFUSED_ERROR, 'The provider refused the connection'],
+    [PROVIDER_CONNECT_UNREACHABLE_ERROR, 'The provider address could not be reached'],
+    [PROVIDER_CONNECT_RESET_ERROR, 'The connection to the provider was closed'],
+  ])('the sentinel "%s" reads "Could not reach the provider", the sentinel as detail', (sentinel, text) => {
+    expect(sentinel).toBe(text);
+    expect(friendlyTestFailure(connectFail(null, sentinel))).toEqual({
+      reason: 'Could not reach the provider',
+      statusText: null,
+      detail: sentinel,
+    });
+  });
+
+  it('"fetch failed" keeps the mapping it had', () => {
+    expect(friendlyTestFailure(connectFail(null, 'fetch failed'))).toEqual({
+      reason: 'Could not reach the provider',
+      statusText: null,
+      detail: 'fetch failed',
+    });
+  });
+
+  it('matches the timeout sentinel exactly, not as a prefix', () => {
+    const out = friendlyTestFailure(connectFail(null, `${PROVIDER_CONNECT_TIMEOUT_ERROR} (proxy)`));
+    expect(out.reason).toBe('Could not reach the provider');
+  });
+
+  it('a provider HTTP answer carrying the same text stays an HTTP failure', () => {
+    const out = friendlyTestFailure(connectFail(502, PROVIDER_CONNECT_TIMEOUT_ERROR));
+    expect(out.reason).toBe('The provider had a server error');
+    expect(out.statusText).toBe('HTTP 502');
   });
 });
 

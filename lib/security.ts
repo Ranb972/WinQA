@@ -21,6 +21,10 @@ import {
   BASE_URL_HTTPS_ERROR,
   BASE_URL_PRIVATE_ERROR,
   BASE_URL_TOO_LONG_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  PROVIDER_CONNECT_RESET_ERROR,
 } from '@/lib/friendly-errors';
 
 /**
@@ -244,6 +248,70 @@ export class ProviderBodyTooLargeError extends Error {
 }
 
 /**
+ * The connection to the provider failed before any response: undici rejected with
+ * the opaque "fetch failed" and its cause named a connection-level code. The message is one
+ * of the CONNECT_FAILURE_ERRORS sentinels (lib/friendly-errors.ts); `code` is the
+ * Node/undici code that chose it, for the server log only.
+ */
+export class ProviderConnectError extends Error {
+  readonly code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = 'ProviderConnectError';
+    this.code = code;
+  }
+}
+
+/**
+ * Which sentinel each connect-level code reads as. ETIMEDOUT is the kernel giving up
+ * on SYN retransmits (about 15 s on Linux with tcp_syn_retries 4, before a 20 s
+ * budget); UND_ERR_CONNECT_TIMEOUT is undici's own connect timer. A code not listed
+ * here leaves the original "fetch failed" error untouched.
+ */
+const CONNECT_FAILURE_BY_CODE: Readonly<Record<string, string>> = {
+  ETIMEDOUT: PROVIDER_CONNECT_TIMEOUT_ERROR,
+  UND_ERR_CONNECT_TIMEOUT: PROVIDER_CONNECT_TIMEOUT_ERROR,
+  ECONNREFUSED: PROVIDER_CONNECT_REFUSED_ERROR,
+  ENETUNREACH: PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  EHOSTUNREACH: PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  ENOTFOUND: PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  // ENOTFOUND and EAI_AGAIN cannot occur behind the pinned lookup; kept for completeness.
+  EAI_AGAIN: PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  ECONNRESET: PROVIDER_CONNECT_RESET_ERROR,
+  EPIPE: PROVIDER_CONNECT_RESET_ERROR,
+  UND_ERR_SOCKET: PROVIDER_CONNECT_RESET_ERROR,
+};
+
+// How deep connectFailure follows cause / errors[]; undici nests two levels at most.
+const MAX_CAUSE_DEPTH = 4;
+
+/**
+ * A ProviderConnectError for undici's generic `TypeError: fetch failed` whose cause
+ * (or the cause's cause, or an AggregateError's errors[], as Node's happy-eyeballs
+ * connect reports; the pinned lookup gives one address, so that path cannot occur
+ * today and is kept for completeness) carries a code from CONNECT_FAILURE_BY_CODE; otherwise null. The
+ * first listed code met, outermost first, decides.
+ */
+function connectFailure(error: unknown): ProviderConnectError | null {
+  if (!(error instanceof TypeError) || error.message !== 'fetch failed') return null;
+  let level: unknown[] = [error.cause];
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH && level.length > 0; depth++) {
+    const next: unknown[] = [];
+    for (const candidate of level) {
+      if (!candidate || typeof candidate !== 'object') continue;
+      const { code, cause, errors } = candidate as { code?: unknown; cause?: unknown; errors?: unknown };
+      if (typeof code === 'string' && Object.hasOwn(CONNECT_FAILURE_BY_CODE, code)) {
+        return new ProviderConnectError(CONNECT_FAILURE_BY_CODE[code], code);
+      }
+      if (cause !== undefined) next.push(cause);
+      if (Array.isArray(errors)) next.push(...errors);
+    }
+    level = next;
+  }
+  return null;
+}
+
+/**
  * Most bytes of a custom provider's chat response safeProviderFetch buffers
  * (lib/llm/custom.ts). A long chat answer is well under 1 MiB of JSON.
  */
@@ -260,8 +328,8 @@ export const TEST_PROVIDER_MAX_BODY_BYTES = 64 * 1024;
  * The two must not be equal: two timers of the same length race, and whichever
  * fires first decides the error. The deadline gives ProviderTimeoutError ("Request
  * timed out after Ns", shown as "No response in time"); undici's connect timer gives
- * UND_ERR_CONNECT_TIMEOUT, surfaced as "fetch failed" ("Could not reach the
- * provider"). undici runs connect timeouts over 1 s on its coarse fast timers
+ * UND_ERR_CONNECT_TIMEOUT, surfaced as the connect-timeout sentinel (also "No
+ * response in time", but not the deadline's text). undici runs connect timeouts over 1 s on its coarse fast timers
  * (lib/util/timers.js, 499 ms ticks); when other fast timers are active, one can
  * fire early by less than one tick, so equal values let undici win. The margin is
  * longer than a tick, so the deadline always fires first. Its abort ends the
@@ -441,7 +509,9 @@ async function readCappedBody(
  *    unchanged, so the Host header and TLS SNI/certificate check use the name.
  * 3. redirect: 'manual'; a 3xx throws ProviderRedirectError and is never followed.
  * 4. One deadline of `timeoutMs` covers resolution, connect, headers and body;
- *    when it fires the request is aborted and ProviderTimeoutError is thrown.
+ *    when it fires the request is aborted and ProviderTimeoutError is thrown. A
+ *    connect that fails before it ("fetch failed" with a connect-level cause code)
+ *    throws ProviderConnectError with a sentinel naming the cause.
  * 5. The body is read in full here, at most `maxBodyBytes` of it (over the cap:
  *    ProviderBodyTooLargeError), and returned as a plain Response, so the Agent
  *    (and its socket) is destroyed before this function returns; callers use
@@ -494,7 +564,8 @@ export async function safeProviderFetch(url: string, init: ProviderFetchInit): P
   } catch (error) {
     // Whatever undici rejected with once the deadline fired, the cause is the deadline.
     if (deadline.signal.aborted) throw deadline.signal.reason;
-    throw error;
+    // Otherwise "fetch failed" says nothing; its cause code names what went wrong.
+    throw connectFailure(error) ?? error;
   } finally {
     deadline.clear();
     if (agent) await agent.destroy().catch(() => {});

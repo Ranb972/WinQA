@@ -24,6 +24,22 @@ export const ADDRESS_GUARD_ERRORS: ReadonlySet<string> = new Set([
   BASE_URL_PRIVATE_ERROR,
   BASE_URL_TOO_LONG_ERROR,
 ]);
+/**
+ * A connect to a custom provider failed before any answer (lib/security.ts
+ * safeProviderFetch reads the cause code of undici's "fetch failed" and throws
+ * ProviderConnectError with one of these). WinQA's own texts, matched exactly.
+ */
+export const PROVIDER_CONNECT_TIMEOUT_ERROR = 'The provider did not accept a connection in time';
+export const PROVIDER_CONNECT_REFUSED_ERROR = 'The provider refused the connection';
+export const PROVIDER_CONNECT_UNREACHABLE_ERROR = 'The provider address could not be reached';
+export const PROVIDER_CONNECT_RESET_ERROR = 'The connection to the provider was closed';
+/** Every connect-failure sentinel, matched exactly like ADDRESS_GUARD_ERRORS. */
+export const CONNECT_FAILURE_ERRORS: ReadonlySet<string> = new Set([
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  PROVIDER_CONNECT_RESET_ERROR,
+]);
 
 /**
  * What the route knows about a failed call and the raw message does not: which
@@ -83,6 +99,19 @@ export function friendlyErrorMessage(raw: string | undefined, context?: ErrorCon
   // sentinel), not a provider failure.
   if (ADDRESS_GUARD_ERRORS.has(raw)) {
     return 'WinQA cannot connect to this provider address. Check the base URL.';
+  }
+
+  // A connection that failed before any response. The timeout reads like any provider
+  // timeout; an unreachable address points at the base URL, like the guard; a refused
+  // or closed connection may be the provider being down, so it names both.
+  if (raw === PROVIDER_CONNECT_TIMEOUT_ERROR) {
+    return 'This model took too long to respond. Try again.';
+  }
+  if (raw === PROVIDER_CONNECT_UNREACHABLE_ERROR) {
+    return 'WinQA cannot connect to this provider address. Check the base URL.';
+  }
+  if (CONNECT_FAILURE_ERRORS.has(raw)) {
+    return 'WinQA could not connect to this provider. It may be down, or the base URL may be wrong.';
   }
 
   const lower = raw.toLowerCase();

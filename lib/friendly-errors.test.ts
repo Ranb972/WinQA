@@ -6,6 +6,11 @@ import {
   PROVIDER_BODY_TOO_LARGE_ERROR,
   UNREACHABLE_PROVIDER_ERROR,
   ADDRESS_GUARD_ERRORS,
+  CONNECT_FAILURE_ERRORS,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  PROVIDER_CONNECT_RESET_ERROR,
 } from '@/lib/friendly-errors';
 
 // Raw strings as the adapters now emit them (status prefixed by lib/llm/provider-error.ts).
@@ -107,5 +112,49 @@ describe('friendlyErrorMessage: an oversized provider answer (S13)', () => {
     expect(friendlyErrorMessage(`${PROVIDER_BODY_TOO_LARGE_ERROR} of the upstream gateway`)).toBe(
       'Something went wrong. Please try again.'
     );
+  });
+});
+
+describe('friendlyErrorMessage: a failed connect names its cause', () => {
+  it('holds exactly the four connect-failure sentinels', () => {
+    expect([...CONNECT_FAILURE_ERRORS].sort()).toEqual(
+      [
+        'The provider did not accept a connection in time',
+        'The provider refused the connection',
+        'The provider address could not be reached',
+        'The connection to the provider was closed',
+      ].sort()
+    );
+    expect(PROVIDER_CONNECT_TIMEOUT_ERROR).toBe('The provider did not accept a connection in time');
+  });
+
+  it('the connect-timeout sentinel reads as a provider timeout', () => {
+    expect(friendlyErrorMessage(PROVIDER_CONNECT_TIMEOUT_ERROR)).toBe('This model took too long to respond. Try again.');
+  });
+
+  it('the unreachable sentinel points at the address', () => {
+    expect(friendlyErrorMessage(PROVIDER_CONNECT_UNREACHABLE_ERROR)).toBe(
+      'WinQA cannot connect to this provider address. Check the base URL.'
+    );
+  });
+
+  it.each([
+    ['refused', PROVIDER_CONNECT_REFUSED_ERROR],
+    ['closed', PROVIDER_CONNECT_RESET_ERROR],
+  ])('the %s sentinel says the provider may be down or the URL wrong', (_label, raw) => {
+    expect(friendlyErrorMessage(raw)).toBe(
+      'WinQA could not connect to this provider. It may be down, or the base URL may be wrong.'
+    );
+  });
+
+  it('matches the sentinels exactly, not as a prefix', () => {
+    expect(friendlyErrorMessage(`${PROVIDER_CONNECT_REFUSED_ERROR} by the gateway`)).toBe(
+      'Something went wrong. Please try again.'
+    );
+    expect(friendlyErrorMessage(`${PROVIDER_CONNECT_TIMEOUT_ERROR} today`)).toBe('Something went wrong. Please try again.');
+  });
+
+  it('"fetch failed" is unchanged (the generic fallback)', () => {
+    expect(friendlyErrorMessage('fetch failed')).toBe('Something went wrong. Please try again.');
   });
 });

@@ -10,7 +10,12 @@ import { LEGACY_CUSTOM_PROVIDERS_KEY } from './key-migration';
 // Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
 import { getHeaderType, normalizeBaseUrl } from '@/lib/llm/models';
 // Client-safe: lib/friendly-errors has only a type import (erased at build).
-import { ADDRESS_GUARD_ERRORS, PROVIDER_BODY_TOO_LARGE_ERROR } from '@/lib/friendly-errors';
+import {
+  ADDRESS_GUARD_ERRORS,
+  CONNECT_FAILURE_ERRORS,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+} from '@/lib/friendly-errors';
 import {
   KeysApiError,
   keyErrorText,
@@ -377,6 +382,15 @@ export function friendlyTestFailure(
   // route reports it with status null. Not an HTTP failure, so no status text.
   if (status === null && rawError === PROVIDER_BODY_TOO_LARGE_ERROR) {
     return { reason: 'Response too large', statusText: null, detail: rawError };
+  }
+
+  // The connect failed before any answer and the route named why (lib/security.ts
+  // ProviderConnectError). A connect timeout is a timeout; the rest cannot reach it.
+  if (status === null && rawError === PROVIDER_CONNECT_TIMEOUT_ERROR) {
+    return { reason: 'No response in time', statusText: null, detail: rawError };
+  }
+  if (status === null && CONNECT_FAILURE_ERRORS.has(rawError)) {
+    return { reason: 'Could not reach the provider', statusText: null, detail: rawError };
   }
 
   let reason: string;

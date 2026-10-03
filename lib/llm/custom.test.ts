@@ -3,7 +3,13 @@ import type { LookupFunction } from 'node:net';
 import { callCustomProvider } from '@/lib/llm/custom';
 import { COMMON_CUSTOM_PROVIDERS, getSuggestedModels } from '@/lib/llm/models';
 import { safeProviderFetch, CHAT_PROVIDER_MAX_BODY_BYTES } from '@/lib/security';
-import { REDIRECT_BLOCKED_ERROR, PROVIDER_BODY_TOO_LARGE_ERROR, friendlyErrorMessage } from '@/lib/friendly-errors';
+import {
+  REDIRECT_BLOCKED_ERROR,
+  PROVIDER_BODY_TOO_LARGE_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  friendlyErrorMessage,
+} from '@/lib/friendly-errors';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import type { CustomProvider } from '@/lib/custom-providers';
 
@@ -207,6 +213,31 @@ describe('custom path: the provider call times out with the engine budget (S5)',
       `[llm] custom:${provider.id} ${provider.modelId} timed out after 20s key=user`
     );
     errorLog.mockRestore();
+  });
+});
+
+describe('custom path: a failed connect names its cause', () => {
+  const fetchFailed = (code: string, text: string) =>
+    new TypeError('fetch failed', { cause: Object.assign(new Error(text), { code }) });
+
+  it.each([
+    ['OpenAI format', openrouter],
+    ['Anthropic format', anthropic],
+  ])('%s: a connect ETIMEDOUT is the timeout sentinel, which chat shows as a timeout', async (_label, provider) => {
+    undiciMock.fetch.mockRejectedValueOnce(fetchFailed('ETIMEDOUT', `connect ETIMEDOUT ${PUBLIC_ADDRESS}:443`));
+    const res = await callCustomProvider(provider, [{ role: 'user', content: 'hi' }]);
+    expect(res.content).toBe('');
+    expect(res.error).toBe(PROVIDER_CONNECT_TIMEOUT_ERROR);
+    expect(friendlyErrorMessage(res.error)).toBe('This model took too long to respond. Try again.');
+  });
+
+  it('a refused connect is the refused sentinel, which chat shows as down or a wrong URL', async () => {
+    undiciMock.fetch.mockRejectedValueOnce(fetchFailed('ECONNREFUSED', `connect ECONNREFUSED ${PUBLIC_ADDRESS}:443`));
+    const res = await callCustomProvider(openrouter, [{ role: 'user', content: 'hi' }]);
+    expect(res.error).toBe(PROVIDER_CONNECT_REFUSED_ERROR);
+    expect(friendlyErrorMessage(res.error)).toBe(
+      'WinQA could not connect to this provider. It may be down, or the base URL may be wrong.'
+    );
   });
 });
 

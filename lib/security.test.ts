@@ -13,6 +13,7 @@ import {
   ProviderRedirectError,
   ProviderTimeoutError,
   ProviderBodyTooLargeError,
+  ProviderConnectError,
   MAX_PROVIDER_URL_LENGTH,
   CONNECT_TIMEOUT_MARGIN_MS,
 } from '@/lib/security';
@@ -23,6 +24,11 @@ import {
   BASE_URL_HTTPS_ERROR,
   BASE_URL_PRIVATE_ERROR,
   BASE_URL_TOO_LONG_ERROR,
+  PROVIDER_CONNECT_TIMEOUT_ERROR,
+  PROVIDER_CONNECT_REFUSED_ERROR,
+  PROVIDER_CONNECT_UNREACHABLE_ERROR,
+  PROVIDER_CONNECT_RESET_ERROR,
+  CONNECT_FAILURE_ERRORS,
 } from '@/lib/friendly-errors';
 
 // No test touches the network: DNS answers and the undici fetch are mocked. The
@@ -572,6 +578,104 @@ describe('safeProviderFetch: the connect timeout is longer than the request dead
     expect(undiciMock.fetch.mock.calls[0][1].signal.aborted).toBe(true);
     expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('safeProviderFetch: a failed connect names its cause instead of "fetch failed"', () => {
+  // undici's rejection when connect() fails: the opaque "fetch failed", the code in the cause.
+  const coded = (code: string, text = `connect ${code} 1.2.3.4:81`) => Object.assign(new Error(text), { code });
+  const fetchFailed = (cause: unknown) => new TypeError('fetch failed', { cause });
+
+  beforeEach(() => {
+    dnsMock.lookup.mockReset();
+    dnsMock.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    undiciMock.fetch.mockReset();
+    undiciMock.agents.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const fetchWith = (rejection: unknown) => {
+    undiciMock.fetch.mockRejectedValueOnce(rejection);
+    return safeProviderFetch('https://example.com:81/v1', { timeoutMs: 20_000, maxBodyBytes: MAX_BODY }).catch((e) => e);
+  };
+
+  it.each([
+    ['ETIMEDOUT', PROVIDER_CONNECT_TIMEOUT_ERROR],
+    ['UND_ERR_CONNECT_TIMEOUT', PROVIDER_CONNECT_TIMEOUT_ERROR],
+    ['ECONNREFUSED', PROVIDER_CONNECT_REFUSED_ERROR],
+    ['ENETUNREACH', PROVIDER_CONNECT_UNREACHABLE_ERROR],
+    ['EHOSTUNREACH', PROVIDER_CONNECT_UNREACHABLE_ERROR],
+    ['ENOTFOUND', PROVIDER_CONNECT_UNREACHABLE_ERROR],
+    ['EAI_AGAIN', PROVIDER_CONNECT_UNREACHABLE_ERROR],
+    ['ECONNRESET', PROVIDER_CONNECT_RESET_ERROR],
+    ['EPIPE', PROVIDER_CONNECT_RESET_ERROR],
+    ['UND_ERR_SOCKET', PROVIDER_CONNECT_RESET_ERROR],
+  ])('cause code %s -> ProviderConnectError with its sentinel', async (code, sentinel) => {
+    const err = await fetchWith(fetchFailed(coded(code)));
+    expect(err).toBeInstanceOf(ProviderConnectError);
+    expect(err.message).toBe(sentinel);
+    expect(err.code).toBe(code);
+    expect(CONNECT_FAILURE_ERRORS.has(err.message)).toBe(true);
+    expect(undiciMock.agents[0].destroy).toHaveBeenCalled();
+  });
+
+  it('the production shape: connect ETIMEDOUT reads as the timeout sentinel, code ETIMEDOUT', async () => {
+    const err = await fetchWith(
+      new TypeError('fetch failed', {
+        cause: Object.assign(new Error('connect ETIMEDOUT 1.2.3.4:81'), { code: 'ETIMEDOUT' }),
+      })
+    );
+    expect(err).toBeInstanceOf(ProviderConnectError);
+    expect(err.message).toBe('The provider did not accept a connection in time');
+    expect(err.code).toBe('ETIMEDOUT');
+  });
+
+  it('a code nested one cause deeper is found', async () => {
+    const err = await fetchWith(fetchFailed(Object.assign(new Error('socket'), { cause: coded('ECONNREFUSED') })));
+    expect(err).toBeInstanceOf(ProviderConnectError);
+    expect(err.message).toBe(PROVIDER_CONNECT_REFUSED_ERROR);
+    expect(err.code).toBe('ECONNREFUSED');
+  });
+
+  it('an AggregateError (happy-eyeballs connect) is read through its errors[]', async () => {
+    const aggregate = new AggregateError([new Error('no code'), coded('ENETUNREACH')], 'all attempts failed');
+    const err = await fetchWith(fetchFailed(aggregate));
+    expect(err).toBeInstanceOf(ProviderConnectError);
+    expect(err.message).toBe(PROVIDER_CONNECT_UNREACHABLE_ERROR);
+    expect(err.code).toBe('ENETUNREACH');
+  });
+
+  it('an unknown code (or none) rethrows the original "fetch failed"', async () => {
+    const original = fetchFailed(coded('ERR_TLS_CERT_ALTNAME_INVALID', 'Hostname/IP does not match'));
+    expect(await fetchWith(original)).toBe(original);
+    const bare = fetchFailed(new Error('other side closed'));
+    expect(await fetchWith(bare)).toBe(bare);
+  });
+
+  it('a known code on an error that is not "fetch failed" is left alone', async () => {
+    const plain = coded('ECONNRESET');
+    expect(await fetchWith(plain)).toBe(plain);
+  });
+
+  it('once the deadline has fired, an ETIMEDOUT rejection is still ProviderTimeoutError', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    // Rejects only after the deadline's abort, carrying a connect ETIMEDOUT cause.
+    undiciMock.fetch.mockImplementationOnce(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) =>
+          init.signal.addEventListener('abort', () => reject(fetchFailed(coded('ETIMEDOUT'))))
+        )
+    );
+    const result = safeProviderFetch('https://example.com:81/v1', { timeoutMs: 10_000, maxBodyBytes: MAX_BODY }).catch(
+      (e) => e
+    );
+    await vi.advanceTimersByTimeAsync(10_000);
+    const err = await result;
+    expect(err).toBeInstanceOf(ProviderTimeoutError);
+    expect(err.message).toBe('Request timed out after 10s');
   });
 });
 

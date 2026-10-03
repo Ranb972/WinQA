@@ -7,6 +7,7 @@ import {
   ProviderRedirectError,
   ProviderUrlError,
   ProviderTimeoutError,
+  ProviderConnectError,
   TEST_PROVIDER_MAX_BODY_BYTES,
   type PinnedAddress,
 } from '@/lib/security';
@@ -91,10 +92,16 @@ function redactKey(text: string, apiKey: string): string {
   return text.split(apiKey).join('[key]');
 }
 
-/** A hung test leaves a runtime-log line shaped like the engine's timeout line. */
+/**
+ * A hung test leaves a runtime-log line shaped like the engine's timeout line; a
+ * failed connect leaves the same line with its sentinel and the cause code
+ * (code=ETIMEDOUT). Never a body, never a key.
+ */
 function logTimeout(modelId: string, error: unknown): void {
   if (error instanceof ProviderTimeoutError) {
     console.error(`[llm] custom-test ${modelId} ${error.message.replace(/^Request /, '')} key=user`);
+  } else if (error instanceof ProviderConnectError) {
+    console.error(`[llm] custom-test ${modelId} ${error.message} code=${error.code} key=user`);
   }
 }
 
