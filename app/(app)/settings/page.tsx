@@ -69,6 +69,8 @@ import {
   CustomProviderTestResult,
 } from '@/lib/custom-providers';
 import CustomProviderCard from '@/components/CustomProviderCard';
+import KeyMigrationBanner from '@/components/KeyMigrationBanner';
+import { subscribeKeysChanged } from '@/lib/key-migration';
 import CustomProviderModal from '@/components/CustomProviderModal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -183,6 +185,10 @@ export default function SettingsPage() {
     }
     loadData();
   }, [isLoaded, user?.id, refreshKeys]);
+
+  // The browser copy of the keys was moved or deleted (this tab or another):
+  // read the account again.
+  useEffect(() => subscribeKeysChanged(() => void refreshKeys()), [refreshKeys]);
 
   const toggleVisibility = (provider: string) => {
     setVisibility((prev) => ({ ...prev, [provider]: !prev[provider] }));
@@ -571,6 +577,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </MotionWrapper>
+
+        <KeyMigrationBanner className="mb-8" />
 
         {/* Info Banner */}
         <MotionWrapper delay={0.1}>

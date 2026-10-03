@@ -2,12 +2,14 @@ import { LLMProvider } from './llm/types';
 import { REGISTRY_PROVIDERS } from './llm/registry';
 import {
   encryptApiKeys,
+  decryptApiKey,
   decryptApiKeys,
   isEncryptedFormat,
   EncryptedData,
 } from './crypto';
+import { LEGACY_API_KEYS_KEY, LEGACY_CUSTOM_PROVIDERS_KEY } from './key-migration';
 
-const STORAGE_KEY = 'winqa_api_keys';
+const STORAGE_KEY = LEGACY_API_KEYS_KEY;
 
 export type ApiKeys = Partial<Record<LLMProvider, string>>;
 
@@ -73,6 +75,92 @@ export async function getApiKeys(userId?: string): Promise<ApiKeys> {
   } catch {
     // Invalid JSON or decryption failed, return empty
     return {};
+  }
+}
+
+/**
+ * Read-only reader for the migration (C14): the stored keys, decrypted under
+ * `userId`, plus how many entries could not be decrypted (another account's
+ * blob, corrupted data) or read at all. getApiKeys swallows those; the move
+ * must not wipe a browser copy it could not read. Never writes.
+ */
+export async function readLegacyApiKeys(
+  userId: string
+): Promise<{ keys: Record<string, string>; failed: number }> {
+  if (typeof window === 'undefined') return { keys: {}, failed: 0 };
+
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return { keys: {}, failed: 1 };
+  }
+  if (!stored) return { keys: {}, failed: 0 };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    return { keys: {}, failed: 1 };
+  }
+  if (typeof parsed !== 'object' || parsed === null) return { keys: {}, failed: 1 };
+
+  if (isEncryptedFormat(parsed)) {
+    // A damaged blob ({"encrypted":true,"keys":null}) is one unreadable entry, not a throw.
+    if (typeof parsed.keys !== 'object' || parsed.keys === null) return { keys: {}, failed: 1 };
+    const decrypted: Record<string, string> = {};
+    let failed = 0;
+    for (const [provider, data] of Object.entries(parsed.keys)) {
+      try {
+        decrypted[provider] = await decryptApiKey(data, userId);
+      } catch {
+        failed++;
+      }
+    }
+    return { keys: keepRegistered(decrypted) as Record<string, string>, failed };
+  }
+
+  // Old unencrypted format: nothing to decrypt.
+  return { keys: keepRegistered(parsed as LegacyStorage) as Record<string, string>, failed: 0 };
+}
+
+/** True when this browser still holds either legacy key store (keys or custom providers). */
+export function hasLegacyKeyBlob(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return (
+      !!localStorage.getItem(LEGACY_API_KEYS_KEY) ||
+      !!localStorage.getItem(LEGACY_CUSTOM_PROVIDERS_KEY)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The raw text of both legacy entries, for a before/after compare around the
+ * upload: a change in between (another tab) means the copy must not be wiped.
+ */
+export function snapshotLegacyKeyStorage(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return JSON.stringify([
+      localStorage.getItem(LEGACY_API_KEYS_KEY),
+      localStorage.getItem(LEGACY_CUSTOM_PROVIDERS_KEY),
+    ]);
+  } catch {
+    return '';
+  }
+}
+
+/** Removes exactly the two legacy key entries; no other storage is touched. */
+export function wipeLegacyKeyStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(LEGACY_API_KEYS_KEY);
+    localStorage.removeItem(LEGACY_CUSTOM_PROVIDERS_KEY);
+  } catch {
+    // Storage blocked: nothing to remove.
   }
 }
 

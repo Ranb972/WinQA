@@ -45,6 +45,8 @@ import {
 } from '@/lib/code-execution';
 import { LLMProvider, ChatResponse, providerDisplayNames, specificModelDisplayNames, defaultModels } from '@/lib/llm';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
+import KeyMigrationBanner from '@/components/KeyMigrationBanner';
+import { subscribeKeysChanged } from '@/lib/key-migration';
 import { getEnabledCustomProviders } from '@/lib/custom-providers';
 import {
   PickerProvider,
@@ -182,6 +184,18 @@ export default function CodeTestingPage() {
       loadGuard.invalidate();
     };
   }, [user?.id, loadProviders, loadGuard]);
+
+  // The browser copy of the keys was moved or deleted (this tab or another):
+  // re-read the local keys (empty after a wipe) and reload the provider list.
+  useEffect(
+    () =>
+      subscribeKeysChanged(() => {
+        // Re-read instead of clearing: a rewrite in another tab is not a wipe.
+        void getApiKeys(user?.id).then(setCachedApiKeys);
+        void loadProviders();
+      }),
+    [loadProviders, user?.id]
+  );
 
   // A provider that left the list (disabled or removed) must not stay selected
   useEffect(() => {
@@ -592,6 +606,7 @@ ${result.output ? `\nOutput:\n${result.output}` : ''}`;
 
   return (
     <div className="px-4 sm:px-0 pt-4 sm:pt-0 pb-12 sm:pb-0">
+      <KeyMigrationBanner className="mb-6" />
       {/* Header */}
       <MotionWrapper>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

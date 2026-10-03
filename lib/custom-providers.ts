@@ -6,6 +6,7 @@
 // (C14) and for chat while a browser still holds un-migrated providers.
 
 import { decryptApiKey, EncryptedData } from './crypto';
+import { LEGACY_CUSTOM_PROVIDERS_KEY } from './key-migration';
 // Import-safe and cycle-free: lib/llm/models imports only ./registry (and types).
 import { getHeaderType, normalizeBaseUrl } from '@/lib/llm/models';
 // Client-safe: lib/friendly-errors has only a type import (erased at build).
@@ -19,7 +20,7 @@ import {
   type UpdateCustomProviderBody,
 } from '@/lib/keys-client';
 
-const STORAGE_KEY = 'winqa_custom_providers';
+const STORAGE_KEY = LEGACY_CUSTOM_PROVIDERS_KEY;
 export const MAX_CUSTOM_PROVIDERS = 6;
 
 /**
@@ -136,6 +137,77 @@ export async function getCustomProviders(userId?: string): Promise<CustomProvide
   } catch {
     return [];
   }
+}
+
+/** A provider read from the old browser store, key decrypted (the migration's input). */
+export type LegacyCustomProvider = CustomProvider;
+
+/**
+ * Read-only reader for the migration (C14): the stored providers with their
+ * keys decrypted under `userId`, plus how many entries could not be decrypted
+ * (another account's blob, corrupted data) or read at all. A provider whose key
+ * fails to decrypt is left out of `providers` and counted. getCustomProviders
+ * swallows those; the move must not wipe a browser copy it could not read.
+ */
+export async function readLegacyCustomProviders(
+  userId: string
+): Promise<{ providers: LegacyCustomProvider[]; failed: number }> {
+  if (typeof window === 'undefined') return { providers: [], failed: 0 };
+
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return { providers: [], failed: 1 };
+  }
+  if (!stored) return { providers: [], failed: 0 };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    return { providers: [], failed: 1 };
+  }
+
+  if (isEncryptedProviderFormat(parsed) && Array.isArray(parsed.providers)) {
+    const providers: LegacyCustomProvider[] = [];
+    let failed = 0;
+    for (const provider of parsed.providers) {
+      // A null or non-object entry is a damaged one: count it, never throw.
+      if (typeof provider !== 'object' || provider === null) {
+        failed++;
+        continue;
+      }
+      const encryptedKey = parsed.keys?.[provider.id];
+      let apiKey = '';
+      if (encryptedKey) {
+        try {
+          apiKey = await decryptApiKey(encryptedKey, userId);
+        } catch {
+          failed++;
+          continue;
+        }
+      }
+      providers.push({ ...provider, apiKey });
+    }
+    return { providers, failed };
+  }
+
+  if (isLegacyFormat(parsed)) {
+    const providers: LegacyCustomProvider[] = [];
+    let failed = 0;
+    for (const p of parsed.providers) {
+      if (typeof p !== 'object' || p === null) {
+        failed++;
+        continue;
+      }
+      providers.push({ ...p, apiKey: p.apiKey || '' });
+    }
+    return { providers, failed };
+  }
+
+  // Not a shape this code wrote: keep it, and say so.
+  return { providers: [], failed: 1 };
 }
 
 /**

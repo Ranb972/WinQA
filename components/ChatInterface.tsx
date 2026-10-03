@@ -13,6 +13,8 @@ import BugReportModal from '@/components/BugReportModal';
 import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames, sanitizeModelPreferences } from '@/lib/llm';
 import { cn } from '@/lib/utils';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
+import KeyMigrationBanner from '@/components/KeyMigrationBanner';
+import { subscribeKeysChanged } from '@/lib/key-migration';
 import { getModelPreferences, setModelPreference } from '@/lib/model-preferences';
 import { getEnabledCustomProviders } from '@/lib/custom-providers';
 import {
@@ -118,6 +120,18 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       loadGuard.invalidate();
     };
   }, [user?.id, loadProviders, loadGuard]);
+
+  // The browser copy of the keys was moved or deleted (this tab or another):
+  // re-read the local keys (empty after a wipe) and reload the provider list.
+  useEffect(
+    () =>
+      subscribeKeysChanged(() => {
+        // Re-read instead of clearing: a rewrite in another tab is not a wipe.
+        void getApiKeys(user?.id).then(setCachedApiKeys);
+        void loadProviders();
+      }),
+    [loadProviders, user?.id]
+  );
 
   // Drop selections whose provider left the list (disabled or removed)
   useEffect(() => {
@@ -390,6 +404,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] overflow-hidden">
+      <KeyMigrationBanner className="px-4 sm:px-6 pt-3 shrink-0" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-white/[0.06]">
         <div className="overflow-x-auto">
