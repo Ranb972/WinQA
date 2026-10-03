@@ -5,11 +5,12 @@ import { callCustomProvider } from '@/lib/llm/custom';
 import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
+import { loadCustomProvider, markRejected, resolveUserKeys, type KeyOrigin } from '@/lib/server/user-keys';
 
 // Every built-in call runs under a 42s total budget (20s per attempt, so two Compare
 // attempts plus delays finish before the client's 45s abort; Batch E3); the 60s cap
 // leaves headroom for the daily-allowance check. The custom-provider path is bounded
-// by its own 20s deadline (DEFAULT_PROVIDER_TIMEOUT_MS, lib/llm/custom.ts).
+// by its own 20s deadline (DEFAULT_PROVIDER_TIMEOUT_MS, lib/llm/provider-timeout.ts).
 export const maxDuration = 60;
 const TOTAL_TIMEOUT_MS = 42000;
 
@@ -19,8 +20,11 @@ interface RequestBody {
   temperature?: number;
   maxTokens?: number;
   modelPreferences?: Record<LLMProvider, SpecificModel>;
+  // Migration only (dual-read): an old tab or an un-migrated browser still sends
+  // its keys. A saved key wins over these per provider (resolveUserKeys).
   customApiKeys?: CustomApiKeys;
-  customProvider?: CustomProvider; // For custom provider requests
+  // Migration only: used when no saved provider matches the id in `models`.
+  customProvider?: CustomProvider;
   crossProviderFallback?: boolean;
   maxFallbackAttempts?: number;
   fallbackDelay?: number;
@@ -32,6 +36,12 @@ interface RequestBody {
 // (lib/llm/fallback.ts:106) holding a Function — an uncaught TypeError surfacing as a
 // 500. PROVIDER_MODELS is a UI catalogue, not an authorization list.
 const VALID_PROVIDERS = new Set<LLMProvider>(['cohere', 'gemini', 'groq', 'mistral']);
+const ALL_PROVIDERS: LLMProvider[] = ['cohere', 'gemini', 'groq', 'mistral'];
+
+// A saved custom provider's id: a Mongo ObjectId, 24 hex characters. Ids from the
+// old browser-only store (`custom_<time>_<random>`) never match and can only use
+// the legacy body path.
+const CUSTOM_ID_RE = /^[0-9a-f]{24}$/;
 
 /**
  * The first (provider, id) preference that names a model the registry does not know,
@@ -128,7 +138,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (
       typeof models !== 'string' ||
-      !((models.startsWith('custom:') && customProvider) || VALID_PROVIDERS.has(models as LLMProvider))
+      !(models.startsWith('custom:') || VALID_PROVIDERS.has(models as LLMProvider))
     ) {
       // Previously these reached chat() and returned 200-with-error (or a 500 from an
       // unhandled TypeError) after the charge. Behavior change: they now 400 up front.
@@ -153,10 +163,81 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve the credentials before the allowance charge, so a provider that does
+    // not exist or is disabled 400s without burning a unit.
+    let keyOrigin: KeyOrigin = 'none';
+    let keyProviders: string[] = [];
+    let apiKeys: CustomApiKeys | undefined;
+    let serverKeyProviders: LLMProvider[] = [];
+    let customToCall: CustomProvider | null = null;
+
+    if (typeof models === 'string' && models.startsWith('custom:')) {
+      const id = models.slice('custom:'.length).toLowerCase();
+      let stored: CustomProvider | null = null;
+      if (CUSTOM_ID_RE.test(id)) {
+        try {
+          stored = await loadCustomProvider(userId, id);
+        } catch (err) {
+          console.error(`[keys] load-failed error=${err instanceof Error ? err.name : 'Error'}`);
+        }
+      }
+      if (stored) {
+        // The saved record wins whole: a body customProvider (another base URL,
+        // another key) has no effect, so a saved key only ever goes to its saved host.
+        if (!stored.enabled) {
+          return NextResponse.json({ error: 'This custom provider is disabled' }, { status: 400 });
+        }
+        customToCall = stored;
+        keyOrigin = 'server';
+      } else if (customProvider && typeof customProvider === 'object') {
+        // Legacy: a browser that has not moved its providers to the account yet.
+        customToCall = customProvider;
+        keyOrigin = 'client';
+      } else if (!CUSTOM_ID_RE.test(id)) {
+        return NextResponse.json({ error: 'Invalid model specified' }, { status: 400 });
+      } else {
+        return NextResponse.json({ error: 'Custom provider not found' }, { status: 400 });
+      }
+      keyProviders = ['custom'];
+    } else {
+      // The engine falls back across providers unless the client turns it off
+      // (chatWithFallback defaults enableCrossProviderFallback to true and then
+      // walks every provider in crossProviderFallbackOrder, reading keys[provider]
+      // on each attempt). So keys are resolved for all four built-ins, as the
+      // browser sent all of its keys before; with fallback off, only the called ones.
+      const resolved = await resolveUserKeys(
+        userId,
+        safeCrossProviderFallback === false ? calledProviders : ALL_PROVIDERS,
+        customApiKeys
+      );
+      apiKeys = resolved.keys;
+      keyOrigin = resolved.origin;
+      serverKeyProviders = resolved.fromServer;
+      keyProviders = apiKeys ? Object.keys(apiKeys).sort() : [];
+    }
+
     const { allowed } = await consumeDailyAllowance(userId);
     if (!allowed) {
       return NextResponse.json({ error: friendlyErrorMessage(DAILY_LIMIT_ERROR) }, { status: 429 });
     }
+
+    // One line per request that runs on a user key: where the keys came from
+    // (origin=client must reach 0 before body keys are dropped, C16). Never a user
+    // id, a key or a custom provider id.
+    if (keyOrigin !== 'none') {
+      console.log(`[keys] route=chat origin=${keyOrigin} providers=${keyProviders.join(',')}`);
+    }
+
+    // A saved key the provider rejected (the engine retried on the app key) is
+    // recorded so Settings can say so. The engine flags the response, not the
+    // provider; the rejected provider is known only when the final attempt ran on
+    // that provider with the app key although a saved key was resolved for it,
+    // since the engine drops a key only when it is rejected. Fire-and-forget.
+    const recordRejection = (r: { model: LLMProvider; keySource?: string; userKeyRejected?: boolean }) => {
+      if (r.userKeyRejected && r.keySource !== 'user' && serverKeyProviders.includes(r.model)) {
+        void markRejected(userId, r.model);
+      }
+    };
 
     // Build fallback overrides once; honored by both the multi-model and single-model
     // paths. The total budget is always set; undefined tuning fields fall back to the
@@ -173,12 +254,12 @@ export async function POST(request: NextRequest) {
     };
 
     // Handle custom provider request
-    if (typeof models === 'string' && models.startsWith('custom:') && customProvider) {
-      const response = await callCustomProvider(customProvider, messages, safeTemperature, safeMaxTokens);
+    if (customToCall) {
+      const response = await callCustomProvider(customToCall, messages, safeTemperature, safeMaxTokens);
       // A custom provider's key is always the user's own.
       return NextResponse.json({
         ...response,
-        error: friendlyErrorMessage(response.error, { keySource: 'user', providerName: customProvider.name }),
+        error: friendlyErrorMessage(response.error, { keySource: 'user', providerName: customToCall.name }),
       });
     }
 
@@ -190,9 +271,10 @@ export async function POST(request: NextRequest) {
         temperature: safeTemperature,
         maxTokens: safeMaxTokens,
         modelPreferences,
-        customApiKeys,
+        customApiKeys: apiKeys,
         fallbackOverrides,
       });
+      response.responses.forEach(recordRejection);
       // Sanitize error messages in multi-model responses
       const sanitized = {
         ...response,
@@ -210,7 +292,8 @@ export async function POST(request: NextRequest) {
 
     // Handle single built-in model
     const specificModel = modelPreferences?.[models as LLMProvider];
-    const response = await chat(messages, models as LLMProvider, safeTemperature, safeMaxTokens, true, specificModel, customApiKeys, fallbackOverrides);
+    const response = await chat(messages, models as LLMProvider, safeTemperature, safeMaxTokens, true, specificModel, apiKeys, fallbackOverrides);
+    recordRejection(response);
     return NextResponse.json({
       ...response,
       error: friendlyErrorMessage(response.error, {

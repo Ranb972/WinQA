@@ -201,6 +201,86 @@ export async function loadUserKeys(
   return { keys, failed };
 }
 
+/** Where the keys a request runs on came from: the account, the request body, both, or neither. */
+export type KeyOrigin = 'server' | 'client' | 'mixed' | 'none';
+
+/** A body key is used only when it is a string of 1-512 characters; anything else is ignored. */
+function isUsableBodyKey(v: unknown): v is string {
+  return typeof v === 'string' && v.length >= 1 && v.length <= API_KEY_MAX_LENGTH;
+}
+
+/**
+ * The keys an LLM call runs on, per requested built-in provider: the user's
+ * saved key wins; otherwise the key the request body carried (an old tab or a
+ * browser not yet migrated); otherwise none, and the engine uses the app key.
+ * `keys` is undefined when no provider has a key. `origin` says where the
+ * resolved keys came from, for the route's `[keys]` line; `fromServer` lists
+ * the providers whose key is the saved one (the route marks only those
+ * rejected); `failed` lists the saved slots that did not decrypt (already
+ * logged by loadUserKeys).
+ *
+ * A load that throws (database error) is logged as
+ * `[keys] load-failed error=<class>` and the body keys are used; it never
+ * throws itself.
+ */
+export async function resolveUserKeys(
+  userId: string,
+  providers: LLMProvider[],
+  bodyKeys?: CustomApiKeys
+): Promise<{
+  keys: CustomApiKeys | undefined;
+  origin: KeyOrigin;
+  fromServer: LLMProvider[];
+  failed: string[];
+}> {
+  const wanted = Array.isArray(providers)
+    ? [...new Set(providers)].filter((p) => BUILTIN_SET.has(p))
+    : [];
+
+  let saved: CustomApiKeys = {};
+  let failed: string[] = [];
+  if (wanted.length > 0) {
+    try {
+      ({ keys: saved, failed } = await loadUserKeys(userId, wanted));
+    } catch (err) {
+      const name = err instanceof Error ? err.name : 'Error';
+      console.error(`[keys] load-failed error=${name}`);
+      saved = {};
+      failed = [];
+    }
+  }
+
+  const body: Record<string, unknown> =
+    bodyKeys && typeof bodyKeys === 'object' ? (bodyKeys as Record<string, unknown>) : {};
+  const keys: CustomApiKeys = {};
+  const fromServer: LLMProvider[] = [];
+  let fromClient = 0;
+  for (const provider of wanted) {
+    const serverKey = saved[provider];
+    if (typeof serverKey === 'string' && serverKey !== '') {
+      keys[provider] = serverKey;
+      fromServer.push(provider);
+      continue;
+    }
+    // Own-property read only, so 'toString' and friends on the prototype never count.
+    const bodyKey = Object.prototype.hasOwnProperty.call(body, provider) ? body[provider] : undefined;
+    if (isUsableBodyKey(bodyKey)) {
+      keys[provider] = bodyKey;
+      fromClient++;
+    }
+  }
+
+  const origin: KeyOrigin =
+    fromServer.length > 0 && fromClient > 0
+      ? 'mixed'
+      : fromServer.length > 0
+        ? 'server'
+        : fromClient > 0
+          ? 'client'
+          : 'none';
+  return { keys: origin === 'none' ? undefined : keys, origin, fromServer, failed };
+}
+
 /**
  * Loads one of the user's custom providers with its decrypted key, in the
  * shape the engine's callCustomProvider takes. null for a malformed id (no DB

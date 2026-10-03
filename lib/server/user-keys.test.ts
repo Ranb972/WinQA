@@ -20,6 +20,7 @@ import {
   newCustomCredentialId,
   customSlot,
   isKnownSlot,
+  resolveUserKeys,
 } from '@/lib/server/user-keys';
 
 // No database: dbConnect is a spy and the model statics are spied on per test.
@@ -470,5 +471,101 @@ describe('markRejected', () => {
     await markRejected('', 'gemini');
     expect(writeSpies[0]).not.toHaveBeenCalled();
     expect(db.connect).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveUserKeys', () => {
+  const BODY_GEMINI = 'AIzaSy-body-gemini-key-00000000000009';
+  const BODY_GROQ = 'gsk_body_groq_key_000000000000000008';
+
+  it('the saved key wins over a different body key for the same provider', async () => {
+    mockFind([builtinDoc(USER, 'gemini', GEMINI_KEY)]);
+    const r = await resolveUserKeys(USER, ['gemini'], { gemini: BODY_GEMINI });
+    expect(r).toEqual({ keys: { gemini: GEMINI_KEY }, origin: 'server', fromServer: ['gemini'], failed: [] });
+  });
+
+  it('the body key is used when nothing is saved: origin client', async () => {
+    mockFind([]);
+    const r = await resolveUserKeys(USER, ['gemini', 'groq'], { gemini: BODY_GEMINI });
+    expect(r).toEqual({ keys: { gemini: BODY_GEMINI }, origin: 'client', fromServer: [], failed: [] });
+  });
+
+  it('a saved key for one provider and a body key for another: origin mixed', async () => {
+    mockFind([builtinDoc(USER, 'gemini', GEMINI_KEY)]);
+    const r = await resolveUserKeys(USER, ['gemini', 'groq'], { gemini: BODY_GEMINI, groq: BODY_GROQ });
+    expect(r.keys).toEqual({ gemini: GEMINI_KEY, groq: BODY_GROQ });
+    expect(r.origin).toBe('mixed');
+    expect(r.fromServer).toEqual(['gemini']);
+  });
+
+  it('neither: keys undefined, origin none', async () => {
+    mockFind([]);
+    expect(await resolveUserKeys(USER, ['gemini'])).toEqual({
+      keys: undefined,
+      origin: 'none',
+      fromServer: [],
+      failed: [],
+    });
+  });
+
+  it('only requested providers are taken from the body', async () => {
+    mockFind([]);
+    const r = await resolveUserKeys(USER, ['gemini'], { gemini: BODY_GEMINI, groq: BODY_GROQ });
+    expect(r.keys).toEqual({ gemini: BODY_GEMINI });
+  });
+
+  it('junk body keys are ignored silently (empty, non-string, over 512 characters, object; non-object body)', async () => {
+    mockFind([]);
+    const junk = {
+      cohere: '',
+      gemini: 12345,
+      groq: 'x'.repeat(513),
+      mistral: { key: 'abc' },
+    } as unknown as Record<string, string>;
+    const r = await resolveUserKeys(USER, ['cohere', 'gemini', 'groq', 'mistral'], junk);
+    expect(r).toEqual({ keys: undefined, origin: 'none', fromServer: [], failed: [] });
+    // 1 and 512 characters are accepted.
+    const edge = await resolveUserKeys(USER, ['gemini', 'groq'], { gemini: 'k', groq: 'y'.repeat(512) });
+    expect(edge.keys).toEqual({ gemini: 'k', groq: 'y'.repeat(512) });
+    // A body that is not an object, and an unknown provider, change nothing.
+    const notObj = await resolveUserKeys(USER, ['gemini', 'toString' as never], 'gemini' as never);
+    expect(notObj.origin).toBe('none');
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('a slot that does not decrypt is in failed and falls through to the body key, then to none', async () => {
+    const bad = builtinDoc(USER, 'gemini', GEMINI_KEY);
+    bad.ct = flipByte(bad.ct);
+    mockFind([bad]);
+    const withBody = await resolveUserKeys(USER, ['gemini'], { gemini: BODY_GEMINI });
+    expect(withBody).toEqual({ keys: { gemini: BODY_GEMINI }, origin: 'client', fromServer: [], failed: ['gemini'] });
+    const without = await resolveUserKeys(USER, ['gemini']);
+    expect(without).toEqual({ keys: undefined, origin: 'none', fromServer: [], failed: ['gemini'] });
+    expectNoWrites();
+  });
+
+  it('a load that throws logs load-failed with the error class only and falls through to the body keys', async () => {
+    vi.spyOn(ProviderCredential, 'find').mockImplementation((() => {
+      throw new Error(`connection refused for ${USER}`);
+    }) as never);
+    const r = await resolveUserKeys(USER, ['gemini', 'groq'], { groq: BODY_GROQ });
+    expect(r).toEqual({ keys: { groq: BODY_GROQ }, origin: 'client', fromServer: [], failed: [] });
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith('[keys] load-failed error=Error');
+    expect(loggedText()).not.toContain(USER);
+  });
+
+  it('a rejected dbConnect is caught the same way', async () => {
+    db.connect.mockRejectedValueOnce(Object.assign(new Error('down'), { name: 'MongoServerSelectionError' }));
+    const r = await resolveUserKeys(USER, ['gemini'], { gemini: BODY_GEMINI });
+    expect(r.keys).toEqual({ gemini: BODY_GEMINI });
+    expect(errorSpy).toHaveBeenCalledWith('[keys] load-failed error=MongoServerSelectionError');
+  });
+
+  it('no built-in provider requested: no DB call', async () => {
+    const { find } = mockFind([]);
+    const r = await resolveUserKeys(USER, [], { gemini: BODY_GEMINI });
+    expect(r.origin).toBe('none');
+    expect(find).not.toHaveBeenCalled();
   });
 });
