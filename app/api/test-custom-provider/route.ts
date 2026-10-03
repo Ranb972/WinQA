@@ -14,13 +14,31 @@ import { consumeProviderTestAllowance, nextUtcMidnightIso } from '@/lib/rate-lim
 // Import-safe on the server: lib/custom-providers touches window/localStorage only
 // inside functions.
 import { PROVIDER_TEST_LIMIT_ERROR } from '@/lib/custom-providers';
+// The chat path's own per-attempt deadline (lib/llm/custom.ts imports the same
+// constant). Settings saves a provider only after a passing test, so the test must
+// wait exactly as long as the chat will. The module has no imports.
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/provider-timeout';
 
-// Sends a real test message to a user's custom endpoint. Resolving the host and
-// the test request each get TEST_CONNECTION_TIMEOUT_MS, so the route answers
-// within ~20s worst case, inside maxDuration. A self-hosted model that needs more
-// than 10s for a 10-token reply shows "No response in time".
+// Sends a real test message to a user's custom endpoint. The whole test (resolving
+// the host, then the request) shares one DEFAULT_PROVIDER_TIMEOUT_MS budget (20s):
+// the request gets whatever the resolution left. The route therefore answers within
+// ~20s plus auth and metering, inside maxDuration. A self-hosted model that needs
+// more than 20s for a 10-token reply shows "No response in time", as it would time
+// out in chat too.
 export const maxDuration = 30;
-const TEST_CONNECTION_TIMEOUT_MS = 10_000;
+
+/** Milliseconds of the test budget still unspent, counted from `startedAt` (performance.now()). */
+function remainingBudget(startedAt: number): number {
+  return DEFAULT_PROVIDER_TIMEOUT_MS - Math.round(performance.now() - startedAt);
+}
+
+/**
+ * A timeout in either phase is reported against the whole budget ("Request timed
+ * out after 20s"), not against the remainder the phase happened to get.
+ */
+function wholeBudgetTimeout(error: unknown): unknown {
+  return error instanceof ProviderTimeoutError ? new ProviderTimeoutError(DEFAULT_PROVIDER_TIMEOUT_MS) : error;
+}
 
 interface TestCustomProviderRequest {
   baseUrl: string;
@@ -99,7 +117,8 @@ async function testConnection(
   apiKey: string,
   modelId: string,
   headerType: 'bearer' | 'x-api-key' | undefined,
-  pinned: PinnedAddress
+  pinned: PinnedAddress,
+  timeoutMs: number
 ): Promise<TestConnectionResult> {
   const normalizedUrl = normalizeBaseUrl(baseUrl);
   const headers = buildHeaders(apiKey, baseUrl, headerType);
@@ -120,7 +139,7 @@ async function testConnection(
           max_tokens: 10,
         }),
         pinned,
-        timeoutMs: TEST_CONNECTION_TIMEOUT_MS,
+        timeoutMs,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
@@ -154,7 +173,7 @@ async function testConnection(
           max_tokens: 10,
         }),
         pinned,
-        timeoutMs: TEST_CONNECTION_TIMEOUT_MS,
+        timeoutMs,
       });
       const meta = { status: response.status, latencyMs: elapsedMs(), model: modelId };
 
@@ -177,7 +196,8 @@ async function testConnection(
 
       return { valid: true, ...meta };
     }
-  } catch (error) {
+  } catch (caught) {
+    const error = wholeBudgetTimeout(caught);
     if (error instanceof ProviderRedirectError) {
       // Never followed: a public host could 302 the server into a private address.
       return {
@@ -224,12 +244,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false, error: urlError }, { status: 400 });
     }
 
+    // One budget for the whole test: the clock starts before the resolution, and the
+    // request gets only what is left of DEFAULT_PROVIDER_TIMEOUT_MS.
+    const budgetStartedAt = performance.now();
+
     // Resolve the host once and vet every answer; the test request then connects
     // to that address only (lib/security.ts safeProviderFetch).
     let pinned: PinnedAddress;
     try {
-      pinned = await resolveProviderAddress(baseUrl, TEST_CONNECTION_TIMEOUT_MS);
-    } catch (error) {
+      pinned = await resolveProviderAddress(baseUrl, DEFAULT_PROVIDER_TIMEOUT_MS);
+    } catch (caught) {
+      const error = wholeBudgetTimeout(caught);
       if (error instanceof ProviderUrlError) {
         return NextResponse.json({ valid: false, error: error.message }, { status: 400 });
       }
@@ -262,7 +287,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await testConnection(baseUrl, apiKey, modelId, headerType, pinned);
+    // The resolution (and the metering write) may have used up the budget; then
+    // there is no time left to ask the provider anything.
+    const requestBudgetMs = remainingBudget(budgetStartedAt);
+    if (requestBudgetMs <= 0) {
+      const timeout = new ProviderTimeoutError(DEFAULT_PROVIDER_TIMEOUT_MS);
+      logTimeout(modelId, timeout);
+      return NextResponse.json({
+        valid: false,
+        error: timeout.message,
+        status: null,
+        latencyMs: 0,
+        model: modelId,
+      } satisfies TestConnectionResult);
+    }
+
+    const result = await testConnection(baseUrl, apiKey, modelId, headerType, pinned, requestBudgetMs);
     return NextResponse.json(result);
   } catch (error) {
     // Never log the API key in error messages

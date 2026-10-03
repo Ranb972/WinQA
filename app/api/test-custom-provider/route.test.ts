@@ -3,7 +3,8 @@ import type { LookupFunction } from 'node:net';
 import { NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { POST } from '@/app/api/test-custom-provider/route';
-import { safeProviderFetch } from '@/lib/security';
+import { resolveProviderAddress, safeProviderFetch } from '@/lib/security';
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/fallback';
 import { friendlyTestFailure } from '@/lib/custom-providers';
 import { consumeDailyAllowance, consumeProviderTestAllowance } from '@/lib/rate-limit';
 
@@ -14,10 +15,15 @@ vi.mock('@clerk/nextjs/server', () => ({
 }));
 
 // The real lib/security runs (URL checks, DNS vetting, pinning); safeProviderFetch
-// is wrapped in a spy so the tests can see that the route goes through it.
+// and resolveProviderAddress are wrapped in spies so the tests can see that the
+// route goes through them, and with which budget.
 vi.mock('@/lib/security', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/security')>();
-  return { ...actual, safeProviderFetch: vi.fn(actual.safeProviderFetch) };
+  return {
+    ...actual,
+    safeProviderFetch: vi.fn(actual.safeProviderFetch),
+    resolveProviderAddress: vi.fn(actual.resolveProviderAddress),
+  };
 });
 
 // Metering is mocked (no DB): allowed unless a test says otherwise. The LLM
@@ -71,6 +77,7 @@ beforeEach(() => {
   dnsMock.lookup.mockReset();
   dnsMock.lookup.mockResolvedValue([{ address: PUBLIC_ADDRESS, family: 4 }]);
   vi.mocked(safeProviderFetch).mockClear();
+  vi.mocked(resolveProviderAddress).mockClear();
   vi.mocked(consumeProviderTestAllowance).mockReset();
   vi.mocked(consumeProviderTestAllowance).mockResolvedValue({ allowed: true });
   vi.mocked(consumeDailyAllowance).mockClear();
@@ -320,33 +327,81 @@ describe('POST /api/test-custom-provider — resolved address is vetted and pinn
   });
 });
 
-describe('POST /api/test-custom-provider — the test times out after 10 s (S5)', () => {
+describe('POST /api/test-custom-provider — one 20 s budget, the chat path deadline (S5)', () => {
   const PENDING = Symbol('pending');
   const settledOrPending = <T,>(p: Promise<T>) =>
     Promise.race([p, new Promise<typeof PENDING>((resolve) => setImmediate(() => resolve(PENDING)))]);
 
+  // performance is faked too, so the route's budget clock moves only with the timers.
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('passes a 10 000 ms budget to safeProviderFetch', async () => {
+  // Never settles on its own; rejects with the deadline's reason when it fires.
+  const hangUntilAborted = (_url: string, init: { signal: AbortSignal }) =>
+    new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)));
+
+  it('the test budget is DEFAULT_PROVIDER_TIMEOUT_MS (20 000 ms), the chat path deadline', async () => {
+    expect(DEFAULT_PROVIDER_TIMEOUT_MS).toBe(20_000);
     fetchMock.mockResolvedValueOnce(upstream(200, { choices: [] }));
     await POST(makeRequest(validBody));
-    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({ timeoutMs: 10_000 });
+    expect(resolveProviderAddress).toHaveBeenCalledWith(BASE_URL, DEFAULT_PROVIDER_TIMEOUT_MS);
+    // An instant DNS answer leaves the whole budget for the request.
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({ timeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS });
+  });
+
+  it('resolution and request share one budget: a 5 s DNS answer leaves 15 s for the request', async () => {
+    dnsMock.lookup.mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(() => resolve([{ address: PUBLIC_ADDRESS, family: 4 }]), 5_000))
+    );
+    fetchMock.mockImplementationOnce(hangUntilAborted);
+
+    const pending = POST(makeRequest(validBody));
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(safeProviderFetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(safeProviderFetch).mock.calls[0][1]).toMatchObject({ timeoutMs: 15_000 });
+
+    // 19 999 ms in total: still waiting; 20 000 ms: over, reported against the whole budget.
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(await settledOrPending(pending)).toBe(PENDING);
+    await vi.advanceTimersByTimeAsync(1);
+    const res = await settledOrPending(pending);
+    expect(res).not.toBe(PENDING);
+    expect(await (res as Response).json()).toMatchObject({
+      valid: false,
+      error: 'Request timed out after 20s',
+      status: null,
+    });
+  });
+
+  it('a provider that answers after 15 s passes (it would fail the old 10 s test, yet works in chat)', async () => {
+    // Answers after 15 s unless the deadline aborts it first, as undici's fetch does.
+    fetchMock.mockImplementationOnce(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(() => resolve(upstream(200, { choices: [] })), 15_000);
+          init.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(init.signal.reason);
+          });
+        })
+    );
+    const pending = POST(makeRequest(validBody));
+    await vi.advanceTimersByTimeAsync(15_000);
+    const res = await settledOrPending(pending);
+    expect(res).not.toBe(PENDING);
+    expect(await (res as Response).json()).toMatchObject({ valid: true, status: 200 });
   });
 
   it('a provider that never answers -> status null, timed-out text, "No response in time"', async () => {
-    fetchMock.mockImplementationOnce(
-      (_url: string, init: { signal: AbortSignal }) =>
-        new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)))
-    );
+    fetchMock.mockImplementationOnce(hangUntilAborted);
 
     const pending = POST(makeRequest(validBody));
-    await vi.advanceTimersByTimeAsync(9_999);
+    await vi.advanceTimersByTimeAsync(19_999);
     expect(await settledOrPending(pending)).toBe(PENDING);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -355,7 +410,7 @@ describe('POST /api/test-custom-provider — the test times out after 10 s (S5)'
     const json = await (res as Response).json();
     expect(json).toEqual({
       valid: false,
-      error: 'Request timed out after 10s',
+      error: 'Request timed out after 20s',
       status: null,
       latencyMs: expect.any(Number),
       model: MODEL,
@@ -363,17 +418,38 @@ describe('POST /api/test-custom-provider — the test times out after 10 s (S5)'
     expect(friendlyTestFailure(json).reason).toBe('No response in time');
   });
 
-  it('a DNS answer that never comes -> the same timed-out result, nothing fetched', async () => {
+  it('a DNS answer that never comes -> the same timed-out result after 20 s, nothing fetched', async () => {
     dnsMock.lookup.mockImplementationOnce(() => new Promise(() => {}));
     const pending = POST(makeRequest(validBody));
-    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(19_999);
+    expect(await settledOrPending(pending)).toBe(PENDING);
+    await vi.advanceTimersByTimeAsync(1);
     const res = await settledOrPending(pending);
     expect(res).not.toBe(PENDING);
     expect(await (res as Response).json()).toMatchObject({
       valid: false,
-      error: 'Request timed out after 10s',
+      error: 'Request timed out after 20s',
       status: null,
     });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('no budget left after the resolution and metering -> timed out without contacting the provider', async () => {
+    vi.mocked(consumeProviderTestAllowance).mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(() => resolve({ allowed: true }), DEFAULT_PROVIDER_TIMEOUT_MS))
+    );
+    const pending = POST(makeRequest(validBody));
+    await vi.advanceTimersByTimeAsync(DEFAULT_PROVIDER_TIMEOUT_MS);
+    const res = await settledOrPending(pending);
+    expect(res).not.toBe(PENDING);
+    expect(await (res as Response).json()).toEqual({
+      valid: false,
+      error: 'Request timed out after 20s',
+      status: null,
+      latencyMs: 0,
+      model: MODEL,
+    });
+    expect(safeProviderFetch).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

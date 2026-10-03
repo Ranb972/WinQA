@@ -17,6 +17,7 @@ import { geminiChat } from './gemini';
 import { groqChat } from './groq';
 import { mistralChat } from './mistral';
 import { fallbackChains, defaultModels, isRegisteredModel } from './registry';
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from './provider-timeout';
 
 // The chains, defaults and display names live in the registry (lib/llm/registry.ts);
 // they are re-exported here for existing importers.
@@ -99,12 +100,10 @@ function withoutProviderKey(keys: CustomApiKeys, provider: LLMProvider): CustomA
 // No attempt starts when less than this much of the total budget remains.
 const MIN_ATTEMPT_BUDGET_MS = 1000;
 
-/**
- * Cap per attempt when the caller sets none. 20s, down from 30s (Batch E3): the
- * 2026-09-08 smoke showed a head that hung for the whole 30s Compare budget while
- * its sibling would have answered; a slow head now hands over instead.
- */
-export const DEFAULT_PROVIDER_TIMEOUT_MS = 20000;
+// Cap per attempt when the caller sets none (20s). Defined in ./provider-timeout so
+// the connection-test route shares it without importing the provider SDKs below;
+// re-exported here for existing importers.
+export { DEFAULT_PROVIDER_TIMEOUT_MS };
 
 /**
  * Minimum pause before retrying on the same provider. Mistral's Free plan enforces

@@ -4,8 +4,8 @@ import { ChatMessage, ChatResponse, LLMProvider } from './types';
 import { CustomProvider } from '../custom-providers';
 import { normalizeBaseUrl, getHeaderType, isAnthropicProvider } from './models';
 import { checkProviderUrl, safeProviderFetch, ProviderTimeoutError } from '@/lib/security';
-// Import-safe: fallback.ts builds no provider client at import time.
-import { DEFAULT_PROVIDER_TIMEOUT_MS } from './fallback';
+// The same deadline the connection test uses (app/api/test-custom-provider/route.ts).
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from './provider-timeout';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
