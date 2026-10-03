@@ -30,7 +30,7 @@
         "framer-motion": "^12.27.1",
         "groq-sdk": "^0.37.0",
         "lucide-react": "^0.468.0",
-        "mongoose": "^9.1.4",
+        "mongoose": "^9.7.2",
         "next": "^16.1.2",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
