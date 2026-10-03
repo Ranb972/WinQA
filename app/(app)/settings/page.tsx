@@ -588,7 +588,7 @@ export default function SettingsPage() {
               <div>
                 <p className="text-zinc-400 text-sm">
                   <span className="text-orange-500 font-medium">Configure your authentication credentials</span> for higher rate limits and better reliability.
-                  Credentials you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
+                  Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, at the moment a request goes to that provider. They are never sent back to your browser; Settings shows only the last four characters. Removing a key, or deleting your account, deletes it. If a built-in provider rejects your key as unauthorized, WinQA may retry the request once with its shared key; custom providers are not retried.
                 </p>
               </div>
             </div>
@@ -1181,15 +1181,27 @@ export default function SettingsPage() {
                     <ul className="text-xs text-zinc-400 space-y-2">
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.</span>
+                        <span>Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment.</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are stored only in your browser&apos;s localStorage</span>
+                        <span>They are decrypted only on our servers, at the moment a request goes to that provider.</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span>Keys are <span className="text-green-400">never saved</span> to our database</span>
+                        <span>They are never sent back to your browser; Settings shows only the last four characters.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Removing a key, or deleting your account, deletes it.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>If a built-in provider rejects your key as unauthorized, WinQA may retry the request once with its shared key; custom providers are not retried.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                        <span>Keys saved in this browser before October 2026 stay there, obfuscated, and are sent to our server over HTTPS with each request that needs them until you move them from Settings; browser storage ends on October 31, 2026.</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <Check className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
@@ -1201,7 +1213,7 @@ export default function SettingsPage() {
                       </li>
                     </ul>
                     <p className="font-mono text-[10px] text-white/25 mt-4 pt-3 border-t border-white/[0.06]">
-                      Your keys are as secure as your browser and device. Clear your browser data to remove all stored keys.
+                      Your keys are protected by our server-side encryption and your account&apos;s sign-in. Deleting your account removes them.
                     </p>
                   </div>
                 </motion.div>

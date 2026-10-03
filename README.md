@@ -63,7 +63,7 @@ Test Cases is a library of scenarios you keep reusing to probe models. Insights 
 | Auth | Clerk (Google + GitHub OAuth) |
 | LLM Providers | Cohere, Google Gemini, Groq, Mistral (Ministral 3) |
 | Code Execution | Judge0 CE, Judge0 via RapidAPI, Piston public API |
-| Security | HSTS and CSP headers; saved API keys stay in the browser, obfuscated, and are not stored on the server |
+| Security | HSTS and CSP headers; saved API keys are stored encrypted (AES-256-GCM) with a server-side key ring and never returned to the browser |
 | Deployment | Vercel |
 
 ---

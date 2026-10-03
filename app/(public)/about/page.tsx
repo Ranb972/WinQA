@@ -202,7 +202,7 @@ export default function AboutPage() {
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
                 <span>
-                  Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
+                  Keys you save are stored encrypted in our database, decrypted only on our servers when a request goes to that provider, and never sent back to your browser.
                 </span>
               </li>
             </ul>

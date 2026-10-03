@@ -108,7 +108,7 @@ export const pageMetadata = {
   },
   privacy: {
     title: 'Privacy Policy',
-    description: 'How WinQA collects, uses, and protects your data. Which services receive your data, how saved API keys are handled, no data selling, Clerk authentication.',
+    description: 'How WinQA collects, uses, and protects your data. Which services receive your data, how saved API keys are stored encrypted, no data selling, Clerk authentication.',
     canonical: '/privacy',
   },
   terms: {

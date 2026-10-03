@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                 <h3 className="text-sm font-medium text-orange-500 font-mono uppercase tracking-wider mb-2">API Keys</h3>
                 <p className="text-sm">
-                  If you save API keys for AI providers (Cohere, Google Gemini, Groq, Mistral, or a custom provider): Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.
+                  If you save API keys for AI providers (Cohere, Google Gemini, Groq, Mistral, or a custom provider): Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, at the moment a request goes to that provider. They are never sent back to your browser; Settings shows only the last four characters. Removing a key, or deleting your account, deletes it. If a built-in provider rejects your key as unauthorized, WinQA may retry the request once with its shared key; custom providers are not retried. Keys saved in this browser before October 2026 stay there, obfuscated, and are sent to our server over HTTPS with each request that needs them until you move them from Settings; browser storage ends on October 31, 2026.
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
@@ -121,7 +121,7 @@ export default function PrivacyPolicyPage() {
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
-                  <span>Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them.</span>
+                  <span>Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, at the moment a request goes to that provider. They are never sent back to your browser; Settings shows only the last four characters.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-orange-500 mt-0.5">&bull;</span>
@@ -213,12 +213,12 @@ export default function PrivacyPolicyPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>Delete your account. Deleting your account deletes your content, battles and usage counters from our database within minutes. Saved API keys are never on our servers; remove them from this browser in Settings. Public library items you contributed stay, re-attributed to WinQA. To delete, use Manage account in your profile menu, or email{' '}
+                <span>Delete your account. Deleting your account deletes your content, battles, usage counters and saved keys from our database within minutes. Public library items you contributed stay, re-attributed to WinQA. To delete, use Manage account in your profile menu, or email{' '}
                   <a href="mailto:privacy@winqa.ai" className="text-orange-500 hover:text-orange-400 underline underline-offset-4">privacy@winqa.ai</a>.</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>
-                <span>Remove saved API keys from this browser at any time via Settings</span>
+                <span>Remove saved API keys at any time in Settings.</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-orange-500 mt-0.5">&bull;</span>

@@ -52,7 +52,7 @@ export const faqs = [
   {
     question: 'Is my data private and secure?',
     answer:
-      'Your data is yours. Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them. Authentication goes through Clerk. Everything you create — prompts, bugs, test cases, insights — is tied to your account and only visible to you. WinQA does not sell data. The full details are in the privacy policy.',
+      'Your data is yours. Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, when a request goes to that provider, and never sent back to your browser. Keys saved in this browser before October 2026 stay there until you move them from Settings. Authentication goes through Clerk. Everything you create — prompts, bugs, test cases, insights — is tied to your account and only visible to you. WinQA does not sell data. The full details are in the privacy policy.',
   },
   {
     question: 'Is WinQA open source?',

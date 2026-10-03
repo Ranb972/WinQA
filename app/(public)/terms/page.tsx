@@ -100,7 +100,7 @@ export default function TermsOfServicePage() {
             </h2>
             <div className="p-4 rounded-lg border border-orange-500/20 bg-orange-500/[0.03]">
               <p className="text-sm">
-                You are responsible for the security and proper use of any API keys you provide to WinQA. Keys you save are kept in this browser, obfuscated (not protected against someone with access to this browser profile), and sent to our server over HTTPS with each request that needs them. We do not store them. You acknowledge that:
+                You are responsible for the security and proper use of any API keys you provide to WinQA. Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, at the moment a request goes to that provider. They are never sent back to your browser; Settings shows only the last four characters. Removing a key, or deleting your account, deletes it. If a built-in provider rejects your key as unauthorized, WinQA may retry the request once with its shared key; custom providers are not retried. You acknowledge that:
               </p>
               <ul className="space-y-2 mt-3 ml-4 text-sm">
                 <li className="flex items-start gap-3">
