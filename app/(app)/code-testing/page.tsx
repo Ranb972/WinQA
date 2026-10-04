@@ -57,6 +57,7 @@ import {
   mergeProviders,
 } from '@/lib/provider-picker';
 import { getModelPreferences } from '@/lib/model-preferences';
+import { CODE_TESTING_RESULT_MAX_CHARS, clipForPrompt } from '@/lib/content-limits';
 
 type DebugMode = 'summary' | 'detailed';
 
@@ -357,7 +358,7 @@ ${code}
 \`\`\`
 
 Error:
-${result.error}
+${clipForPrompt(result.error, CODE_TESTING_RESULT_MAX_CHARS)}
 
 Analyze briefly in 3-5 bullet points:
 - What's wrong
@@ -373,7 +374,7 @@ ${code}
 \`\`\`
 
 Error:
-${result.error}
+${clipForPrompt(result.error, CODE_TESTING_RESULT_MAX_CHARS)}
 
 Please analyze the error and explain:
 1. What caused the error
@@ -431,7 +432,7 @@ Code:
 \`\`\`${language}
 ${code}
 \`\`\`
-${result.output ? `\nOutput:\n${result.output}` : ''}`;
+${result.output ? `\nOutput:\n${clipForPrompt(result.output, CODE_TESTING_RESULT_MAX_CHARS)}` : ''}`;
 
       const detailedPrompt = `Please analyze this working ${LANGUAGE_DISPLAY_NAMES[language]} code and explain:
 1. What's good about this code (2-3 key points)
@@ -442,7 +443,7 @@ Code:
 \`\`\`${language}
 ${code}
 \`\`\`
-${result.output ? `\nOutput:\n${result.output}` : ''}`;
+${result.output ? `\nOutput:\n${clipForPrompt(result.output, CODE_TESTING_RESULT_MAX_CHARS)}` : ''}`;
 
       const analysisPrompt = dMode === 'summary' ? summaryPrompt : detailedPrompt;
 

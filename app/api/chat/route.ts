@@ -6,13 +6,21 @@ import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 import { loadCustomProvider, markRejected, resolveUserKeys, type KeyOrigin } from '@/lib/server/user-keys';
-import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { BODY_LIMITS, CHAT_TOO_LARGE_ERROR } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
+import {
+  CHAT_MAX_MESSAGE_CHARS,
+  CHAT_MAX_MESSAGES,
+  CHAT_MAX_TOTAL_CHARS,
+  CHAT_ROLES,
+} from '@/lib/content-limits';
 
 // Every built-in call runs under a 42s total budget (20s per attempt, so two Compare
-// attempts plus delays finish before the client's 45s abort; Batch E3); the 60s cap
-// leaves headroom for the daily-allowance check. The custom-provider path is bounded
-// by its own 20s deadline (DEFAULT_PROVIDER_TIMEOUT_MS, lib/llm/provider-timeout.ts).
+// attempts plus delays finish before the client's 45s abort; Batch E3). The rest of
+// the 60s cap is headroom for what runs before the engine: key resolution
+// (loadCustomProvider or resolveUserKeys, database reads with no deadline of their
+// own) and the daily-allowance check. The custom-provider path is bounded by its own
+// 20s deadline (DEFAULT_PROVIDER_TIMEOUT_MS, lib/llm/provider-timeout.ts).
 export const maxDuration = 60;
 const TOTAL_TIMEOUT_MS = 42000;
 
@@ -58,6 +66,40 @@ function findUnregisteredPreference(
   for (const provider of providers) {
     const id = (prefs as Record<string, unknown>)[provider];
     if (id !== undefined && !isRegisteredModel(provider, id)) return { provider, id };
+  }
+  return null;
+}
+
+const CHAT_ROLE_SET: ReadonlySet<string> = new Set<string>(CHAT_ROLES);
+
+// None of these texts echoes a submitted value.
+const MESSAGES_COUNT_ERROR =
+  `A conversation can have at most ${CHAT_MAX_MESSAGES} messages. Start a new chat or remove earlier messages.`;
+const MESSAGE_SHAPE_ERROR = 'Each message must be an object with a role and content';
+const MESSAGE_ROLE_ERROR = 'Each message role must be user, assistant or system';
+const MESSAGE_CONTENT_ERROR = 'Each message content must be text';
+
+/**
+ * The 400 (not a list of { role, content: string } with a known role, or more
+ * than CHAT_MAX_MESSAGES) or 413 (one content over CHAT_MAX_MESSAGE_CHARS, or all
+ * of them over CHAT_MAX_TOTAL_CHARS) for `messages`, or null when it is fine.
+ */
+function checkChatMessages(messages: unknown): { status: 400 | 413; error: string } | null {
+  if (!Array.isArray(messages)) return { status: 400, error: MESSAGE_SHAPE_ERROR };
+  if (messages.length > CHAT_MAX_MESSAGES) return { status: 400, error: MESSAGES_COUNT_ERROR };
+  let total = 0;
+  for (const message of messages as unknown[]) {
+    if (message === null || typeof message !== 'object' || Array.isArray(message)) {
+      return { status: 400, error: MESSAGE_SHAPE_ERROR };
+    }
+    const { role, content } = message as { role?: unknown; content?: unknown };
+    if (typeof role !== 'string' || !CHAT_ROLE_SET.has(role)) {
+      return { status: 400, error: MESSAGE_ROLE_ERROR };
+    }
+    if (typeof content !== 'string') return { status: 400, error: MESSAGE_CONTENT_ERROR };
+    if (content.length > CHAT_MAX_MESSAGE_CHARS) return { status: 413, error: CHAT_TOO_LARGE_ERROR };
+    total += content.length;
+    if (total > CHAT_MAX_TOTAL_CHARS) return { status: 413, error: CHAT_TOO_LARGE_ERROR };
   }
   return null;
 }
@@ -111,6 +153,13 @@ export async function POST(request: NextRequest) {
         { error: 'Messages are required' },
         { status: 400 }
       );
+    }
+
+    // Shape, count and length of the conversation, before the keys are resolved
+    // and before the allowance is charged (D8).
+    const messagesProblem = checkChatMessages(messages);
+    if (messagesProblem) {
+      return NextResponse.json({ error: messagesProblem.error }, { status: messagesProblem.status });
     }
 
     if (!models) {

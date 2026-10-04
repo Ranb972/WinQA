@@ -354,3 +354,93 @@ describe('POST /api/chat: custom providers', () => {
     expect(errorSpy).toHaveBeenCalledWith('[keys] load-failed error=Error');
   });
 });
+
+describe('POST /api/chat: message count and length are capped before the charge (D8)', () => {
+  const TOO_LONG = 'This conversation is too long to send. Start a new chat or remove earlier messages.';
+  const msg = (content: unknown, role: unknown = 'user') => ({ role, content });
+
+  /** Nothing past the message checks ran: no key lookup, no charge, no engine. */
+  function expectRefusedEarly() {
+    expect(m.consume).not.toHaveBeenCalled();
+    expect(find).not.toHaveBeenCalled();
+    expect(m.loadCustomProvider).not.toHaveBeenCalled();
+    expect(m.chat).not.toHaveBeenCalled();
+    expect(m.multiModelChat).not.toHaveBeenCalled();
+    expect(m.callCustomProvider).not.toHaveBeenCalled();
+  }
+
+  it('101 messages give 400', async () => {
+    const many = Array.from({ length: 101 }, (_, i) => msg(`m${i}`, i % 2 ? 'assistant' : 'user'));
+    const res = await POST(req({ messages: many, models: 'gemini' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe(
+      'A conversation can have at most 100 messages. Start a new chat or remove earlier messages.'
+    );
+    expectRefusedEarly();
+  });
+
+  it('one message of 64,001 characters gives 413 with the chat sentence', async () => {
+    const res = await POST(req({ messages: [msg('x'.repeat(64_001))], models: 'gemini' }));
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: TOO_LONG });
+    expectRefusedEarly();
+  });
+
+  it('a total of 200,001 characters gives 413, each message within its own cap', async () => {
+    const parts = [
+      msg('x'.repeat(64_000)),
+      msg('x'.repeat(64_000), 'assistant'),
+      msg('x'.repeat(64_000)),
+      msg('x'.repeat(8_001), 'assistant'),
+    ];
+    const res = await POST(req({ messages: parts, models: ['gemini', 'groq'] }));
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: TOO_LONG });
+    expectRefusedEarly();
+  });
+
+  it('content: 5 gives 400', async () => {
+    const res = await POST(req({ messages: [msg(5)], models: 'gemini' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Each message content must be text');
+    expectRefusedEarly();
+  });
+
+  it("role: 'tool' gives 400", async () => {
+    const res = await POST(req({ messages: [msg('hi', 'tool')], models: 'gemini' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Each message role must be user, assistant or system');
+    expectRefusedEarly();
+  });
+
+  it.each([
+    ['a string', 'hello'],
+    ['an object with a length', { length: 1 }],
+    ['a list holding null', [null]],
+    ['a list holding a string', ['hi']],
+  ])('messages that are %s give 400', async (_label, value) => {
+    const res = await POST(req({ messages: value, models: 'gemini' }));
+    expect(res.status).toBe(400);
+    expectRefusedEarly();
+  });
+
+  it('a custom provider is refused before its record is loaded', async () => {
+    const res = await POST(req({ messages: [msg('x'.repeat(64_001))], models: `custom:${CUSTOM_ID}` }));
+    expect(res.status).toBe(413);
+    expectRefusedEarly();
+  });
+
+  it('exactly at every cap is accepted and charged once', async () => {
+    // 100 messages, one of them 64,000 characters, 200,000 in all.
+    const rest = Array.from({ length: 99 }, (_, i) =>
+      msg('x'.repeat(i < 98 ? 1373 : 1446), i % 2 ? 'user' : 'assistant')
+    );
+    const all = [msg('x'.repeat(64_000), 'system'), ...rest];
+    expect(all).toHaveLength(100);
+    expect(all.reduce((n, x) => n + (x.content as string).length, 0)).toBe(200_000);
+    const res = await POST(req({ messages: all, models: 'gemini' }));
+    expect(res.status).toBe(200);
+    expect(m.consume).toHaveBeenCalledTimes(1);
+    expect(m.chat).toHaveBeenCalledTimes(1);
+  });
+});
