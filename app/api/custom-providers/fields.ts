@@ -20,14 +20,20 @@ import { normalizeBaseUrl } from '@/lib/llm/models';
 import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/provider-timeout';
 import { CREDENTIAL_LIMITS, type CredentialHeaderType } from '@/models/ProviderCredential';
 
+// The body reader moved to lib/server/read-json-body.ts (D5: byte cap, 413). The
+// routes here and keys/migrate keep importing it, and its texts, from this file.
+export {
+  INVALID_BODY_ERROR,
+  INVALID_JSON_ERROR,
+  readJsonObject,
+} from '@/lib/server/read-json-body';
+
 export type Checked<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export const NAME_ERROR = `Name must be 1 to ${CREDENTIAL_LIMITS.name} characters`;
 export const MODEL_ID_ERROR = `Model ID must be 1 to ${CREDENTIAL_LIMITS.modelId} characters`;
 export const HEADER_TYPE_ERROR = 'Header type must be "bearer" or "x-api-key"';
 export const ENABLED_ERROR = 'enabled must be true or false';
-export const INVALID_JSON_ERROR = 'Invalid JSON body';
-export const INVALID_BODY_ERROR = 'The request body must be a JSON object';
 export const KEY_STORAGE_ERROR = 'Key storage is not configured';
 /** D20: a stored key is never sent to a host it was not saved for. */
 export const BASE_URL_NEEDS_KEY_ERROR = 'Enter the key again when you change the base URL';
@@ -37,20 +43,6 @@ const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 /** The lower-cased id for exactly 24 hex characters, otherwise null (the route answers 404). */
 export function parseProviderId(id: unknown): string | null {
   return typeof id === 'string' && OBJECT_ID_RE.test(id) ? id.toLowerCase() : null;
-}
-
-/** The parsed JSON object body, or the 400 message. Arrays and primitives are refused. */
-export async function readJsonObject(request: Request): Promise<Checked<Record<string, unknown>>> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return { ok: false, error: INVALID_JSON_ERROR };
-  }
-  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
-    return { ok: false, error: INVALID_BODY_ERROR };
-  }
-  return { ok: true, value: body as Record<string, unknown> };
 }
 
 function trimmedText(value: unknown, max: number, error: string): Checked<string> {

@@ -23,6 +23,8 @@ import { DEFAULT_PROVIDER_TIMEOUT_MS } from '@/lib/llm/provider-timeout';
 import dbConnect from '@/lib/mongodb';
 import ProviderCredential from '@/models/ProviderCredential';
 import { customSlot, loadCustomProvider } from '@/lib/server/user-keys';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 // Sends a real test message to a user's custom endpoint. The whole test (resolving
 // the host, then the request) shares one DEFAULT_PROVIDER_TIMEOUT_MS budget (20s):
@@ -381,9 +383,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = (await request.json()) as TestCustomProviderRequest;
+    const parsed = await readJsonObject(request, BODY_LIMITS.testCustomProvider);
+    if (!parsed.ok) {
+      return NextResponse.json({ valid: false, error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value as unknown as TestCustomProviderRequest;
 
-    if (typeof body === 'object' && body !== null && hasField(body, 'providerId')) {
+    if (hasField(body, 'providerId')) {
       // A saved provider: its key goes only to its own saved base URL, so a body
       // that also names a base URL or a key is refused before any DB or network call.
       if (hasField(body, 'baseUrl') || hasField(body, 'apiKey')) {

@@ -4,6 +4,8 @@ import dbConnect from '@/lib/mongodb';
 import Battle from '@/models/Battle';
 import Leaderboard from '@/models/Leaderboard';
 import { validateRating, validateEnum } from '@/lib/security';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 interface VoteRequestBody {
   challengeId: string;
@@ -35,8 +37,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // The body is read under its cap before the database is touched.
+    const parsed = await readJsonObject(request, BODY_LIMITS.battleVote);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value as unknown as VoteRequestBody;
+
     await dbConnect();
-    const body = (await request.json()) as VoteRequestBody;
 
     // Validate battleType
     if (!validateEnum(body.battleType, ['standard', 'blindfold', 'royale'])) {

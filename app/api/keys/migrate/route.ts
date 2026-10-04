@@ -35,6 +35,7 @@ import {
   readJsonObject,
 } from '@/app/api/custom-providers/fields';
 import type { LLMProvider } from '@/lib/llm/types';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
 
 /**
  * POST /api/keys/migrate: one-time upload of the keys a browser still holds
@@ -163,8 +164,8 @@ export async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const parsed = await readJsonObject(request);
-  if (!parsed.ok) return badRequest(parsed.error);
+  const parsed = await readJsonObject(request, BODY_LIMITS.keysMigrate);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   const { builtin: rawBuiltin, custom: rawCustom } = parsed.value;
 
   if (

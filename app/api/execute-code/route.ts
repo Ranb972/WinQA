@@ -8,6 +8,8 @@ import {
 } from '@/lib/code-execution';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com';
@@ -235,11 +237,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { language, code, stdin = '' } = body;
+    const parsed = await readJsonObject(request, BODY_LIMITS.executeCode);
+    if (!parsed.ok) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: parsed.status });
+    }
+    const { language, code, stdin = '' } = parsed.value;
 
     // Validate language
-    if (!['javascript', 'python', 'typescript'].includes(language)) {
+    if (typeof language !== 'string' || !['javascript', 'python', 'typescript'].includes(language)) {
       return NextResponse.json(
         { success: false, error: `Unsupported language: ${language}` },
         { status: 400 }

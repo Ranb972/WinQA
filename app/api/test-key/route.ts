@@ -9,6 +9,8 @@ import { friendlyErrorMessage } from '@/lib/friendly-errors';
 import dbConnect from '@/lib/mongodb';
 import ProviderCredential from '@/models/ProviderCredential';
 import { loadUserKeys } from '@/lib/server/user-keys';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 // Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
 // leaving ~5s headroom under maxDuration = 15.
@@ -240,7 +242,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json() as TestKeyRequest;
+    const parsed = await readJsonObject(request, BODY_LIMITS.testKey);
+    if (!parsed.ok) {
+      return NextResponse.json({ valid: false, error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value as unknown as TestKeyRequest;
     const { provider } = body;
     // No apiKey field (or null): test the saved key. A field that is present must
     // be a typed key, as before.

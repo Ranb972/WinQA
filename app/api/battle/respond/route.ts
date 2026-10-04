@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { chat, LLMProvider, ChatMessage, CustomApiKeys, isRegisteredModel, providerDisplayNames } from '@/lib/llm';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 // Up to two same-provider attempts (a withdrawn or overloaded head falls through to
 // the next model of its family) inside a 24s total budget: the second attempt only
@@ -29,7 +31,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = (await request.json()) as RespondRequestBody;
+    const parsed = await readJsonObject(request, BODY_LIMITS.battleRespond);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value as unknown as RespondRequestBody;
     const { provider, model, prompt, customApiKeys } = body;
 
     if (!provider || !prompt) {

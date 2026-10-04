@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import ProviderCredential from '@/models/ProviderCredential';
 import { KeyVaultNotConfigured } from '@/lib/server/key-vault';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { customSlot, encryptForSlot, publicView, validateApiKey } from '@/lib/server/user-keys';
 import {
   BASE_URL_NEEDS_KEY_ERROR,
@@ -49,8 +50,8 @@ export async function PATCH(
     const id = parseProviderId((await params).id);
     if (!id) return NextResponse.json(NOT_FOUND, { status: 404 });
 
-    const parsed = await readJsonObject(request);
-    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const parsed = await readJsonObject(request, BODY_LIMITS.customProviders);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: parsed.status });
     const body = parsed.value;
 
     if (body.baseUrl !== undefined && body.apiKey === undefined) {

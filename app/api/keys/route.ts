@@ -12,6 +12,8 @@ import {
   type PublicCustomCredential,
 } from '@/lib/server/user-keys';
 import type { LLMProvider } from '@/lib/llm/types';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonBody } from '@/lib/server/read-json-body';
 
 /**
  * Saved built-in provider keys (Batch C, C7).
@@ -84,12 +86,11 @@ export async function PUT(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return unauthorized();
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const parsed = await readJsonBody(request, BODY_LIMITS.keys);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
+  const body = parsed.value;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

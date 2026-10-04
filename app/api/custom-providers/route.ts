@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import ProviderCredential, { type CredentialHeaderType } from '@/models/ProviderCredential';
 import { KeyVaultNotConfigured } from '@/lib/server/key-vault';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
 import {
   encryptForSlot,
   newCustomCredentialId,
@@ -39,8 +40,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const parsed = await readJsonObject(request);
-    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const parsed = await readJsonObject(request, BODY_LIMITS.customProviders);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: parsed.status });
     const body = parsed.value;
 
     const name = checkName(body.name);

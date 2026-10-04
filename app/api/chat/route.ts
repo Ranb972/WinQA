@@ -6,6 +6,8 @@ import { CustomProvider } from '@/lib/custom-providers';
 import { friendlyErrorMessage, DAILY_LIMIT_ERROR } from '@/lib/friendly-errors';
 import { consumeDailyAllowance } from '@/lib/rate-limit';
 import { loadCustomProvider, markRejected, resolveUserKeys, type KeyOrigin } from '@/lib/server/user-keys';
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
 
 // Every built-in call runs under a 42s total budget (20s per attempt, so two Compare
 // attempts plus delays finish before the client's 45s abort; Batch E3); the 60s cap
@@ -67,7 +69,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = (await request.json()) as RequestBody;
+    const parsed = await readJsonObject(request, BODY_LIMITS.chat);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value as unknown as RequestBody;
     const { messages, models, temperature, maxTokens, modelPreferences, customApiKeys, customProvider, crossProviderFallback, maxFallbackAttempts, fallbackDelay } = body;
 
     // Clamp client-supplied generation params silently (no 400s): temperature to a
