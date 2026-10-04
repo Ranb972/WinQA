@@ -48,6 +48,11 @@ const PromptLibrarySchema = new Schema<IPromptLibrary>({
 });
 
 PromptLibrarySchema.index({ is_public: 1, created_at: -1 });
+// List pages (lib/server/list-page.ts): one index per branch of the visibility $or,
+// each ending in the (created_at, _id) sort, so the server can merge two ordered
+// scans instead of sorting in memory.
+PromptLibrarySchema.index({ user_id: 1, created_at: -1, _id: -1 });
+PromptLibrarySchema.index({ is_public: 1, created_at: -1, _id: -1 });
 
 const PromptLibrary: Model<IPromptLibrary> =
   mongoose.models.PromptLibrary ||

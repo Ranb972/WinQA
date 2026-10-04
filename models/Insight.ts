@@ -52,6 +52,11 @@ InsightSchema.pre('save', function () {
 });
 
 InsightSchema.index({ is_public: 1, updated_at: -1 });
+// List pages (lib/server/list-page.ts): one index per branch of the visibility $or,
+// each ending in the (updated_at, _id) sort, so the server can merge two ordered
+// scans instead of sorting in memory.
+InsightSchema.index({ user_id: 1, updated_at: -1, _id: -1 });
+InsightSchema.index({ is_public: 1, updated_at: -1, _id: -1 });
 
 const Insight: Model<IInsight> =
   mongoose.models.Insight || mongoose.model<IInsight>('Insight', InsightSchema);

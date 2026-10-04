@@ -3,24 +3,36 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import TestCase from '@/models/TestCase';
 import { pickAllowedFields } from '@/lib/security';
+import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
 
 const ALLOWED_PUT_FIELDS = ['title', 'description', 'initial_prompt', 'expected_outcome', 'category', 'difficulty'];
 
-// GET - List all test cases for the authenticated user
-export async function GET() {
+// Page size for the list. The default equals the cap so no existing library is cut
+// short before the UI learns to load more (D11).
+const LIST_PAGE = { def: 200, max: 200 };
+
+// GET - One page of the user's test cases plus all public ones, newest first
+export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const parsed = parsePage(searchParams, LIST_PAGE);
+    if (!parsed.ok) return parsed.response;
+
     await dbConnect();
 
-    const testCases = await TestCase.find({
-      $or: [{ user_id: userId }, { is_public: true }],
-    }).sort({ created_at: -1 });
+    const { rows, nextCursor } = await pageQuery(
+      TestCase,
+      { $or: [{ user_id: userId }, { is_public: true }] },
+      'created_at',
+      parsed.page
+    );
 
-    return NextResponse.json(testCases);
+    return pageResponse(rows, nextCursor);
   } catch (error) {
     console.error('Error fetching test cases:', error);
     return NextResponse.json(

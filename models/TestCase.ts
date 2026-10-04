@@ -51,6 +51,11 @@ const TestCaseSchema = new Schema<ITestCase>({
 });
 
 TestCaseSchema.index({ is_public: 1, created_at: -1 });
+// List pages (lib/server/list-page.ts): one index per branch of the visibility $or,
+// each ending in the (created_at, _id) sort, so the server can merge two ordered
+// scans instead of sorting in memory.
+TestCaseSchema.index({ user_id: 1, created_at: -1, _id: -1 });
+TestCaseSchema.index({ is_public: 1, created_at: -1, _id: -1 });
 
 const TestCase: Model<ITestCase> =
   mongoose.models.TestCase || mongoose.model<ITestCase>('TestCase', TestCaseSchema);

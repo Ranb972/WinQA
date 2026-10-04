@@ -115,6 +115,8 @@ const BattleSchema = new Schema<IBattle>({
 });
 
 BattleSchema.index({ odlUserId: 1, created_at: -1 });
+// Battle history pages on (created_at, _id); see lib/server/list-page.ts.
+BattleSchema.index({ odlUserId: 1, created_at: -1, _id: -1 });
 
 const Battle: Model<IBattle> =
   mongoose.models.Battle || mongoose.model<IBattle>('Battle', BattleSchema);

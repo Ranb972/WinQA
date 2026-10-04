@@ -3,10 +3,17 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import Insight from '@/models/Insight';
 import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
+import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
 
 const ALLOWED_PUT_FIELDS = ['title', 'content', 'tags', 'category'];
 
-// GET - List all insights for the authenticated user
+// Page size for the list. The default equals the cap so no existing library is cut
+// short before the UI learns to load more (D11).
+const LIST_PAGE = { def: 200, max: 200 };
+
+// GET - One page of the user's insights plus all public ones, most recently updated first.
+// PUT sets updated_at, so an edit moves a row to the top: a row edited while a
+// client is paging can be skipped by that client until it reloads (never duplicated).
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -14,8 +21,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
     const { searchParams } = new URL(request.url);
+    const parsed = parsePage(searchParams, LIST_PAGE);
+    if (!parsed.ok) return parsed.response;
+
+    await dbConnect();
     const tag = searchParams.get('tag');
 
     const filter: Record<string, unknown> = {
@@ -23,9 +33,9 @@ export async function GET(request: NextRequest) {
     };
     if (tag) filter.tags = stripMongoOperators(tag);
 
-    const insights = await Insight.find(filter).sort({ updated_at: -1 });
+    const { rows, nextCursor } = await pageQuery(Insight, filter, 'updated_at', parsed.page);
 
-    return NextResponse.json(insights);
+    return pageResponse(rows, nextCursor);
   } catch (error) {
     console.error('Error fetching insights:', error);
     return NextResponse.json(

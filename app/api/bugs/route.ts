@@ -3,10 +3,15 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import BugReport from '@/models/BugReport';
 import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
+import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
 
 const ALLOWED_PUT_FIELDS = ['prompt_context', 'model_response', 'issue_type', 'severity', 'user_notes', 'status'];
 
-// GET - List all bug reports for the authenticated user
+// Page size for the list. The default equals the cap so no existing library is cut
+// short before the UI learns to load more (D11).
+const LIST_PAGE = { def: 200, max: 200 };
+
+// GET - One page of the user's bug reports plus all public ones, newest first
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -14,8 +19,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
     const { searchParams } = new URL(request.url);
+    const parsed = parsePage(searchParams, LIST_PAGE);
+    if (!parsed.ok) return parsed.response;
+
+    await dbConnect();
     const status = searchParams.get('status');
     const model = searchParams.get('model');
     const issueType = searchParams.get('issue_type');
@@ -27,9 +35,9 @@ export async function GET(request: NextRequest) {
     if (model) filter.model_used = stripMongoOperators(model);
     if (issueType) filter.issue_type = stripMongoOperators(issueType);
 
-    const bugs = await BugReport.find(filter).sort({ created_at: -1 });
+    const { rows, nextCursor } = await pageQuery(BugReport, filter, 'created_at', parsed.page);
 
-    return NextResponse.json(bugs);
+    return pageResponse(rows, nextCursor);
   } catch (error) {
     console.error('Error fetching bug reports:', error);
     return NextResponse.json(

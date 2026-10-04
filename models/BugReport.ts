@@ -64,6 +64,11 @@ const BugReportSchema = new Schema<IBugReport>({
 });
 
 BugReportSchema.index({ is_public: 1, created_at: -1 });
+// List pages (lib/server/list-page.ts): one index per branch of the visibility $or,
+// each ending in the (created_at, _id) sort, so the server can merge two ordered
+// scans instead of sorting in memory.
+BugReportSchema.index({ user_id: 1, created_at: -1, _id: -1 });
+BugReportSchema.index({ is_public: 1, created_at: -1, _id: -1 });
 
 const BugReport: Model<IBugReport> =
   mongoose.models.BugReport || mongoose.model<IBugReport>('BugReport', BugReportSchema);
