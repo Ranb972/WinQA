@@ -41,7 +41,7 @@ describe('query builders', () => {
   it('the system owner is the one lib/autoSeed.ts seeds under', () => {
     expect(SYSTEM_USER_ID).toBe('system');
     const autoSeedSource = readFileSync(resolve(__dirname, '../lib/autoSeed.ts'), 'utf-8');
-    expect(autoSeedSource).toContain(`const SYSTEM_USER_ID = '${SYSTEM_USER_ID}';`);
+    expect(autoSeedSource).toContain("import { SYSTEM_USER_ID } from '@/lib/systemUser';");
   });
 
   it('counts every public document', () => {

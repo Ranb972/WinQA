@@ -24,9 +24,10 @@ import TestCase from '../models/TestCase';
 import PromptLibrary from '../models/PromptLibrary';
 import Insight from '../models/Insight';
 import BugReport from '../models/BugReport';
+import { SYSTEM_USER_ID } from '../lib/systemUser';
 
-/** Same value as SYSTEM_USER_ID in lib/autoSeed.ts (not exported there). */
-export const SYSTEM_USER_ID = 'system';
+/** The one system owner, shared with lib/autoSeed.ts and lib/server/purge-user.ts. */
+export { SYSTEM_USER_ID };
 
 export type Mode = 'dry-run' | 'apply';
 

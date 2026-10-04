@@ -8,8 +8,7 @@ import {
   seedInsights,
   seedBugReports,
 } from '@/lib/seedData';
-
-const SYSTEM_USER_ID = 'system';
+import { SYSTEM_USER_ID } from '@/lib/systemUser';
 
 export async function autoSeed(): Promise<void> {
   const publicFilter = { is_public: true };

@@ -8,11 +8,12 @@ import PromptLibrary from '@/models/PromptLibrary';
 import ProviderCredential from '@/models/ProviderCredential';
 import TestCase from '@/models/TestCase';
 import UserFavorite from '@/models/UserFavorite';
+import { SYSTEM_USER_ID } from '@/lib/systemUser';
 
 // Owner of the seeded public library (lib/autoSeed.ts). A deleted user's public
 // documents are handed to it instead of deleted (decision D11), so deleting the
 // admin account can never erase the public library.
-export const SYSTEM_OWNER_ID = 'system';
+export const SYSTEM_OWNER_ID = SYSTEM_USER_ID;
 
 type Filter = Record<string, unknown>;
 
