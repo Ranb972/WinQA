@@ -23,6 +23,7 @@ import SafeMarkdown from '@/components/SafeMarkdown';
 import { BATTLE_CHALLENGES, BattleChallenge } from '@/lib/battle-challenges';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { LLMProvider } from '@/lib/llm/types';
+import { errorTextFrom } from '@/lib/api-error';
 import {
   modelDisplayNames,
   modelColors,
@@ -129,6 +130,9 @@ function executedFighter(fighter: FighterConfig, response: BattleResponse | null
 }
 
 const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, total: 0 });
+
+/** Shown when a vote does not save and the route gave no sentence of its own. */
+const SAVE_FAILED_TEXT = 'Failed to save. Try again.';
 
 // --- Markdown renderer for battle responses ---
 
@@ -288,6 +292,8 @@ export default function BattlePage() {
 
   // Results
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // The vote route's own sentence (400 field, 409 ceiling, 413 size; D9), shown with 'error'.
+  const [saveError, setSaveError] = useState(SAVE_FAILED_TEXT);
 
   // Leaderboard & History
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -542,10 +548,15 @@ export default function BattlePage() {
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        setSaveError(await errorTextFrom(res, SAVE_FAILED_TEXT));
+        setSaveStatus('error');
+        return;
+      }
       setSaveStatus('saved');
       setBattleState('results');
     } catch {
+      setSaveError(SAVE_FAILED_TEXT);
       setSaveStatus('error');
     }
   };
@@ -628,10 +639,15 @@ export default function BattlePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        setSaveError(await errorTextFrom(res, SAVE_FAILED_TEXT));
+        setSaveStatus('error');
+        return;
+      }
       setSaveStatus('saved');
       setBattleState('results');
     } catch {
+      setSaveError(SAVE_FAILED_TEXT);
       setSaveStatus('error');
     }
   };
@@ -1126,6 +1142,7 @@ export default function BattlePage() {
                       setWinner={setWinner}
                       onSubmitVote={submitVote}
                       saveStatus={saveStatus}
+                      saveError={saveError}
                       challengeName={selectedChallenge?.name}
                       challengeDescription={selectedChallenge?.userDescription}
                       prompt={battlePrompt}
@@ -1133,14 +1150,19 @@ export default function BattlePage() {
                     />
                   ) : isRoyale ? (
                     /* Battle Royale: multi-round elimination */
-                    <BattleRoyaleArena
-                      responses={responses}
-                      fighters={providers.map((p, i) => executedFighter({ provider: p, model: defaultModels[p] }, responses[i]))}
-                      prompts={royalePrompts.length > 0 ? royalePrompts : [{ prompt: battlePrompt, explanation: battleExplanation }]}
-                      challengeDescription={selectedChallenge?.userDescription}
-                      fetchNextRound={fetchRoundResponses}
-                      onChampionCrowned={handleRoyaleComplete}
-                    />
+                    <>
+                      <BattleRoyaleArena
+                        responses={responses}
+                        fighters={providers.map((p, i) => executedFighter({ provider: p, model: defaultModels[p] }, responses[i]))}
+                        prompts={royalePrompts.length > 0 ? royalePrompts : [{ prompt: battlePrompt, explanation: battleExplanation }]}
+                        challengeDescription={selectedChallenge?.userDescription}
+                        fetchNextRound={fetchRoundResponses}
+                        onChampionCrowned={handleRoyaleComplete}
+                      />
+                      {saveStatus === 'error' && (
+                        <p className="text-sm text-red-400 mt-4 text-center">{saveError}</p>
+                      )}
+                    </>
                   ) : (
                     /* Standard / Blindfold judging */
                     <div>
@@ -1314,7 +1336,7 @@ export default function BattlePage() {
                           )}
                         </motion.button>
                         {saveStatus === 'error' && (
-                          <p className="text-sm text-red-400 mt-2">Failed to save. Try again.</p>
+                          <p className="text-sm text-red-400 mt-2">{saveError}</p>
                         )}
                       </div>
                     </div>

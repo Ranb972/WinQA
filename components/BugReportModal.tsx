@@ -18,7 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CharCounter } from '@/components/ui/char-counter';
 import { useToast } from '@/hooks/use-toast';
+import { errorTextFrom } from '@/lib/api-error';
+import { BUG_REPORT_CAPS, truncateForField } from '@/lib/content-limits';
 import { LLMProvider, modelDisplayNames } from '@/lib/llm';
 import { IssueType, Severity } from '@/models/BugReport';
 
@@ -47,19 +50,29 @@ export default function BugReportModal({
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
 
+  // A chat prompt or response can be longer than the bug report keeps: the
+  // prefill is cut to the field cap, ending in "(truncated)", and what is shown
+  // is what is saved.
+  const prompt = truncateForField(promptContext, BUG_REPORT_CAPS.prompt_context);
+  const response = truncateForField(modelResponse, BUG_REPORT_CAPS.model_response);
+  const promptCut = prompt !== promptContext;
+  const responseCut = response !== modelResponse;
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to create bug report. Please try again.';
     try {
-      const response = await fetch('/api/bugs', {
+      const res = await fetch('/api/bugs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt_context: promptContext,
-          model_response: modelResponse,
+          prompt_context: prompt,
+          model_response: response,
           model_used: modelUsed,
           issue_type: issueType,
           severity,
@@ -67,7 +80,10 @@ export default function BugReportModal({
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create bug report');
+      if (!res.ok) {
+        saveError = await errorTextFrom(res, saveError);
+        throw new Error('Failed to create bug report');
+      }
 
       toast({
         title: 'Bug reported',
@@ -79,7 +95,7 @@ export default function BugReportModal({
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to create bug report. Please try again.',
+        description: saveError,
         variant: 'destructive',
       });
     } finally {
@@ -110,8 +126,10 @@ export default function BugReportModal({
               Prompt
             </label>
             <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 max-h-24 overflow-y-auto">
-              <p className="text-sm text-slate-400 whitespace-pre-wrap">{promptContext}</p>
+              <p className="text-sm text-slate-400 whitespace-pre-wrap">{prompt}</p>
             </div>
+            <CharCounter length={prompt.length} max={BUG_REPORT_CAPS.prompt_context} />
+            {promptCut && <p className="text-xs text-slate-500">Shortened to fit the limit; the saved prompt ends with (truncated).</p>}
           </div>
 
           {/* Response Preview */}
@@ -120,8 +138,10 @@ export default function BugReportModal({
               Response
             </label>
             <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <p className="text-sm text-slate-400 whitespace-pre-wrap">{modelResponse}</p>
+              <p className="text-sm text-slate-400 whitespace-pre-wrap">{response}</p>
             </div>
+            <CharCounter length={response.length} max={BUG_REPORT_CAPS.model_response} />
+            {responseCut && <p className="text-xs text-slate-500">Shortened to fit the limit; the saved response ends with (truncated).</p>}
           </div>
 
           {/* Issue Type & Severity */}
@@ -183,9 +203,11 @@ export default function BugReportModal({
             <Textarea
               value={userNotes}
               onChange={(e) => setUserNotes(e.target.value)}
+              maxLength={BUG_REPORT_CAPS.user_notes}
               placeholder="Describe what went wrong..."
               className="bg-slate-950 border-slate-700 text-slate-300 placeholder:text-slate-600 min-h-[80px]"
             />
+            <CharCounter length={userNotes.length} max={BUG_REPORT_CAPS.user_notes} />
           </div>
         </div>
 

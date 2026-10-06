@@ -10,6 +10,8 @@
  * A 413 text never echoes the submitted value.
  */
 
+import { IMPORT_MAX_BYTES, IMPORT_TOO_LARGE_TEXT } from '@/lib/content-limits';
+
 export interface BodyLimit {
   /** The largest body accepted, in bytes. Exactly this many is accepted. */
   readonly maxBytes: number;
@@ -44,7 +46,7 @@ export const BODY_LIMITS = {
     tooLarge: 'This code is too large to run (limit 50,000 characters).',
   },
   // Wired in D3.
-  dataImport: { maxBytes: 4 * MB, tooLarge: 'This file is larger than 4 MB. Nothing was imported.' },
+  dataImport: { maxBytes: IMPORT_MAX_BYTES, tooLarge: IMPORT_TOO_LARGE_TEXT },
   keysMigrate: { maxBytes: 256 * KB, tooLarge: 'Too much data in one request.' },
   keys: credential,
   testKey: credential,

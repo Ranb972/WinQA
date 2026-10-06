@@ -61,6 +61,13 @@ import { CODE_TESTING_RESULT_MAX_CHARS, clipForPrompt } from '@/lib/content-limi
 
 type DebugMode = 'summary' | 'detailed';
 
+/**
+ * /api/chat answers 413 with the Chat Lab sentence ("This conversation is too
+ * long to send...") when an Analyze or Debug prompt passes the chat caps; this
+ * page says it in its own terms instead (D9).
+ */
+const ANALYSIS_TOO_LARGE_TEXT = 'This code and its output are too large to analyze. Shorten the code and try again.';
+
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
   { value: 'javascript', label: 'JavaScript' },
   { value: 'python', label: 'Python' },
@@ -394,6 +401,7 @@ Please analyze the error and explain:
         ),
       });
 
+      if (response.status === 413) throw new Error(ANALYSIS_TOO_LARGE_TEXT);
       const data = await response.json() as ChatResponse;
       setKeyNotice(keyNoticeFor(data));
       if (isStaleProviderError(data.error)) void loadProviders();
@@ -458,6 +466,7 @@ ${result.output ? `\nOutput:\n${clipForPrompt(result.output, CODE_TESTING_RESULT
         ),
       });
 
+      if (response.status === 413) throw new Error(ANALYSIS_TOO_LARGE_TEXT);
       const data = await response.json() as ChatResponse;
       setKeyNotice(keyNoticeFor(data));
       if (isStaleProviderError(data.error)) void loadProviders();

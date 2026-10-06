@@ -73,6 +73,11 @@ import KeyMigrationBanner from '@/components/KeyMigrationBanner';
 import { subscribeKeysChanged } from '@/lib/key-migration';
 import CustomProviderModal from '@/components/CustomProviderModal';
 import { useToast } from '@/hooks/use-toast';
+import { errorTextFrom } from '@/lib/api-error';
+import { IMPORT_MAX_BYTES, IMPORT_TOO_LARGE_TEXT } from '@/lib/content-limits';
+
+/** D-9: an export past the import cap downloads, with this notice. */
+const EXPORT_TOO_LARGE_TEXT = 'This export is larger than 4 MB and cannot be imported back in one file.';
 
 interface ProviderConfig {
   key: LLMProvider;
@@ -453,6 +458,7 @@ export default function SettingsPage() {
 
       const data = await response.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const tooLargeToImport = blob.size > IMPORT_MAX_BYTES;
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement('a');
@@ -463,11 +469,12 @@ export default function SettingsPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: 'Export complete',
-        description: 'Your data has been downloaded',
-        variant: 'success',
-      });
+      // One toast at a time (TOAST_LIMIT 1): the size notice rides on the result.
+      toast(
+        tooLargeToImport
+          ? { title: 'Export complete', description: `Your data has been downloaded. ${EXPORT_TOO_LARGE_TEXT}` }
+          : { title: 'Export complete', description: 'Your data has been downloaded', variant: 'success' }
+      );
     } catch {
       toast({
         title: 'Export failed',
@@ -482,6 +489,18 @@ export default function SettingsPage() {
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // The import route reads at most IMPORT_MAX_BYTES (D-9): refuse a bigger file
+    // here, before reading it.
+    if (file.size > IMPORT_MAX_BYTES) {
+      toast({
+        title: 'File too large',
+        description: IMPORT_TOO_LARGE_TEXT,
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -522,11 +541,12 @@ export default function SettingsPage() {
         body: JSON.stringify({ data: pendingImportData, mode }),
       });
 
-      const result = await response.json();
-
+      // The route's sentence when it answers JSON; a platform 413 page is not JSON.
       if (!response.ok) {
-        throw new Error(result.error || 'Import failed');
+        throw new Error(await errorTextFrom(response, 'Import failed', { tooLarge: IMPORT_TOO_LARGE_TEXT }));
       }
+
+      const result = await response.json();
 
       const total = result.imported.bugs + result.imported.prompts +
                     result.imported.testCases + result.imported.insights;
@@ -1141,7 +1161,7 @@ export default function SettingsPage() {
                 Replace all data?
               </AlertDialogTitle>
               <AlertDialogDescription className="text-sm text-zinc-400">
-                This will permanently delete all your existing bugs, prompts, test cases, and insights before importing the new data. This action cannot be undone.
+                This replaces your bug reports, prompts, test cases and insights with the file&apos;s contents. Example content is not affected. If anything in the file is invalid, nothing is changed.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

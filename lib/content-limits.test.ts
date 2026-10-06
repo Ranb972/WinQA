@@ -1,10 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BUG_REPORT_CAPS,
   CHAT_MAX_MESSAGE_CHARS,
   CLIP_MARKER,
   CODE_TESTING_RESULT_MAX_CHARS,
+  IMPORT_MAX_BYTES,
+  IMPORT_TOO_LARGE_TEXT,
+  TAGS_MAX_COUNT,
+  TAG_MAX_CHARS,
+  charCountText,
   clipForPrompt,
+  tagLimitText,
+  truncateForField,
 } from './content-limits';
+import { BODY_LIMITS } from './server/body-limits';
 
 describe('clipForPrompt (D8): Code Testing prompts stay under the chat message cap', () => {
   it('returns text at or below the cap unchanged', () => {
@@ -35,5 +44,83 @@ describe('clipForPrompt (D8): Code Testing prompts stay under the chat message c
     const result = clipForPrompt('y'.repeat(1_000_000), CODE_TESTING_RESULT_MAX_CHARS);
     const template = 'z'.repeat(1_000);
     expect(code.length + result.length + template.length).toBeLessThan(CHAT_MAX_MESSAGE_CHARS);
+  });
+});
+
+describe('truncateForField (D9): a prefill that fits its field cap', () => {
+  it('returns text below or exactly at the cap unchanged', () => {
+    expect(truncateForField('short', 10)).toBe('short');
+    expect(truncateForField('', 10)).toBe('');
+    const exact = 'r'.repeat(BUG_REPORT_CAPS.model_response);
+    expect(truncateForField(exact, BUG_REPORT_CAPS.model_response)).toBe(exact);
+  });
+
+  it('cuts text over the cap so that the text plus the marker is exactly the cap', () => {
+    const cap = BUG_REPORT_CAPS.model_response;
+    const over = 'r'.repeat(cap + 1);
+    const out = truncateForField(over, cap);
+    expect(out.length).toBe(cap);
+    expect(out.endsWith(CLIP_MARKER)).toBe(true);
+    expect(out).toBe('r'.repeat(cap - CLIP_MARKER.length) + CLIP_MARKER);
+
+    const prompt = 'p'.repeat(BUG_REPORT_CAPS.prompt_context * 3);
+    expect(truncateForField(prompt, BUG_REPORT_CAPS.prompt_context).length).toBe(
+      BUG_REPORT_CAPS.prompt_context
+    );
+  });
+
+  it('never leaves half of a surrogate pair before the marker', () => {
+    // 'x' then emoji (2 code units each): a cut at an odd offset lands mid-pair.
+    const text = 'x' + '\u{1F600}'.repeat(20);
+    const max = CLIP_MARKER.length + 2; // room for 'x' and one high surrogate
+    const out = truncateForField(text, max);
+    expect(out).toBe('x' + CLIP_MARKER);
+    expect(out.length).toBeLessThanOrEqual(max);
+  });
+
+  it('cuts without a marker when the cap is too small to hold one, and turns a non-string into ""', () => {
+    expect(truncateForField('abcdefghijklmnop', 5)).toBe('abcde');
+    expect(truncateForField(undefined, 10)).toBe('');
+    expect(truncateForField(42, 10)).toBe('');
+  });
+});
+
+describe('charCountText (D9): the counter under a long field', () => {
+  it('shows the length and the cap with thousands separators', () => {
+    expect(charCountText(12_345, 30_000)).toBe('12,345 / 30,000');
+    expect(charCountText(0, 5_000)).toBe('0 / 5,000');
+    expect(charCountText(200, 200)).toBe('200 / 200');
+  });
+});
+
+describe('tagLimitText (D9): the tag input refuses what the route would refuse', () => {
+  const full = Array.from({ length: TAGS_MAX_COUNT }, (_, i) => `t${i}`);
+
+  it('accepts a tag below both limits', () => {
+    expect(tagLimitText([], 'Code')).toBeNull();
+    expect(tagLimitText(full.slice(1), 'Code')).toBeNull();
+    expect(tagLimitText([], 'x'.repeat(TAG_MAX_CHARS))).toBeNull();
+  });
+
+  it('refuses a tag past the count, naming the limit and never the tag', () => {
+    const text = tagLimitText(full, 'Code');
+    expect(text).toBe('An entry can have at most 20 tags.');
+    expect(text).not.toContain('Code');
+  });
+
+  it('refuses a tag over the length cap, naming the limit and never the tag', () => {
+    const long = 'L'.repeat(TAG_MAX_CHARS + 1);
+    const text = tagLimitText([], long);
+    expect(text).toBe('A tag can be at most 40 characters.');
+    expect(text).not.toContain(long);
+  });
+});
+
+describe('IMPORT_MAX_BYTES (D9, D-9): the client and the import route share one cap', () => {
+  it('is 4 MB, the cap the import route reads with, and the file sentence is the route sentence', () => {
+    expect(IMPORT_MAX_BYTES).toBe(4 * 1024 * 1024);
+    expect(BODY_LIMITS.dataImport.maxBytes).toBe(IMPORT_MAX_BYTES);
+    expect(IMPORT_TOO_LARGE_TEXT).toBe('This file is larger than 4 MB. Nothing was imported.');
+    expect(BODY_LIMITS.dataImport.tooLarge).toBe(IMPORT_TOO_LARGE_TEXT);
   });
 });

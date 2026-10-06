@@ -13,6 +13,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CharCounter } from '@/components/ui/char-counter';
+import { errorTextFrom } from '@/lib/api-error';
+import { TEST_CASE_CAPS } from '@/lib/content-limits';
 import { useToast } from '@/hooks/use-toast';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { usePagedList } from '@/hooks/use-paged-list';
@@ -76,6 +79,8 @@ export default function TestCasesPage() {
     }
 
     setIsSubmitting(true);
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to save test case';
     try {
       const url = '/api/test-cases';
       const method = editingCase ? 'PUT' : 'POST';
@@ -89,7 +94,10 @@ export default function TestCasesPage() {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('Failed to save test case');
+      if (!response.ok) {
+        saveError = await errorTextFrom(response, saveError);
+        throw new Error('Failed to save test case');
+      }
       const saved = asRow<TestCase>(await response.json().catch(() => null));
 
       toast({
@@ -107,7 +115,7 @@ export default function TestCasesPage() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to save test case',
+        description: saveError,
         variant: 'destructive',
       });
     } finally {
@@ -444,6 +452,7 @@ export default function TestCasesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
+                maxLength={TEST_CASE_CAPS.title}
                 placeholder="e.g., Code Generation Test"
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 rounded"
               />
@@ -458,9 +467,11 @@ export default function TestCasesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                maxLength={TEST_CASE_CAPS.description}
                 placeholder="Brief description of the test"
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 rounded"
               />
+              <CharCounter length={formData.description.length} max={TEST_CASE_CAPS.description} />
             </div>
 
             <div>
@@ -472,9 +483,11 @@ export default function TestCasesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, initial_prompt: e.target.value })
                 }
+                maxLength={TEST_CASE_CAPS.initial_prompt}
                 placeholder="The prompt to send to the AI model..."
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[120px] rounded"
               />
+              <CharCounter length={formData.initial_prompt.length} max={TEST_CASE_CAPS.initial_prompt} />
             </div>
 
             <div>
@@ -486,9 +499,11 @@ export default function TestCasesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, expected_outcome: e.target.value })
                 }
+                maxLength={TEST_CASE_CAPS.expected_outcome}
                 placeholder="What you expect the AI to respond with..."
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px] rounded"
               />
+              <CharCounter length={formData.expected_outcome.length} max={TEST_CASE_CAPS.expected_outcome} />
             </div>
           </div>
 

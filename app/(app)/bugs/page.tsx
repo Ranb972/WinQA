@@ -23,6 +23,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CharCounter } from '@/components/ui/char-counter';
+import { errorTextFrom } from '@/lib/api-error';
+import { BUG_REPORT_CAPS } from '@/lib/content-limits';
 import { modelDisplayNames, LLMProvider } from '@/lib/llm';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { usePagedList } from '@/hooks/use-paged-list';
@@ -165,6 +168,8 @@ function BugsPageContent() {
   const handleStatusUpdate = async () => {
     if (!editingBug || !newStatus) return;
 
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to update bug report';
     try {
       const response = await fetch('/api/bugs', {
         method: 'PUT',
@@ -172,7 +177,10 @@ function BugsPageContent() {
         body: JSON.stringify({ id: editingBug._id, status: newStatus }),
       });
 
-      if (!response.ok) throw new Error('Failed to update bug report');
+      if (!response.ok) {
+        saveError = await errorTextFrom(response, saveError);
+        throw new Error('Failed to update bug report');
+      }
       const saved = asRow<BugReport>(await response.json().catch(() => null));
 
       toast({
@@ -187,7 +195,7 @@ function BugsPageContent() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to update bug report',
+        description: saveError,
         variant: 'destructive',
       });
     }
@@ -225,6 +233,8 @@ function BugsPageContent() {
     }
 
     setIsSubmitting(true);
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to create bug report';
     try {
       const response = await fetch('/api/bugs', {
         method: 'POST',
@@ -232,7 +242,10 @@ function BugsPageContent() {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error('Failed to create bug report');
+      if (!response.ok) {
+        saveError = await errorTextFrom(response, saveError);
+        throw new Error('Failed to create bug report');
+      }
       const created = asRow<BugReport>(await response.json().catch(() => null));
 
       toast({
@@ -248,7 +261,7 @@ function BugsPageContent() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to create bug report',
+        description: saveError,
         variant: 'destructive',
       });
     } finally {
@@ -621,9 +634,11 @@ function BugsPageContent() {
               <textarea
                 value={formData.prompt_context}
                 onChange={(e) => setFormData({ ...formData, prompt_context: e.target.value })}
+                maxLength={BUG_REPORT_CAPS.prompt_context}
                 placeholder="What prompt or context triggered this issue?"
                 className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[80px]"
               />
+              <CharCounter length={formData.prompt_context.length} max={BUG_REPORT_CAPS.prompt_context} />
             </div>
 
             <div className="space-y-2">
@@ -631,9 +646,11 @@ function BugsPageContent() {
               <textarea
                 value={formData.model_response}
                 onChange={(e) => setFormData({ ...formData, model_response: e.target.value })}
+                maxLength={BUG_REPORT_CAPS.model_response}
                 placeholder="What was the problematic response?"
                 className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[100px]"
               />
+              <CharCounter length={formData.model_response.length} max={BUG_REPORT_CAPS.model_response} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -702,9 +719,11 @@ function BugsPageContent() {
               <textarea
                 value={formData.user_notes}
                 onChange={(e) => setFormData({ ...formData, user_notes: e.target.value })}
+                maxLength={BUG_REPORT_CAPS.user_notes}
                 placeholder="Any additional context or observations..."
                 className="bg-white/[0.015] border border-white/[0.06] focus:border-orange-500/30 text-sm text-white placeholder:text-white/30 p-4 w-full resize-none focus:outline-none transition-colors min-h-[60px]"
               />
+              <CharCounter length={formData.user_notes.length} max={BUG_REPORT_CAPS.user_notes} />
             </div>
           </div>
 

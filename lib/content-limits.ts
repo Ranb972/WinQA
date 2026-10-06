@@ -1,5 +1,5 @@
 /**
- * Content caps shared by the routes and, later, the forms (Batch D). Client-safe:
+ * Content caps shared by the routes and the forms (Batch D). Client-safe:
  * no imports, constants only. Lengths are JavaScript string lengths (UTF-16 code
  * units), as the routes measure them.
  *
@@ -30,6 +30,24 @@ export function clipForPrompt(text: unknown, max: number): string {
   if (typeof text !== 'string') return '';
   if (text.length <= max) return text;
   return text.slice(0, max) + CLIP_MARKER;
+}
+
+/**
+ * Fits a prefilled value into a stored field (D9): the Bug Report modal carries
+ * a chat prompt and response into fields capped by BUG_REPORT_CAPS. Returns the
+ * text unchanged when it fits; otherwise a cut that ends in CLIP_MARKER and is
+ * exactly max characters long with the marker, so the result passes the route's
+ * check. A cut never splits a surrogate pair. When max cannot hold the marker,
+ * the text is cut to max with no marker. Non-strings become an empty string.
+ */
+export function truncateForField(text: unknown, max: number): string {
+  if (typeof text !== 'string') return '';
+  if (text.length <= max) return text;
+  if (max <= CLIP_MARKER.length) return text.slice(0, max);
+  let cut = max - CLIP_MARKER.length;
+  const last = text.charCodeAt(cut - 1);
+  if (last >= 0xd800 && last <= 0xdbff) cut -= 1;
+  return text.slice(0, cut) + CLIP_MARKER;
 }
 
 /*
@@ -111,6 +129,26 @@ export function entryTooLongText(field: string, maxChars: number): string {
   return `${field} has an entry longer than ${withThousands(maxChars)} characters`;
 }
 
+/** The counter under a long form field: "12,345 / 30,000". */
+export function charCountText(length: number, max: number): string {
+  return `${withThousands(length)} / ${withThousands(max)}`;
+}
+
+/**
+ * The tag inputs (prompts, insights) refuse what the route would refuse: null
+ * when `tag` can be added to `tags`, otherwise the inline note. Names the limit,
+ * never the tag.
+ */
+export function tagLimitText(tags: readonly string[], tag: string): string | null {
+  if (tags.length >= TAGS_MAX_COUNT) {
+    return `An entry can have at most ${withThousands(TAGS_MAX_COUNT)} tags.`;
+  }
+  if (tag.length > TAG_MAX_CHARS) {
+    return `A tag can be at most ${withThousands(TAG_MAX_CHARS)} characters.`;
+  }
+  return null;
+}
+
 /** A schema `maxlength` carrying the same value-free sentence: [cap, message]. */
 export function maxChars(field: string, cap: number): [number, string] {
   return [cap, tooLongText(field, cap)];
@@ -134,3 +172,13 @@ export const RANKINGS_VALIDATOR = {
   validator: (rankings: unknown) => !Array.isArray(rankings) || rankings.length <= BATTLE_RANKINGS_MAX,
   message: tooManyText('rankings', BATTLE_RANKINGS_MAX),
 };
+
+/*
+ * Import (D-9): the largest file Settings sends to POST /api/import, in bytes.
+ * lib/server/body-limits.ts reads the import body with this cap and answers 413
+ * with IMPORT_TOO_LARGE_TEXT, so the page and the route cannot disagree. The
+ * page refuses a bigger file before reading it and warns when an export it
+ * builds is bigger.
+ */
+export const IMPORT_MAX_BYTES = 4 * 1024 * 1024;
+export const IMPORT_TOO_LARGE_TEXT = 'This file is larger than 4 MB. Nothing was imported.';

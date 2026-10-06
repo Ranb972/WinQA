@@ -13,6 +13,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { CharCounter } from '@/components/ui/char-counter';
+import { errorTextFrom } from '@/lib/api-error';
+import { INSIGHT_CAPS, tagLimitText } from '@/lib/content-limits';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { usePagedList } from '@/hooks/use-paged-list';
@@ -42,6 +45,7 @@ function InsightsPageContent() {
     tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [tagNote, setTagNote] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paramsProcessed, setParamsProcessed] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -105,6 +109,8 @@ function InsightsPageContent() {
     }
 
     setIsSubmitting(true);
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to save insight';
     try {
       const url = '/api/insights';
       const method = editingInsight ? 'PUT' : 'POST';
@@ -116,7 +122,10 @@ function InsightsPageContent() {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('Failed to save insight');
+      if (!response.ok) {
+        saveError = await errorTextFrom(response, saveError);
+        throw new Error('Failed to save insight');
+      }
       const saved = asRow<Insight>(await response.json().catch(() => null));
 
       toast({
@@ -134,7 +143,7 @@ function InsightsPageContent() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to save insight',
+        description: saveError,
         variant: 'destructive',
       });
     } finally {
@@ -185,6 +194,7 @@ function InsightsPageContent() {
       tags: [],
     });
     setTagInput('');
+    setTagNote(null);
   };
 
   const openNewDialog = () => {
@@ -195,12 +205,18 @@ function InsightsPageContent() {
   const addTag = (tag: string) => {
     const trimmedTag = tag.trim();
     if (trimmedTag && !formData.tags.includes(trimmedTag)) {
+      // The route refuses more than TAGS_MAX_COUNT tags or a longer tag (D9):
+      // say so here and keep the typed text so it can be shortened.
+      const limit = tagLimitText(formData.tags, trimmedTag);
+      setTagNote(limit);
+      if (limit) return;
       setFormData({ ...formData, tags: [...formData.tags, trimmedTag] });
     }
     setTagInput('');
   };
 
   const removeTag = (tag: string) => {
+    setTagNote(null);
     setFormData({
       ...formData,
       tags: formData.tags.filter((t) => t !== tag),
@@ -523,6 +539,7 @@ function InsightsPageContent() {
               <input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                maxLength={INSIGHT_CAPS.title}
                 placeholder="e.g., Cohere struggles with Hebrew"
                 className="w-full bg-white/[0.02] border border-white/[0.06] rounded px-3 py-2 text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
@@ -535,9 +552,11 @@ function InsightsPageContent() {
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                maxLength={INSIGHT_CAPS.content}
                 placeholder="Describe your findings in detail..."
                 className="w-full bg-white/[0.02] border border-white/[0.06] rounded px-3 py-2 text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[150px]"
               />
+              <CharCounter length={formData.content.length} max={INSIGHT_CAPS.content} />
             </div>
 
             <div>
@@ -577,6 +596,7 @@ function InsightsPageContent() {
                   ADD
                 </button>
               </div>
+              {tagNote && <p className="mt-2 font-mono text-[10px] text-orange-400">{tagNote}</p>}
               <div className="flex flex-wrap gap-1 mt-2">
                 {suggestedTags
                   .filter((t) => !formData.tags.includes(t))

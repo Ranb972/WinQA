@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { CharCounter } from '@/components/ui/char-counter';
+import { errorTextFrom } from '@/lib/api-error';
+import { PROMPT_CAPS, tagLimitText } from '@/lib/content-limits';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
 import { usePagedList } from '@/hooks/use-paged-list';
@@ -51,6 +54,7 @@ function PromptsPageContent() {
     tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [tagNote, setTagNote] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paramsProcessed, setParamsProcessed] = useState(false);
   const [viewingPrompt] = useState<Prompt | null>(null);
@@ -114,6 +118,8 @@ function PromptsPageContent() {
     }
 
     setIsSubmitting(true);
+    // The route's own sentence when it answers one (D9); otherwise this.
+    let saveError = 'Failed to save prompt';
     try {
       const url = '/api/prompts';
       const method = editingPrompt ? 'PUT' : 'POST';
@@ -125,7 +131,10 @@ function PromptsPageContent() {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('Failed to save prompt');
+      if (!response.ok) {
+        saveError = await errorTextFrom(response, saveError);
+        throw new Error('Failed to save prompt');
+      }
       const saved = asRow<Prompt>(await response.json().catch(() => null));
 
       toast({
@@ -149,7 +158,7 @@ function PromptsPageContent() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to save prompt',
+        description: saveError,
         variant: 'destructive',
       });
     } finally {
@@ -229,6 +238,7 @@ function PromptsPageContent() {
       tags: [],
     });
     setTagInput('');
+    setTagNote(null);
   };
 
   const openNewDialog = () => {
@@ -261,12 +271,18 @@ function PromptsPageContent() {
   const addTag = (tag: string) => {
     const trimmedTag = tag.trim();
     if (trimmedTag && !formData.tags.includes(trimmedTag)) {
+      // The route refuses more than TAGS_MAX_COUNT tags or a longer tag (D9):
+      // say so here and keep the typed text so it can be shortened.
+      const limit = tagLimitText(formData.tags, trimmedTag);
+      setTagNote(limit);
+      if (limit) return;
       setFormData({ ...formData, tags: [...formData.tags, trimmedTag] });
     }
     setTagInput('');
   };
 
   const removeTag = (tag: string) => {
+    setTagNote(null);
     setFormData({
       ...formData,
       tags: formData.tags.filter((t) => t !== tag),
@@ -593,6 +609,7 @@ function PromptsPageContent() {
               <input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                maxLength={PROMPT_CAPS.title}
                 placeholder="e.g., Specific Instructions"
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20"
               />
@@ -607,9 +624,11 @@ function PromptsPageContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, bad_prompt_example: e.target.value })
                 }
+                maxLength={PROMPT_CAPS.bad_prompt_example}
                 placeholder="The ineffective prompt..."
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px] sm:min-h-[100px]"
               />
+              <CharCounter length={formData.bad_prompt_example.length} max={PROMPT_CAPS.bad_prompt_example} />
             </div>
 
             <div>
@@ -621,9 +640,11 @@ function PromptsPageContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, good_prompt_example: e.target.value })
                 }
+                maxLength={PROMPT_CAPS.good_prompt_example}
                 placeholder="The improved prompt..."
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[80px] sm:min-h-[100px]"
               />
+              <CharCounter length={formData.good_prompt_example.length} max={PROMPT_CAPS.good_prompt_example} />
             </div>
 
             <div>
@@ -635,9 +656,11 @@ function PromptsPageContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, explanation: e.target.value })
                 }
+                maxLength={PROMPT_CAPS.explanation}
                 placeholder="Why is the refined technique more effective?"
                 className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/20 resize-none min-h-[60px]"
               />
+              <CharCounter length={formData.explanation.length} max={PROMPT_CAPS.explanation} />
             </div>
 
             <div>
@@ -676,6 +699,7 @@ function PromptsPageContent() {
                   Add
                 </button>
               </div>
+              {tagNote && <p className="mt-2 font-mono text-[10px] text-orange-400">{tagNote}</p>}
               <div className="flex flex-wrap gap-1 mt-2">
                 {suggestedTags
                   .filter((t) => !formData.tags.includes(t))

@@ -53,6 +53,8 @@ interface CodeDuelJudgingProps {
   setWinner: (w: Winner) => void;
   onSubmitVote: () => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  /** The sentence shown with saveStatus 'error' (the vote route's own, when it gave one). */
+  saveError?: string;
   challengeName?: string;
   challengeDescription?: string;
   prompt?: string;
@@ -126,6 +128,7 @@ export default function CodeDuelJudging({
   setWinner,
   onSubmitVote,
   saveStatus,
+  saveError,
   challengeDescription,
   prompt,
   explanation,
@@ -508,7 +511,7 @@ export default function CodeDuelJudging({
           )}
         </motion.button>
         {saveStatus === 'error' && (
-          <p className="text-sm text-red-400 mt-2">Failed to save. Try again.</p>
+          <p className="text-sm text-red-400 mt-2">{saveError || 'Failed to save. Try again.'}</p>
         )}
       </div>
     </div>
