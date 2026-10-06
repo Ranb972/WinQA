@@ -7,7 +7,8 @@
  * daily-allowance charge. The per-message cap leaves room for Code Testing's
  * prompts: up to 50,000 characters of code (the execute-code cap) plus the
  * program output or error, which the page clips to CODE_TESTING_RESULT_MAX_CHARS
- * with clipForPrompt before it builds the message.
+ * with clipForPrompt before it builds the message. Chat Lab trims the history it
+ * sends to the same caps (trimChatHistory, D13).
  */
 
 export const CHAT_MAX_MESSAGES = 100;
@@ -48,6 +49,132 @@ export function truncateForField(text: unknown, max: number): string {
   const last = text.charCodeAt(cut - 1);
   if (last >= 0xd800 && last <= 0xdbff) cut -= 1;
   return text.slice(0, cut) + CLIP_MARKER;
+}
+
+/*
+ * Chat Lab history (D13): the client trims what it sends so a long conversation
+ * stays inside the route caps instead of being refused. The route still refuses
+ * a raw oversize body (400 / 413), which protects every other caller.
+ */
+
+/** The three chat caps a trimmed history must fit. */
+export interface ChatHistoryCaps {
+  maxMessages: number;
+  maxMessageChars: number;
+  maxTotalChars: number;
+}
+
+export const CHAT_HISTORY_CAPS: Readonly<ChatHistoryCaps> = {
+  maxMessages: CHAT_MAX_MESSAGES,
+  maxMessageChars: CHAT_MAX_MESSAGE_CHARS,
+  maxTotalChars: CHAT_MAX_TOTAL_CHARS,
+};
+
+/** The one note Chat Lab shows while older messages are left out of a send. */
+export const CHAT_HISTORY_TRIMMED_TEXT = 'Older messages are no longer sent to the model.';
+
+/**
+ * Fits a conversation into the chat caps by dropping its oldest turns. A turn
+ * is a user message and the non-system messages after it up to the next user
+ * message, so a Compare turn (one user message, one reply per model) goes as
+ * a whole and the window never starts with a reply.
+ *
+ * - A conversation inside every cap comes back unchanged (as a new array).
+ * - System messages are all kept, in place, wherever they stand. Only when they
+ *   alone pass a cap are they cut down to the newest ones that fit.
+ * - Then the newest turns are kept while the whole window stays within the
+ *   count and total caps; the first turn that does not fit ends the window, and
+ *   it and every older turn are dropped. An older turn holding a message over
+ *   the per-message cap is skipped on its own (the route refused that send, so
+ *   the model never saw it) and the turns before it can still be kept. Replies
+ *   before the first user message are always dropped when trimming.
+ * - The newest turn (on a send, the user's new message) is always kept whole:
+ *   no message is ever cut, so a new message over the per-message cap is left
+ *   to the route's 413.
+ *
+ * `dropped` is the number of non-system messages left out. Content is measured
+ * as the route measures it (string length).
+ */
+export function trimChatHistory<T extends { role: string; content: string }>(
+  messages: readonly T[],
+  caps: ChatHistoryCaps = CHAT_HISTORY_CAPS
+): { messages: T[]; dropped: number } {
+  const size = (message: T) => (typeof message.content === 'string' ? message.content.length : 0);
+
+  let allChars = 0;
+  let oversized = false;
+  for (const message of messages) {
+    const n = size(message);
+    allChars += n;
+    if (n > caps.maxMessageChars) oversized = true;
+  }
+  if (messages.length <= caps.maxMessages && allChars <= caps.maxTotalChars && !oversized) {
+    return { messages: messages.slice(), dropped: 0 };
+  }
+
+  // System messages first: all of them, unless they alone pass a cap. Even when
+  // they fill a cap the newest turn below is still added, and the route refuses
+  // the send (Chat Lab sends no system messages).
+  const systemIdx: number[] = [];
+  messages.forEach((message, i) => {
+    if (message.role === 'system') systemIdx.push(i);
+  });
+  const kept = new Set<number>();
+  let count = 0;
+  let chars = 0;
+  const systemChars = systemIdx.reduce((n, i) => n + size(messages[i]), 0);
+  const systemsFit =
+    systemIdx.length <= caps.maxMessages &&
+    systemChars <= caps.maxTotalChars &&
+    systemIdx.every((i) => size(messages[i]) <= caps.maxMessageChars);
+  if (systemsFit) {
+    for (const i of systemIdx) kept.add(i);
+    count = systemIdx.length;
+    chars = systemChars;
+  } else {
+    for (let s = systemIdx.length - 1; s >= 0; s--) {
+      const n = size(messages[systemIdx[s]]);
+      if (n > caps.maxMessageChars || count + 1 > caps.maxMessages || chars + n > caps.maxTotalChars) break;
+      kept.add(systemIdx[s]);
+      count += 1;
+      chars += n;
+    }
+  }
+
+  // The other messages, grouped into turns; replies before any user message
+  // form a group of their own that is never kept once trimming starts.
+  const turns: number[][] = [];
+  const leading: number[] = [];
+  let nonSystem = 0;
+  messages.forEach((message, i) => {
+    if (message.role === 'system') return;
+    nonSystem += 1;
+    if (message.role === 'user') turns.push([i]);
+    else if (turns.length > 0) turns[turns.length - 1].push(i);
+    else leading.push(i);
+  });
+  if (turns.length === 0 && leading.length > 0) turns.push(leading);
+
+  let keptNonSystem = 0;
+  for (let t = turns.length - 1; t >= 0; t--) {
+    const turn = turns[t];
+    const turnChars = turn.reduce((n, i) => n + size(messages[i]), 0);
+    const turnOversized = turn.some((i) => size(messages[i]) > caps.maxMessageChars);
+    const newest = t === turns.length - 1;
+    if (!newest && turnOversized) continue;
+    if (!newest && (count + turn.length > caps.maxMessages || chars + turnChars > caps.maxTotalChars)) {
+      break;
+    }
+    for (const i of turn) kept.add(i);
+    count += turn.length;
+    chars += turnChars;
+    keptNonSystem += turn.length;
+  }
+
+  return {
+    messages: messages.filter((_, i) => kept.has(i)),
+    dropped: nonSystem - keptNonSystem,
+  };
 }
 
 /*

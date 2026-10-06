@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   BUG_REPORT_CAPS,
+  CHAT_HISTORY_TRIMMED_TEXT,
   CHAT_MAX_MESSAGE_CHARS,
+  CHAT_MAX_MESSAGES,
+  CHAT_MAX_TOTAL_CHARS,
   CLIP_MARKER,
   CODE_TESTING_RESULT_MAX_CHARS,
   IMPORT_MAX_BYTES,
@@ -14,6 +17,7 @@ import {
   clipForPrompt,
   importCeilingText,
   tagLimitText,
+  trimChatHistory,
   truncateForField,
 } from './content-limits';
 import { BODY_LIMITS } from './server/body-limits';
@@ -156,5 +160,166 @@ describe('D7: the per-user ceiling sentences', () => {
         'the most WinQA keeps per account. Delete some to add more.'
     );
     expect(importCeilingText('testCases')).toContain('more than 500 test cases,');
+  });
+});
+
+describe('trimChatHistory (D13): a long conversation is trimmed to the chat caps, never refused', () => {
+  type Msg = { role: 'user' | 'assistant' | 'system'; content: string };
+  const user = (content: string): Msg => ({ role: 'user', content });
+  const bot = (content: string): Msg => ({ role: 'assistant', content });
+  const sys = (content: string): Msg => ({ role: 'system', content });
+  const chars = (list: readonly Msg[]) => list.reduce((n, x) => n + x.content.length, 0);
+
+  /** A Compare conversation as Chat Lab builds a send: each earlier turn is the
+   *  user message and one reply per model, then the new user message. */
+  function compareHistory(previousTurns: number, models: number): Msg[] {
+    const out: Msg[] = [];
+    for (let t = 1; t <= previousTurns; t++) {
+      out.push(user(`u${t}`));
+      for (let k = 1; k <= models; k++) out.push(bot(`r${t}.${k}`));
+    }
+    out.push(user(`u${previousTurns + 1}`));
+    return out;
+  }
+
+  it('the defaults are the route caps, and the note is one short sentence', () => {
+    expect([CHAT_MAX_MESSAGES, CHAT_MAX_MESSAGE_CHARS, CHAT_MAX_TOTAL_CHARS]).toEqual([100, 64_000, 200_000]);
+    expect(CHAT_HISTORY_TRIMMED_TEXT).toBe('Older messages are no longer sent to the model.');
+  });
+
+  it('exactly at every cap nothing is dropped and the list comes back as it was', () => {
+    // 100 messages, one of 64,000 characters, 200,000 in all (the route's at-cap case).
+    const rest = Array.from({ length: 99 }, (_, i) =>
+      (i % 2 ? user : bot)('x'.repeat(i < 98 ? 1373 : 1446))
+    );
+    const all = [sys('x'.repeat(64_000)), ...rest];
+    expect(all).toHaveLength(100);
+    expect(chars(all)).toBe(200_000);
+    const out = trimChatHistory(all);
+    expect(out.dropped).toBe(0);
+    expect(out.messages).toEqual(all);
+    expect(out.messages).not.toBe(all);
+  });
+
+  it('an empty list stays empty', () => {
+    expect(trimChatHistory([])).toEqual({ messages: [], dropped: 0 });
+  });
+
+  it('101 messages drop the oldest whole turn and keep the system prompt', () => {
+    const turns = Array.from({ length: 50 }, (_, i) => [user(`u${i + 1}`), bot(`a${i + 1}`)]).flat();
+    const all = [sys('be terse'), ...turns];
+    expect(all).toHaveLength(101);
+    const out = trimChatHistory(all);
+    // Both halves of turn 1 go, not only its user message.
+    expect(out.dropped).toBe(2);
+    expect(out.messages).toHaveLength(99);
+    expect(out.messages[0]).toBe(all[0]);
+    expect(out.messages[1]).toEqual(user('u2'));
+    expect(out.messages.at(-1)).toEqual(bot('a50'));
+  });
+
+  it('every system message is kept in place, also one inside a dropped turn', () => {
+    const all = [sys('first'), user('u1'), sys('middle'), bot('a1'), user('u2'), bot('a2'), user('u3')];
+    const out = trimChatHistory(all, { maxMessages: 5, maxMessageChars: 100, maxTotalChars: 1_000 });
+    expect(out.messages).toEqual([sys('first'), sys('middle'), user('u2'), bot('a2'), user('u3')]);
+    expect(out.dropped).toBe(2);
+  });
+
+  it('a total over 200,000 characters drops the oldest turns until it fits', () => {
+    const all: Msg[] = [];
+    for (let t = 1; t <= 7; t++) all.push(user(`q${t}`.padEnd(10, '.')), bot('y'.repeat(30_000)));
+    expect(all).toHaveLength(14);
+    expect(chars(all)).toBe(210_070);
+    const out = trimChatHistory(all);
+    expect(out.dropped).toBe(2);
+    expect(out.messages).toEqual(all.slice(2));
+    expect(chars(out.messages)).toBe(180_060);
+  });
+
+  it('the window never starts with an assistant reply: whole Compare turns go, not single messages', () => {
+    // Three turns of a user message and two replies. A cap of 7 taken message by
+    // message would start on turn 1's second reply.
+    const all = compareHistory(3, 2).slice(0, -1);
+    expect(all).toHaveLength(9);
+    const out = trimChatHistory(all, { maxMessages: 7, maxMessageChars: 100, maxTotalChars: 1_000 });
+    expect(out.messages[0]).toEqual(user('u2'));
+    expect(out.messages).toHaveLength(6);
+    expect(out.dropped).toBe(3);
+  });
+
+  it('assistant replies before the first user message are dropped first when trimming', () => {
+    const all = [bot('stray 1'), bot('stray 2'), user('u1'), bot('a1'), user('u2')];
+    const out = trimChatHistory(all, { maxMessages: 4, maxMessageChars: 100, maxTotalChars: 1_000 });
+    expect(out.messages).toEqual([user('u1'), bot('a1'), user('u2')]);
+    expect(out.dropped).toBe(2);
+  });
+
+  it('Compare with 4 models: turn 21 sends the new message and the 19 newest whole turns (96 messages)', () => {
+    const at20 = compareHistory(19, 4);
+    expect(at20).toHaveLength(96);
+    expect(trimChatHistory(at20).dropped).toBe(0);
+    const at21 = compareHistory(20, 4);
+    expect(at21).toHaveLength(101);
+    const out = trimChatHistory(at21);
+    expect(out.dropped).toBe(5);
+    expect(out.messages).toEqual(at21.slice(5));
+    expect(out.messages[0]).toEqual(user('u2'));
+    const at40 = trimChatHistory(compareHistory(39, 4));
+    expect(at40.messages).toHaveLength(96);
+    expect(at40.dropped).toBe(100);
+    expect(at40.messages[0]).toEqual(user('u21'));
+    expect(at40.messages.at(-1)).toEqual(user('u40'));
+  });
+
+  it('Compare with 2 models keeps 33 whole turns plus the new message (100 messages)', () => {
+    const all = compareHistory(60, 2);
+    expect(all).toHaveLength(181);
+    const out = trimChatHistory(all);
+    expect(out.messages).toHaveLength(100);
+    expect(out.messages[0]).toEqual(user('u28'));
+    expect(out.dropped).toBe(81);
+  });
+
+  it('an older turn holding a message over 64,000 characters is skipped; the turns before it are kept', () => {
+    // A message the route refused with 413 stays on screen; it must not block
+    // every later send, and the model never saw it, so only its turn goes.
+    const all = [user('u1'), bot('a1'), user('x'.repeat(64_001)), bot('refused'), user('u3'), bot('a3'), user('u4')];
+    const out = trimChatHistory(all);
+    expect(out.messages).toEqual([user('u1'), bot('a1'), user('u3'), bot('a3'), user('u4')]);
+    expect(out.dropped).toBe(2);
+  });
+
+  it('a 10-turn chat with turn 5 oversized keeps turns 1-4 and 6-10 and drops only turn 5', () => {
+    const all: Msg[] = [];
+    for (let t = 1; t <= 10; t++) {
+      all.push(user(t === 5 ? 'x'.repeat(70_000) : `u${t}`), bot(`a${t}`));
+    }
+    all.push(user('u11'));
+    const out = trimChatHistory(all);
+    expect(out.messages).toEqual([...all.slice(0, 8), ...all.slice(10)]);
+    expect(out.messages.map((x) => x.role)).toEqual([...Array(9).fill(['user', 'assistant']).flat(), 'user']);
+    expect(out.dropped).toBe(2);
+  });
+
+  it('a new message over 64,000 characters is sent whole, never cut; the route answers 413', () => {
+    const all = [user('u1'), bot('a1'), user('x'.repeat(64_001))];
+    const out = trimChatHistory(all);
+    expect(out.messages).toEqual(all);
+    expect(out.messages[2].content).toHaveLength(64_001);
+    expect(out.dropped).toBe(0);
+  });
+
+  it('system messages that alone pass the caps keep the newest that fit; dropped counts only the others', () => {
+    const all = [sys('s'.repeat(60)), sys('t'.repeat(50)), user('hi')];
+    const out = trimChatHistory(all, { maxMessages: 10, maxMessageChars: 100, maxTotalChars: 100 });
+    expect(out.messages).toEqual([sys('t'.repeat(50)), user('hi')]);
+    expect(out.dropped).toBe(0);
+  });
+
+  it('does not change the list it is given', () => {
+    const all = compareHistory(20, 4);
+    const copy = all.map((x) => ({ ...x }));
+    trimChatHistory(all);
+    expect(all).toEqual(copy);
   });
 });

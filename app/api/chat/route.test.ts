@@ -7,6 +7,9 @@ import { _resetKeyRingForTests } from '@/lib/server/key-vault';
 import { encryptForSlot } from '@/lib/server/user-keys';
 import type { ChatResponse, CustomApiKeys } from '@/lib/llm';
 import type { CustomProvider } from '@/lib/custom-providers';
+import { defaultModels } from '@/lib/llm';
+import { CHAT_MAX_MESSAGES, CHAT_MAX_TOTAL_CHARS, trimChatHistory } from '@/lib/content-limits';
+import { buildChatBody } from '@/lib/provider-picker';
 
 const USER = 'user_2chatALICE42';
 
@@ -443,4 +446,115 @@ describe('POST /api/chat: message count and length are capped before the charge 
     expect(m.consume).toHaveBeenCalledTimes(1);
     expect(m.chat).toHaveBeenCalledTimes(1);
   });
+});
+
+describe('POST /api/chat: a long Compare conversation keeps being accepted (D13)', () => {
+  type Sent = { role: string; content: string };
+  const COMPARE_MODELS = ['cohere', 'gemini', 'groq', 'mistral'] as const;
+  const USER_CHARS = 120;
+
+  /**
+   * A Compare session as Chat Lab runs it (components/ChatInterface.tsx): each
+   * send maps the on-screen conversation plus the new user message to
+   * { role, content }, trims it, and posts the same list once per selected model
+   * with the Compare body; each reply (data.error || data.content) is appended as
+   * an assistant message in model order. `trim: false` sends the raw history,
+   * which is what the client did before this change.
+   */
+  async function compareSession(turns: number, replyChars: number, { trim = true } = {}) {
+    m.chat.mockImplementation(async (_msgs: unknown, model: string) =>
+      okResponse(model, { content: 'r'.repeat(replyChars) })
+    );
+    const conversation: Sent[] = [];
+    const sends: { turn: number; outgoing: Sent[]; dropped: number; statuses: number[]; engineGot: unknown[] }[] = [];
+    for (let turn = 1; turn <= turns; turn++) {
+      const userMessage = { role: 'user', content: `turn ${turn} `.padEnd(USER_CHARS, 'q') };
+      const history = [...conversation, userMessage].map((x) => ({ role: x.role, content: x.content }));
+      const { messages: outgoing, dropped } = trim ? trimChatHistory(history) : { messages: history, dropped: 0 };
+      conversation.push(userMessage);
+      const statuses: number[] = [];
+      const engineGot: unknown[] = [];
+      for (const model of COMPARE_MODELS) {
+        m.chat.mockClear();
+        const body = buildChatBody(
+          {
+            messages: outgoing,
+            modelPreferences: defaultModels,
+            crossProviderFallback: false,
+            maxFallbackAttempts: 2,
+            fallbackDelay: 200,
+          },
+          { model, localKeys: {} }
+        );
+        const res = await POST(req(body));
+        statuses.push(res.status);
+        engineGot.push(m.chat.mock.calls[0]?.[0]);
+        const data = (await res.json()) as ChatResponse;
+        conversation.push({ role: 'assistant', content: data.error || data.content });
+      }
+      sends.push({ turn, outgoing, dropped, statuses, engineGot });
+    }
+    return sends;
+  }
+
+  const total = (list: Sent[]) => list.reduce((n, x) => n + x.content.length, 0);
+
+  it('without the trim, turn 21 of a 4-model Compare chat is refused with 400 (the regression)', async () => {
+    const sends = await compareSession(21, 200, { trim: false });
+    expect(sends.slice(0, 20).every((s) => s.statuses.every((st) => st === 200))).toBe(true);
+    expect(sends[20].outgoing).toHaveLength(101);
+    expect(sends[20].statuses).toEqual([400, 400, 400, 400]);
+  }, 60_000);
+
+  it('40 turns with 4 models: every send of every turn is accepted; past turn 20 the window is 19 whole turns', async () => {
+    const sends = await compareSession(40, 200);
+    expect(sends).toHaveLength(40);
+    for (const s of sends) {
+      expect(s.statuses, `turn ${s.turn}`).toEqual([200, 200, 200, 200]);
+      // The engine got exactly the trimmed window, for each model.
+      for (const got of s.engineGot) expect(got).toEqual(s.outgoing);
+      expect(s.outgoing.length).toBeLessThanOrEqual(CHAT_MAX_MESSAGES);
+      expect(total(s.outgoing)).toBeLessThanOrEqual(CHAT_MAX_TOTAL_CHARS);
+      // Whole turns only: it starts on a user message, ends on the new one, and
+      // holds the new message plus five messages per earlier turn.
+      expect(s.outgoing[0].role).toBe('user');
+      expect(s.outgoing.at(-1)?.content.startsWith(`turn ${s.turn} `)).toBe(true);
+      expect((s.outgoing.length - 1) % 5).toBe(0);
+      if (s.turn <= 20) {
+        expect(s.dropped, `turn ${s.turn}`).toBe(0);
+        expect(s.outgoing).toHaveLength(5 * (s.turn - 1) + 1);
+      } else {
+        expect(s.dropped, `turn ${s.turn}`).toBe(5 * (s.turn - 20));
+        expect(s.outgoing).toHaveLength(96);
+        expect(s.outgoing[0].content.startsWith(`turn ${s.turn - 19} `)).toBe(true);
+      }
+    }
+    expect(m.consume).toHaveBeenCalledTimes(160);
+  }, 60_000);
+
+  it('40 turns with 4 long replies: the 200,000-character cap trims from turn 18 and every send is accepted', async () => {
+    // 120 + 4 x 3,000 = 12,120 characters a turn: 16 earlier turns fit, 17 do not.
+    const sends = await compareSession(40, 3_000);
+    for (const s of sends) {
+      expect(s.statuses, `turn ${s.turn}`).toEqual([200, 200, 200, 200]);
+      expect(s.outgoing[0].role).toBe('user');
+      expect(total(s.outgoing)).toBeLessThanOrEqual(CHAT_MAX_TOTAL_CHARS);
+      if (s.turn <= 17) {
+        expect(s.dropped, `turn ${s.turn}`).toBe(0);
+      } else {
+        expect(s.dropped, `turn ${s.turn}`).toBeGreaterThan(0);
+        expect(s.outgoing).toHaveLength(1 + 5 * 16);
+      }
+    }
+  }, 60_000);
+
+  it('the trimmed turn-40 window is accepted by a custom provider too', async () => {
+    const sends = await compareSession(40, 200);
+    const last = sends[39].outgoing;
+    m.loadCustomProvider.mockResolvedValue(storedProvider());
+    const res = await POST(req(buildChatBody({ messages: last }, { model: `custom:${CUSTOM_ID}` })));
+    expect(res.status).toBe(200);
+    expect(m.callCustomProvider).toHaveBeenCalledTimes(1);
+    expect(m.callCustomProvider.mock.calls[0][1]).toEqual(last);
+  }, 60_000);
 });

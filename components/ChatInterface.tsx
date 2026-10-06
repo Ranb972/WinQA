@@ -12,6 +12,7 @@ import ChatMessage from '@/components/ChatMessage';
 import BugReportModal from '@/components/BugReportModal';
 import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames, sanitizeModelPreferences } from '@/lib/llm';
 import { cn } from '@/lib/utils';
+import { CHAT_HISTORY_TRIMMED_TEXT, trimChatHistory } from '@/lib/content-limits';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import KeyMigrationBanner from '@/components/KeyMigrationBanner';
 import { subscribeKeysChanged } from '@/lib/key-migration';
@@ -86,6 +87,8 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
   const [cachedApiKeys, setCachedApiKeys] = useState<ApiKeys>({});
   const [pickerProviders, setPickerProviders] = useState<PickerProvider[]>([]);
   const [selectedCustomProviders, setSelectedCustomProviders] = useState<string[]>([]);
+  // True while the last send left older messages out (D13); cleared with the chat.
+  const [historyTrimmed, setHistoryTrimmed] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -199,10 +202,18 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
     setInput('');
     setIsLoading(true);
 
-    const chatHistory = [...messages, userMessage].map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // What is sent is trimmed to the chat caps (D13); the screen keeps the whole
+    // conversation. Every request of this send (single, each Compare model, each
+    // custom provider) carries the same list, in which an earlier Compare turn is
+    // the user message plus every reply shown under it, so the trim drops whole
+    // turns, oldest first, and never starts the window on a reply.
+    const { messages: chatHistory, dropped } = trimChatHistory(
+      [...messages, userMessage].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }))
+    );
+    setHistoryTrimmed(dropped > 0);
 
     try {
       // Local keys (un-migrated browser blob only); buildChatBody attaches them
@@ -400,6 +411,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
 
   const clearChat = () => {
     setMessages([]);
+    setHistoryTrimmed(false);
   };
 
   return (
@@ -616,6 +628,11 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
 
       {/* Input */}
       <div className="mt-2 border-t border-white/[0.04] px-6 py-4">
+        {historyTrimmed && (
+          <p role="status" className="mb-2 text-xs text-white/50">
+            {CHAT_HISTORY_TRIMMED_TEXT}
+          </p>
+        )}
         <div className="flex gap-3 items-end">
           <Textarea
             ref={textareaRef}
