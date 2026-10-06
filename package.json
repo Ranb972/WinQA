@@ -27,7 +27,7 @@
         "@vercel/analytics": "^1.6.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "cohere-ai": "^7.20.0",
+        "cohere-ai": "^8.1.0",
         "framer-motion": "^12.27.1",
         "groq-sdk": "^1.6.0",
         "lucide-react": "^0.468.0",
