@@ -126,7 +126,7 @@ export async function PUT(request: NextRequest) {
     const bugReport = await BugReport.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
       input.doc,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!bugReport) {

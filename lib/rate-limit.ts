@@ -37,7 +37,7 @@ async function incrementToday(userId: string, field: 'count' | 'providerTests'):
     DailyUsage.findOneAndUpdate(
       { userId, date },
       { $inc: { [field]: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     ).lean();
 
   let usage;

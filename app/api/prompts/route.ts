@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest) {
     const prompt = await PromptLibrary.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
       input.doc,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!prompt) {

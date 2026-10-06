@@ -116,7 +116,7 @@ describe('D6: PUT /api/bugs caps each editable field', () => {
     expect(update).toHaveBeenCalledWith(
       { _id: ID, user_id: 'user_a', is_public: { $ne: true } },
       { status: 'Resolved', ...atCap },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
   });
 });

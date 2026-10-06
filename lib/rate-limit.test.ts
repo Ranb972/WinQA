@@ -36,7 +36,7 @@ describe('consumeProviderTestAllowance (S6)', () => {
     expect(db.findOneAndUpdate).toHaveBeenCalledWith(
       { userId: 'user_1', date: '2026-10-02' },
       { $inc: { providerTests: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   });
 
@@ -76,7 +76,7 @@ describe('consumeDailyAllowance (unchanged behaviour)', () => {
     expect(db.findOneAndUpdate).toHaveBeenCalledWith(
       { userId: 'user_1', date: '2026-10-02' },
       { $inc: { count: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   });
 

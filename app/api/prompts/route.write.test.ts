@@ -134,7 +134,7 @@ describe('D6: PUT /api/prompts caps each editable field', () => {
     expect(update).toHaveBeenCalledWith(
       { _id: ID, user_id: 'user_a', is_public: { $ne: true } },
       { ...atCap, tags: tags(20, 40) },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
   });
 });

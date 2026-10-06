@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
     const testCase = await TestCase.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
       input.doc,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!testCase) {

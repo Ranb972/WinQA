@@ -116,7 +116,7 @@ describe('D6: PUT /api/insights caps each editable field', () => {
     expect(update).toHaveBeenCalledWith(
       { _id: ID, user_id: 'user_a', is_public: { $ne: true } },
       { ...atCap, tags: tags(20, 40), updated_at: expect.any(Date) },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
   });
 });
