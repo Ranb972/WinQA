@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { INSIGHT_CAPS as CAPS, TAGS_VALIDATORS, maxChars } from '@/lib/content-limits';
 
 export interface IInsight extends Document {
   _id: mongoose.Types.ObjectId;
@@ -21,17 +22,21 @@ const InsightSchema = new Schema<IInsight>({
     type: String,
     required: [true, 'Title is required'],
     trim: true,
+    maxlength: maxChars('title', CAPS.title),
   },
   content: {
     type: String,
     required: [true, 'Content is required'],
+    maxlength: maxChars('content', CAPS.content),
   },
   category: {
     type: String,
+    maxlength: maxChars('category', CAPS.category),
   },
   tags: {
     type: [String],
     default: [],
+    validate: TAGS_VALIDATORS,
   },
   is_public: {
     type: Boolean,

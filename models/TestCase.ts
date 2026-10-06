@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { TEST_CASE_CAPS as CAPS, maxChars } from '@/lib/content-limits';
 
 export interface ITestCase extends Document {
   _id: mongoose.Types.ObjectId;
@@ -22,23 +23,29 @@ const TestCaseSchema = new Schema<ITestCase>({
     type: String,
     required: [true, 'Title is required'],
     trim: true,
+    maxlength: maxChars('title', CAPS.title),
   },
   description: {
     type: String,
     trim: true,
+    maxlength: maxChars('description', CAPS.description),
   },
   initial_prompt: {
     type: String,
     required: [true, 'Initial prompt is required'],
+    maxlength: maxChars('initial_prompt', CAPS.initial_prompt),
   },
   expected_outcome: {
     type: String,
+    maxlength: maxChars('expected_outcome', CAPS.expected_outcome),
   },
   category: {
     type: String,
+    maxlength: maxChars('category', CAPS.category),
   },
   difficulty: {
     type: String,
+    maxlength: maxChars('difficulty', CAPS.difficulty),
   },
   is_public: {
     type: Boolean,

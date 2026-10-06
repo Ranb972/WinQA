@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { BUG_REPORT_CAPS as CAPS, maxChars } from '@/lib/content-limits';
 
 export type IssueType = 'Hallucination' | 'Formatting' | 'Refusal' | 'Logic';
 export type Severity = 'Low' | 'Medium' | 'High';
@@ -26,14 +27,17 @@ const BugReportSchema = new Schema<IBugReport>({
   prompt_context: {
     type: String,
     required: [true, 'Prompt context is required'],
+    maxlength: maxChars('prompt_context', CAPS.prompt_context),
   },
   model_response: {
     type: String,
     required: [true, 'Model response is required'],
+    maxlength: maxChars('model_response', CAPS.model_response),
   },
   model_used: {
     type: String,
     required: [true, 'Model used is required'],
+    maxlength: maxChars('model_used', CAPS.model_used),
   },
   issue_type: {
     type: String,
@@ -47,6 +51,7 @@ const BugReportSchema = new Schema<IBugReport>({
   },
   user_notes: {
     type: String,
+    maxlength: maxChars('user_notes', CAPS.user_notes),
   },
   status: {
     type: String,

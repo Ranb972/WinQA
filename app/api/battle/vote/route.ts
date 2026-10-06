@@ -6,6 +6,7 @@ import Leaderboard from '@/models/Leaderboard';
 import { validateRating, validateEnum } from '@/lib/security';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
+import { prepareBattleVote, validationErrorText } from '@/lib/server/content-input';
 
 interface VoteRequestBody {
   challengeId: string;
@@ -42,9 +43,13 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: parsed.status });
     }
+    // Every stored text against its cap, the rankings count and the ratings object,
+    // then the enums and rating values, all before the database.
+    const input = prepareBattleVote(parsed.value);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
     const body = parsed.value as unknown as VoteRequestBody;
-
-    await dbConnect();
 
     // Validate battleType
     if (!validateEnum(body.battleType, ['standard', 'blindfold', 'royale'])) {
@@ -65,6 +70,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Invalid rating values for ${key}` }, { status: 400 });
       }
     }
+
+    await dbConnect();
 
     // Record each slot under the model that actually produced its response. The
     // respond route reports the executed id in responseX.specificModel; the picked id
@@ -159,6 +166,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(battle, { status: 201 });
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('Battle vote error:', errMsg);
     return NextResponse.json({ error: 'Failed to save battle' }, { status: 500 });

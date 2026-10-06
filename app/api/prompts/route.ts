@@ -3,10 +3,15 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import PromptLibrary from '@/models/PromptLibrary';
 import UserFavorite from '@/models/UserFavorite';
-import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
+import { stripMongoOperators } from '@/lib/security';
 import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
-
-const ALLOWED_PUT_FIELDS = ['title', 'bad_prompt_example', 'good_prompt_example', 'explanation', 'tags'];
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
+import {
+  preparePromptCreate,
+  preparePromptUpdate,
+  validationErrorText,
+} from '@/lib/server/content-input';
 
 // Page size for the list. The default equals the cap so no existing library is cut
 // short before the UI learns to load more (D11).
@@ -76,20 +81,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    // The body under its cap, then each field's type and length, before the database.
+    const parsed = await readJsonObject(request, BODY_LIMITS.prompts);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const input = preparePromptCreate(parsed.value);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
 
-    const prompt = await PromptLibrary.create({
-      user_id: userId,
-      title: body.title,
-      bad_prompt_example: body.bad_prompt_example,
-      good_prompt_example: body.good_prompt_example,
-      explanation: body.explanation,
-      tags: body.tags || [],
-    });
+    await dbConnect();
+
+    const prompt = await PromptLibrary.create({ user_id: userId, ...input.doc });
 
     return NextResponse.json(prompt, { status: 201 });
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error creating prompt:', error);
     return NextResponse.json(
       { error: 'Failed to create prompt' },
@@ -106,8 +115,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    const parsed = await readJsonObject(request, BODY_LIMITS.prompts);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value;
     const { id } = body;
 
     if (!id) {
@@ -117,11 +129,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+    const input = preparePromptUpdate(body);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
+
+    await dbConnect();
 
     const prompt = await PromptLibrary.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
-      updateData,
+      input.doc,
       { new: true, runValidators: true }
     );
 
@@ -131,6 +148,8 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(prompt);
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error updating prompt:', error);
     return NextResponse.json(
       { error: 'Failed to update prompt' },
@@ -147,9 +166,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
-    const { id } = body;
+    const parsed = await readJsonObject(request, BODY_LIMITS.prompts);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    // As before, the id is used as sent; checking it is an ObjectId is Batch M (V39).
+    const { id } = parsed.value as { id?: string };
 
     if (!id) {
       return NextResponse.json(
@@ -157,6 +179,8 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await dbConnect();
 
     // Verify the prompt exists (own or public)
     const prompt = await PromptLibrary.findOne({

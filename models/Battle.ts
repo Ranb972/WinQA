@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { BATTLE_CAPS as CAPS, RANKINGS_VALIDATOR, maxChars } from '@/lib/content-limits';
 
 export type BattleWinner = 'modelA' | 'modelB' | 'modelC' | 'modelD' | 'tie';
 export type BattleType = 'standard' | 'blindfold' | 'royale';
@@ -53,28 +54,30 @@ const RatingsSchema = new Schema<IBattleRatings>(
   { _id: false }
 );
 
+// Caps (D6): the messages name the subdocument's own path ("content"); the vote
+// route reports the full path ("responseA.content").
 const ModelInfoSchema = new Schema(
   {
-    provider: { type: String, required: true },
-    model: { type: String, required: true },
+    provider: { type: String, required: true, maxlength: maxChars('provider', CAPS.provider) },
+    model: { type: String, required: true, maxlength: maxChars('model', CAPS.model) },
   },
   { _id: false }
 );
 
 const ResponseSchema = new Schema(
   {
-    content: { type: String, required: true },
+    content: { type: String, required: true, maxlength: maxChars('content', CAPS.content) },
     responseTime: { type: Number, required: true },
-    specificModel: { type: String },
-    error: { type: String },
+    specificModel: { type: String, maxlength: maxChars('specificModel', CAPS.specificModel) },
+    error: { type: String, maxlength: maxChars('error', CAPS.error) },
   },
   { _id: false }
 );
 
 const RankingSchema = new Schema(
   {
-    model: { type: String, required: true },
-    provider: { type: String, required: true },
+    model: { type: String, required: true, maxlength: maxChars('model', CAPS.model) },
+    provider: { type: String, required: true, maxlength: maxChars('provider', CAPS.provider) },
     rank: { type: Number, required: true },
     score: { type: Number, required: true },
   },
@@ -83,9 +86,9 @@ const RankingSchema = new Schema(
 
 const BattleSchema = new Schema<IBattle>({
   odlUserId: { type: String, required: true },
-  challengeId: { type: String, required: true },
-  challengeName: { type: String, required: true },
-  prompt: { type: String, required: true },
+  challengeId: { type: String, required: true, maxlength: maxChars('challengeId', CAPS.challengeId) },
+  challengeName: { type: String, required: true, maxlength: maxChars('challengeName', CAPS.challengeName) },
+  prompt: { type: String, required: true, maxlength: maxChars('prompt', CAPS.prompt) },
   battleType: {
     type: String,
     enum: ['standard', 'blindfold', 'royale'],
@@ -110,7 +113,7 @@ const BattleSchema = new Schema<IBattle>({
     enum: ['modelA', 'modelB', 'modelC', 'modelD', 'tie'],
     required: true,
   },
-  rankings: [RankingSchema],
+  rankings: { type: [RankingSchema], validate: RANKINGS_VALIDATOR },
   created_at: { type: Date, default: Date.now },
 });
 

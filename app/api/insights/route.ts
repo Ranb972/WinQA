@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import Insight from '@/models/Insight';
-import { stripMongoOperators, pickAllowedFields } from '@/lib/security';
+import { stripMongoOperators } from '@/lib/security';
 import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
-
-const ALLOWED_PUT_FIELDS = ['title', 'content', 'tags', 'category'];
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
+import {
+  prepareInsightCreate,
+  prepareInsightUpdate,
+  validationErrorText,
+} from '@/lib/server/content-input';
 
 // Page size for the list. The default equals the cap so no existing library is cut
 // short before the UI learns to load more (D11).
@@ -53,19 +58,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    // The body under its cap, then each field's type and length, before the database.
+    const parsed = await readJsonObject(request, BODY_LIMITS.insights);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const input = prepareInsightCreate(parsed.value);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
 
-    const insight = await Insight.create({
-      user_id: userId,
-      title: body.title,
-      content: body.content,
-      category: body.category,
-      tags: body.tags || [],
-    });
+    await dbConnect();
+
+    const insight = await Insight.create({ user_id: userId, ...input.doc });
 
     return NextResponse.json(insight, { status: 201 });
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error creating insight:', error);
     return NextResponse.json(
       { error: 'Failed to create insight' },
@@ -82,8 +92,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    const parsed = await readJsonObject(request, BODY_LIMITS.insights);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value;
     const { id } = body;
 
     if (!id) {
@@ -93,11 +106,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+    const input = prepareInsightUpdate(body);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
+
+    await dbConnect();
 
     const insight = await Insight.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
-      { ...updateData, updated_at: new Date() },
+      { ...input.doc, updated_at: new Date() },
       { new: true, runValidators: true }
     );
 
@@ -107,6 +125,8 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(insight);
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error updating insight:', error);
     return NextResponse.json(
       { error: 'Failed to update insight' },

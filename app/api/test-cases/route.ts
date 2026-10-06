@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/mongodb';
 import TestCase from '@/models/TestCase';
-import { pickAllowedFields } from '@/lib/security';
 import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
-
-const ALLOWED_PUT_FIELDS = ['title', 'description', 'initial_prompt', 'expected_outcome', 'category', 'difficulty'];
+import { BODY_LIMITS } from '@/lib/server/body-limits';
+import { readJsonObject } from '@/lib/server/read-json-body';
+import {
+  prepareTestCaseCreate,
+  prepareTestCaseUpdate,
+  validationErrorText,
+} from '@/lib/server/content-input';
 
 // Page size for the list. The default equals the cap so no existing library is cut
 // short before the UI learns to load more (D11).
@@ -50,21 +54,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    // The body under its cap, then each field's type and length, before the database.
+    const parsed = await readJsonObject(request, BODY_LIMITS.testCases);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const input = prepareTestCaseCreate(parsed.value);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
 
-    const testCase = await TestCase.create({
-      user_id: userId,
-      title: body.title,
-      description: body.description,
-      initial_prompt: body.initial_prompt,
-      expected_outcome: body.expected_outcome,
-      category: body.category,
-      difficulty: body.difficulty,
-    });
+    await dbConnect();
+
+    const testCase = await TestCase.create({ user_id: userId, ...input.doc });
 
     return NextResponse.json(testCase, { status: 201 });
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error creating test case:', error);
     return NextResponse.json(
       { error: 'Failed to create test case' },
@@ -81,8 +88,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
-    const body = await request.json();
+    const parsed = await readJsonObject(request, BODY_LIMITS.testCases);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value;
     const { id } = body;
 
     if (!id) {
@@ -92,11 +102,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateData = pickAllowedFields(body, ALLOWED_PUT_FIELDS);
+    const input = prepareTestCaseUpdate(body);
+    if (!input.ok) {
+      return NextResponse.json({ error: input.message }, { status: 400 });
+    }
+
+    await dbConnect();
 
     const testCase = await TestCase.findOneAndUpdate(
       { _id: id, user_id: userId, is_public: { $ne: true } },
-      updateData,
+      input.doc,
       { new: true, runValidators: true }
     );
 
@@ -109,6 +124,8 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(testCase);
   } catch (error) {
+    const invalid = validationErrorText(error);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
     console.error('Error updating test case:', error);
     return NextResponse.json(
       { error: 'Failed to update test case' },

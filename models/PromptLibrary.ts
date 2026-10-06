@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { PROMPT_CAPS as CAPS, TAGS_VALIDATORS, maxChars } from '@/lib/content-limits';
 
 export interface IPromptLibrary extends Document {
   _id: mongoose.Types.ObjectId;
@@ -21,21 +22,26 @@ const PromptLibrarySchema = new Schema<IPromptLibrary>({
     type: String,
     required: [true, 'Title is required'],
     trim: true,
+    maxlength: maxChars('title', CAPS.title),
   },
   bad_prompt_example: {
     type: String,
     required: [true, 'Bad prompt example is required'],
+    maxlength: maxChars('bad_prompt_example', CAPS.bad_prompt_example),
   },
   good_prompt_example: {
     type: String,
     required: [true, 'Good prompt example is required'],
+    maxlength: maxChars('good_prompt_example', CAPS.good_prompt_example),
   },
   explanation: {
     type: String,
+    maxlength: maxChars('explanation', CAPS.explanation),
   },
   tags: {
     type: [String],
     default: [],
+    validate: TAGS_VALIDATORS,
   },
   is_public: {
     type: Boolean,
