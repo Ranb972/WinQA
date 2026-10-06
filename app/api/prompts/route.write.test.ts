@@ -3,8 +3,10 @@ import type { MockInstance } from 'vitest';
 import { NextRequest } from 'next/server';
 import PromptLibrary from '@/models/PromptLibrary';
 import UserFavorite from '@/models/UserFavorite';
-import { PROMPT_CAPS, tooLongText } from '@/lib/content-limits';
+import { PROMPT_CAPS, ceilingText, tooLongText } from '@/lib/content-limits';
 import { ENTRY_TOO_LARGE_ERROR } from '@/lib/server/body-limits';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
+import { fakeCount } from '@/lib/server/count-query.test-utils';
 
 /**
  * D6: the prompt writes check every field's type and cap (tags at most 20 x 40)
@@ -49,11 +51,14 @@ const put = (body: unknown) => call(PUT, 'PUT', JSON.stringify(body));
 
 let create: MockInstance;
 let update: MockInstance;
+let count: MockInstance;
 let findOne: MockInstance;
 
 beforeEach(() => {
   h.auth.mockResolvedValue({ userId: 'user_a' });
   h.dbConnect.mockClear();
+  // D7: the per-user ceiling count; 0 rows unless a test says otherwise.
+  count = vi.spyOn(PromptLibrary, 'countDocuments').mockImplementation((() => fakeCount(0)) as never);
   create = vi
     .spyOn(PromptLibrary, 'create')
     .mockImplementation((async (doc: Record<string, unknown>) => ({ _id: ID, ...doc })) as never);
@@ -71,6 +76,7 @@ afterEach(() => {
 
 function expectNoWrite() {
   expect(h.dbConnect).not.toHaveBeenCalled();
+  expect(count).not.toHaveBeenCalled();
   expect(create).not.toHaveBeenCalled();
   expect(update).not.toHaveBeenCalled();
   expect(findOne).not.toHaveBeenCalled();
@@ -186,5 +192,42 @@ describe('D6: the body is read under the 256 KB entry cap', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ is_favorite: true });
     expect(favCreate).toHaveBeenCalledWith({ user_id: 'user_a', prompt_id: ID });
+  });
+});
+
+describe('D7: POST /api/prompts refuses at the per-user ceiling of 500', () => {
+  it('500 private prompts: 409 with the sentence, and no create', async () => {
+    count.mockImplementation((() => fakeCount(500)) as never);
+    const res = await post(VALID);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: ceilingText('prompts') });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("499: created; the count filters on the caller's private rows, with the query deadline, before the create", async () => {
+    const query = fakeCount(499);
+    count.mockImplementation((() => query) as never);
+    const res = await post(VALID);
+    expect(res.status).toBe(201);
+    expect(count).toHaveBeenCalledTimes(1);
+    expect(count.mock.calls[0][0]).toEqual({ user_id: 'user_a', is_public: { $ne: true } });
+    expect(query.maxTimeMS).toHaveBeenCalledWith(DB_QUERY_MAX_TIME_MS);
+    expect(count.mock.invocationCallOrder[0]).toBeLessThan(create.mock.invocationCallOrder[0]);
+  });
+
+  it("a count that fails answers the route's 500 and creates nothing", async () => {
+    count.mockImplementation((() => fakeCount(new Error('operation exceeded time limit'))) as never);
+    const res = await post(VALID);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to create prompt' });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('PUT does not count: an edit at the ceiling still saves', async () => {
+    count.mockImplementation((() => fakeCount(500)) as never);
+    const res = await put({ id: ID, title: 'New title' });
+    expect(res.status).toBe(200);
+    expect(count).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledTimes(1);
   });
 });

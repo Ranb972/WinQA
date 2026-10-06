@@ -6,7 +6,7 @@ import {
   parseImportPayload,
   type ParsedImport,
 } from './import-payload';
-import { BUG_REPORT_CAPS, TAGS_MAX_COUNT } from '@/lib/content-limits';
+import { BUG_REPORT_CAPS, PER_USER_CEILING, TAGS_MAX_COUNT } from '@/lib/content-limits';
 
 const USER = 'user_2abcDEF123';
 const NOW = new Date('2026-10-06T12:00:00.000Z');
@@ -121,13 +121,19 @@ describe('parseImportPayload: the file as a whole', () => {
     expect(result.problems).toEqual([{ collection: 'testCases', item: null, field: null }]);
   });
 
-  it('refuses more than IMPORT_MAX_ITEMS items in one list', () => {
-    expect(IMPORT_MAX_ITEMS).toBe(1000);
+  it('D7: a list holds at most the per-user ceiling, 500 items', () => {
+    expect(IMPORT_MAX_ITEMS).toBe(500);
+    expect(IMPORT_MAX_ITEMS).toBe(PER_USER_CEILING);
+  });
+
+  it.each(IMPORT_COLLECTIONS)('D7: refuses %s with 501 items, naming the list and the limit', (collection) => {
     const file = validFile();
-    file.data.bugs = Array.from({ length: IMPORT_MAX_ITEMS + 1 }, () => ({}));
+    file.data[collection] = Array.from({ length: IMPORT_MAX_ITEMS + 1 }, () => ({}));
     const result = refused(parse(file));
-    expect(result.error).toBe('Nothing was imported. bugs has more than 1000 items.');
-    expect(result.problems).toEqual([{ collection: 'bugs', item: null, field: null }]);
+    expect(result.error).toBe(
+      `Nothing was imported. ${collection} has more than 500 items, the most WinQA keeps per account.`
+    );
+    expect(result.problems).toEqual([{ collection, item: null, field: null }]);
   });
 
   it('refuses a mode other than merge or replace', () => {

@@ -4,7 +4,9 @@ import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
 import TestCase from '@/models/TestCase';
 import Insight from '@/models/Insight';
-import { BUG_REPORT_CAPS } from '@/lib/content-limits';
+import { BUG_REPORT_CAPS, importCeilingText } from '@/lib/content-limits';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
+import { fakeCount, type FakeCountQuery } from '@/lib/server/count-query.test-utils';
 
 // No database: auth and dbConnect are mocked, and the model statics are spied
 // on below. Creating a Mongoose model opens no connection. dbConnect resolves
@@ -34,6 +36,11 @@ const calls: string[] = [];
 type Spy = ReturnType<typeof vi.fn>;
 const deleteSpies = {} as Record<Collection, Spy>;
 const insertSpies = {} as Record<Collection, Spy>;
+// D7: the merge ceiling counts. Each collection holds `existing[name]` private
+// rows unless a test says otherwise; the counts are reads, not logged in `calls`.
+const countSpies = {} as Record<Collection, Spy>;
+const countQueries = {} as Record<Collection, FakeCountQuery>;
+let existing: Record<Collection, number | Error>;
 
 const SESSION = { fake: 'session' };
 interface FakeConn {
@@ -88,6 +95,10 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 1));
 
 function spyWrites() {
   for (const name of COLLECTIONS) {
+    countSpies[name] = vi.spyOn(MODELS[name], 'countDocuments').mockImplementation((() => {
+      countQueries[name] = fakeCount(existing[name]);
+      return countQueries[name];
+    }) as never) as unknown as Spy;
     deleteSpies[name] = vi
       .spyOn(MODELS[name], 'deleteMany')
       .mockImplementation((async (_filter: unknown, options: unknown) => {
@@ -114,6 +125,7 @@ beforeEach(() => {
   conn = makeConn(true);
   dbConnectMock.mockReset();
   dbConnectMock.mockImplementation(async () => ({ connection: conn }));
+  existing = { bugs: 0, prompts: 0, testCases: 0, insights: 0 };
   spyWrites();
 });
 
@@ -266,13 +278,16 @@ describe('POST /api/import: the whole file is validated before any write (D3)', 
     expectNoWrites();
   });
 
-  it('1,001 bugs answer 400 before dbConnect', async () => {
+  it.each(['replace', 'merge'])('D7: %s with 501 bugs (one over the ceiling) answers 400 before dbConnect', async (mode) => {
     const file = validFile();
-    file.data.bugs = Array.from({ length: 1001 }, () => ({ ...(file.data.bugs[0] as object) }));
-    const res = await POST(post({ data: file, mode: 'replace' }));
+    file.data.bugs = Array.from({ length: 501 }, () => ({ ...(file.data.bugs[0] as object) }));
+    const res = await POST(post({ data: file, mode }));
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe('Nothing was imported. bugs has more than 1000 items.');
+    expect((await res.json()).error).toBe(
+      'Nothing was imported. bugs has more than 500 items, the most WinQA keeps per account.'
+    );
     expect(dbConnectMock).not.toHaveBeenCalled();
+    for (const name of COLLECTIONS) expect(countSpies[name]).not.toHaveBeenCalled();
     expectNoWrites();
   });
 
@@ -527,5 +542,91 @@ describe('POST /api/import: failures outside the runner', () => {
       error: 'Import failed part-way. Some items may have been added; check your library before importing again.',
     });
     expect(deleteSpies.bugs).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/import: the per-user ceiling of 500 (D7)', () => {
+  const copies = (name: Collection, n: number) => {
+    const file = validFile();
+    file.data[name] = Array.from({ length: n }, () => ({ ...(file.data[name][0] as object) }));
+    return file;
+  };
+
+  it('merge with 490 existing bug reports and 20 incoming answers 409; no runner, no delete, no insert', async () => {
+    existing.bugs = 490;
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const res = await POST(post({ data: copies('bugs', 20), mode: 'merge' }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: importCeilingText('bugs') });
+    expect(conn.transaction).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+    expectNoWrites();
+    const lines = log.mock.calls.map((c) => c.join(' '));
+    expect(lines).toEqual(['[import] mode=merge outcome=rejected status=409 reason=ceiling collection=bugs']);
+  });
+
+  it("each count filters on the caller's private rows and carries the query deadline", async () => {
+    const res = await POST(post({ data: validFile(), mode: 'merge' }));
+    expect(res.status).toBe(200);
+    for (const name of COLLECTIONS) {
+      expect(countSpies[name]).toHaveBeenCalledTimes(1);
+      expect(countSpies[name].mock.calls[0][0]).toEqual(PRIVATE_ONLY);
+      expect(countQueries[name].maxTimeMS).toHaveBeenCalledWith(DB_QUERY_MAX_TIME_MS);
+      // Read before the transaction opens.
+      expect(countSpies[name].mock.invocationCallOrder[0]).toBeLessThan(
+        conn.transaction.mock.invocationCallOrder[0]
+      );
+    }
+  });
+
+  it('merge that lands exactly on 500 is imported', async () => {
+    existing.prompts = 480;
+    const res = await POST(post({ data: copies('prompts', 20), mode: 'merge' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).imported.prompts).toBe(20);
+  });
+
+  it('any one collection over its ceiling refuses the whole file', async () => {
+    existing.insights = 500;
+    const res = await POST(post({ data: validFile(), mode: 'merge' }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: importCeilingText('insights') });
+    expectNoWrites();
+  });
+
+  it('an empty list is not counted, so a collection already past 500 does not block the rest', async () => {
+    existing.insights = 650;
+    const file = validFile();
+    file.data.insights = [];
+    const res = await POST(post({ data: file, mode: 'merge' }));
+    expect(res.status).toBe(200);
+    expect(countSpies.insights).not.toHaveBeenCalled();
+  });
+
+  it('merge without transactions is refused the same way and writes nothing', async () => {
+    conn = makeConn(false);
+    existing.testCases = 500;
+    const res = await POST(post({ data: validFile(), mode: 'merge' }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: importCeilingText('testCases') });
+    expectNoWrites();
+  });
+
+  it("replace does not count: the file's rows replace the private ones, and the parser caps each list at 500", async () => {
+    existing.bugs = 500;
+    const res = await POST(post({ data: copies('bugs', 500), mode: 'replace' }));
+    expect(res.status).toBe(200);
+    for (const name of COLLECTIONS) expect(countSpies[name]).not.toHaveBeenCalled();
+    expect((await res.json()).imported.bugs).toBe(500);
+  });
+
+  it('a count that fails answers 500 "Nothing was changed" and writes nothing', async () => {
+    existing.prompts = Object.assign(new Error('operation exceeded time limit'), { codeName: 'MaxTimeMSExpired' });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await POST(post({ data: validFile(), mode: 'merge' }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Import failed. Nothing was changed.' });
+    expect(conn.transaction).not.toHaveBeenCalled();
+    expectNoWrites();
   });
 });

@@ -7,6 +7,8 @@ import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
 import {
+  assertBelowCeiling,
+  ownedPrivateRows,
   prepareBugReportCreate,
   prepareBugReportUpdate,
   validationErrorText,
@@ -71,6 +73,12 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
+
+    // The per-user ceiling (D7): count the caller's private rows, then create.
+    const room = await assertBelowCeiling(BugReport, ownedPrivateRows(userId), 'bugs');
+    if (!room.ok) {
+      return NextResponse.json({ error: room.error }, { status: room.status });
+    }
 
     const bugReport = await BugReport.create({ user_id: userId, ...input.doc });
 

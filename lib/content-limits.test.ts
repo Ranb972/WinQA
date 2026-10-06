@@ -6,10 +6,13 @@ import {
   CODE_TESTING_RESULT_MAX_CHARS,
   IMPORT_MAX_BYTES,
   IMPORT_TOO_LARGE_TEXT,
+  PER_USER_CEILING,
   TAGS_MAX_COUNT,
   TAG_MAX_CHARS,
+  ceilingText,
   charCountText,
   clipForPrompt,
+  importCeilingText,
   tagLimitText,
   truncateForField,
 } from './content-limits';
@@ -122,5 +125,36 @@ describe('IMPORT_MAX_BYTES (D9, D-9): the client and the import route share one 
     expect(BODY_LIMITS.dataImport.maxBytes).toBe(IMPORT_MAX_BYTES);
     expect(IMPORT_TOO_LARGE_TEXT).toBe('This file is larger than 4 MB. Nothing was imported.');
     expect(BODY_LIMITS.dataImport.tooLarge).toBe(IMPORT_TOO_LARGE_TEXT);
+  });
+});
+
+describe('D7: the per-user ceiling sentences', () => {
+  it('the ceiling is 500 per collection (decision D-6)', () => {
+    expect(PER_USER_CEILING).toBe(500);
+  });
+
+  it.each([
+    ['bugs', 'bug reports'],
+    ['prompts', 'prompts'],
+    ['testCases', 'test cases'],
+    ['insights', 'insights'],
+  ] as const)('%s: the create refusal names the collection and the fixed ceiling', (collection, noun) => {
+    expect(ceilingText(collection)).toBe(
+      `You have 500 ${noun}, the most WinQA keeps per account. Delete some to add more.`
+    );
+  });
+
+  it('battles: the refusal does not ask for a delete that does not exist', () => {
+    expect(ceilingText('battles')).toBe(
+      'You have 500 saved battles, the most WinQA keeps per account. This vote was not saved.'
+    );
+  });
+
+  it('the import refusal says nothing was imported and names the same ceiling', () => {
+    expect(importCeilingText('bugs')).toBe(
+      'Nothing was imported. With this file you would have more than 500 bug reports, ' +
+        'the most WinQA keeps per account. Delete some to add more.'
+    );
+    expect(importCeilingText('testCases')).toContain('more than 500 test cases,');
   });
 });

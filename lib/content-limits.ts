@@ -182,3 +182,47 @@ export const RANKINGS_VALIDATOR = {
  */
 export const IMPORT_MAX_BYTES = 4 * 1024 * 1024;
 export const IMPORT_TOO_LARGE_TEXT = 'This file is larger than 4 MB. Nothing was imported.';
+
+/*
+ * Per-user ceilings (D7, owner decision D-6): the most rows one account keeps in
+ * each collection. The library collections count the owner's private rows
+ * (public example rows never count); battles count every battle the user saved.
+ * A create at the ceiling, or an import merge that would pass it, answers 409.
+ * Battles refuse at the ceiling like the rest: nothing is deleted to make room.
+ */
+export const PER_USER_CEILING = 500;
+
+export type CeilingCollection = 'bugs' | 'prompts' | 'testCases' | 'insights' | 'battles';
+
+/** How each refusal names its collection. */
+export const CEILING_NOUNS: Readonly<Record<CeilingCollection, string>> = {
+  bugs: 'bug reports',
+  prompts: 'prompts',
+  testCases: 'test cases',
+  insights: 'insights',
+  battles: 'battles',
+};
+
+const KEPT_PER_ACCOUNT = 'the most WinQA keeps per account. Delete some to add more.';
+
+/**
+ * The 409 text for a create at the ceiling: "You have 500 bug reports, the most
+ * WinQA keeps per account. Delete some to add more." It states the fixed
+ * ceiling, never the row count or anything submitted.
+ */
+export function ceilingText(collection: CeilingCollection): string {
+  // Battles cannot be deleted one by one (no route, no UI), so their sentence
+  // does not ask for it; it says what happened to the vote instead.
+  if (collection === 'battles') {
+    return `You have ${withThousands(PER_USER_CEILING)} saved battles, the most WinQA keeps per account. This vote was not saved.`;
+  }
+  return `You have ${withThousands(PER_USER_CEILING)} ${CEILING_NOUNS[collection]}, ${KEPT_PER_ACCOUNT}`;
+}
+
+/** The 409 text for an import merge that would pass the ceiling. */
+export function importCeilingText(collection: CeilingCollection): string {
+  return (
+    `Nothing was imported. With this file you would have more than ${withThousands(PER_USER_CEILING)} ` +
+    `${CEILING_NOUNS[collection]}, ${KEPT_PER_ACCOUNT}`
+  );
+}

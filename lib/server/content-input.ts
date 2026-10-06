@@ -12,22 +12,29 @@
  * A field that is absent (undefined or null) is not checked here: whether it is
  * required stays the schema's decision, and the route maps the schema's
  * ValidationError to a 400 with validationErrorText.
+ *
+ * assertBelowCeiling (D7) is the one database read here: after dbConnect and
+ * before the create, it counts the caller's rows against the per-user ceiling.
  */
 
 import mongoose from 'mongoose';
 import { pickAllowedFields } from '@/lib/security';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
 import {
   BATTLE_CAPS,
   BATTLE_RANKINGS_MAX,
   BUG_REPORT_CAPS,
   INSIGHT_CAPS,
+  PER_USER_CEILING,
   PROMPT_CAPS,
   TAG_MAX_CHARS,
   TAGS_MAX_COUNT,
   TEST_CASE_CAPS,
+  ceilingText,
   entryTooLongText,
   tooLongText,
   tooManyText,
+  type CeilingCollection,
 } from '@/lib/content-limits';
 
 export type ContentDoc = Record<string, unknown>;
@@ -273,6 +280,61 @@ export function prepareBattleVote(body: ContentDoc): ContentCheck {
     }
   }
   return { ok: true, doc: body };
+}
+
+// --- Per-user ceilings (D7) ---
+
+type CeilingFilter = Record<string, unknown>;
+
+/**
+ * The rows a library ceiling counts: the caller's own private rows. `$ne: true`
+ * matches false, null and a missing field, the filter the PUT/DELETE guards and
+ * the import's replace use, so public example rows never count.
+ */
+export function ownedPrivateRows(userId: string): CeilingFilter {
+  return { user_id: userId, is_public: { $ne: true } };
+}
+
+/** The rows the battle ceiling counts: every battle the caller saved. */
+export function ownedBattles(userId: string): CeilingFilter {
+  return { odlUserId: userId };
+}
+
+/** The count query assertBelowCeiling drives, typed structurally so a test can pass a fake. */
+export interface CountableModel {
+  countDocuments(filter: CeilingFilter): { maxTimeMS(ms: number): PromiseLike<number> };
+}
+
+export type CeilingCheck = { ok: true } | { ok: false; status: 409; error: string };
+
+export interface CeilingOptions {
+  /** Rows about to be added: 1 for a create, the file's list length for an import merge. */
+  incoming?: number;
+  /** The refusal sentence; the create sentence unless the caller passes another. */
+  refusal?: (collection: CeilingCollection) => string;
+}
+
+/**
+ * Counts the rows `filter` matches and refuses with 409 when adding `incoming`
+ * would pass PER_USER_CEILING. A collection already past the ceiling (rows
+ * saved before D7) refuses every create until enough are deleted.
+ *
+ * Count, then insert: two concurrent creates from one user can both see 499 and
+ * both insert, leaving 501. Accepted, as for custom providers: the ceiling
+ * bounds storage per account and is not a security boundary, and an overshoot
+ * of up to the incoming rows of each racing request is harmless. The count runs under the read deadline
+ * (DB_QUERY_MAX_TIME_MS); a failure rejects, and the route answers its 500
+ * before any write.
+ */
+export async function assertBelowCeiling(
+  model: CountableModel,
+  filter: CeilingFilter,
+  collection: CeilingCollection,
+  { incoming = 1, refusal = ceilingText }: CeilingOptions = {}
+): Promise<CeilingCheck> {
+  const existing = await model.countDocuments(filter).maxTimeMS(DB_QUERY_MAX_TIME_MS);
+  if (existing + incoming <= PER_USER_CEILING) return { ok: true };
+  return { ok: false, status: 409, error: refusal(collection) };
 }
 
 // --- The schema's verdict ---

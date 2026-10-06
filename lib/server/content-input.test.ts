@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Document } from 'mongoose';
 import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
@@ -11,9 +11,16 @@ import {
   INSIGHT_CAPS,
   PROMPT_CAPS,
   TEST_CASE_CAPS,
+  ceilingText,
+  importCeilingText,
   tooLongText,
 } from '@/lib/content-limits';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
+import { fakeCount } from '@/lib/server/count-query.test-utils';
 import {
+  assertBelowCeiling,
+  ownedBattles,
+  ownedPrivateRows,
   prepareBattleVote,
   prepareBugReportCreate,
   prepareBugReportUpdate,
@@ -328,5 +335,47 @@ describe('D6: validationErrorText', () => {
       responseA: { content: 'a', responseTime: 'SECRET_VALUE' },
     }).validateSync();
     expect(validationErrorText(castErr)).toBe('responseA.responseTime is not a valid value');
+  });
+});
+
+describe("D7: assertBelowCeiling counts the owner's rows before a create", () => {
+  const countingModel = (count: number | Error) => {
+    const query = fakeCount(count);
+    return { query, model: { countDocuments: vi.fn(() => query) } };
+  };
+
+  it("the library filter counts only the owner's private rows; battles count by odlUserId", () => {
+    expect(ownedPrivateRows('user_a')).toEqual({ user_id: 'user_a', is_public: { $ne: true } });
+    expect(ownedBattles('user_a')).toEqual({ odlUserId: 'user_a' });
+  });
+
+  it('499 rows: there is room for one more', async () => {
+    const { model, query } = countingModel(499);
+    const filter = ownedPrivateRows('user_a');
+    expect(await assertBelowCeiling(model, filter, 'bugs')).toEqual({ ok: true });
+    expect(model.countDocuments).toHaveBeenCalledWith(filter);
+    expect(query.maxTimeMS).toHaveBeenCalledWith(DB_QUERY_MAX_TIME_MS);
+  });
+
+  it.each([500, 650])("%i rows: refused with 409 and the collection's sentence", async (count) => {
+    const { model } = countingModel(count);
+    expect(await assertBelowCeiling(model, ownedBattles('user_a'), 'battles')).toEqual({
+      ok: false,
+      status: 409,
+      error: ceilingText('battles'),
+    });
+  });
+
+  it('an import counts its incoming rows: 490 + 10 fits, 490 + 11 does not', async () => {
+    const options = { incoming: 10, refusal: importCeilingText };
+    expect(await assertBelowCeiling(countingModel(490).model, {}, 'insights', options)).toEqual({ ok: true });
+    expect(
+      await assertBelowCeiling(countingModel(490).model, {}, 'insights', { ...options, incoming: 11 })
+    ).toEqual({ ok: false, status: 409, error: importCeilingText('insights') });
+  });
+
+  it('a failed count rejects, so the route answers its own 500 and writes nothing', async () => {
+    const failure = Object.assign(new Error('operation exceeded time limit'), { codeName: 'MaxTimeMSExpired' });
+    await expect(assertBelowCeiling(countingModel(failure).model, {}, 'prompts')).rejects.toBe(failure);
   });
 });

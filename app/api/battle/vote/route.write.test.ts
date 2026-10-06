@@ -3,7 +3,9 @@ import type { MockInstance } from 'vitest';
 import { NextRequest } from 'next/server';
 import Battle from '@/models/Battle';
 import Leaderboard from '@/models/Leaderboard';
-import { BATTLE_CAPS, tooLongText } from '@/lib/content-limits';
+import { BATTLE_CAPS, ceilingText, tooLongText } from '@/lib/content-limits';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
+import { fakeCount } from '@/lib/server/count-query.test-utils';
 
 /**
  * D6: a vote checks every stored text against its cap, at most four rankings and
@@ -66,10 +68,13 @@ const FIELDS: { path: string; cap: number; set: (body: Body, value: string) => v
 ];
 
 let create: MockInstance;
+let count: MockInstance;
 
 beforeEach(() => {
   h.auth.mockResolvedValue({ userId: 'user_a' });
   h.dbConnect.mockClear();
+  // D7: the per-user battle count; 0 battles unless a test says otherwise.
+  count = vi.spyOn(Battle, 'countDocuments').mockImplementation((() => fakeCount(0)) as never);
   create = vi
     .spyOn(Battle, 'create')
     .mockImplementation((async (doc: Record<string, unknown>) => ({ _id: 'b1', ...doc })) as never);
@@ -84,6 +89,7 @@ afterEach(() => {
 
 function expectNoWrite() {
   expect(h.dbConnect).not.toHaveBeenCalled();
+  expect(count).not.toHaveBeenCalled();
   expect(create).not.toHaveBeenCalled();
 }
 
@@ -189,5 +195,45 @@ describe('D6: a schema ValidationError answers 400, not 500', () => {
     const res = await post(VOTE);
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Failed to save battle' });
+  });
+});
+
+describe('D7: POST /api/battle/vote refuses at the per-user ceiling of 500 (D-6: refuse, never roll over)', () => {
+  it('500 saved battles: 409 with the sentence; no battle is created and the leaderboard is untouched', async () => {
+    count.mockImplementation((() => fakeCount(500)) as never);
+    const res = await post(VOTE);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: ceilingText('battles') });
+    expect(create).not.toHaveBeenCalled();
+    expect(Leaderboard.findOne).not.toHaveBeenCalled();
+    expect(Leaderboard.create).not.toHaveBeenCalled();
+  });
+
+  it('499: saved; the count is by odlUserId, with the query deadline, before the create', async () => {
+    const query = fakeCount(499);
+    count.mockImplementation((() => query) as never);
+    const res = await post(VOTE);
+    expect(res.status).toBe(201);
+    expect(count).toHaveBeenCalledTimes(1);
+    expect(count.mock.calls[0][0]).toEqual({ odlUserId: 'user_a' });
+    expect(query.maxTimeMS).toHaveBeenCalledWith(DB_QUERY_MAX_TIME_MS);
+    expect(count.mock.invocationCallOrder[0]).toBeLessThan(create.mock.invocationCallOrder[0]);
+  });
+
+  it('nothing is deleted to make room: the route never calls a delete', async () => {
+    const deletes = (['deleteOne', 'deleteMany', 'findOneAndDelete'] as const).map((name) =>
+      vi.spyOn(Battle, name).mockImplementation((async () => ({})) as never)
+    );
+    count.mockImplementation((() => fakeCount(500)) as never);
+    expect((await post(VOTE)).status).toBe(409);
+    for (const spy of deletes) expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('a count that fails answers 500 and saves nothing', async () => {
+    count.mockImplementation((() => fakeCount(new Error('operation exceeded time limit'))) as never);
+    const res = await post(VOTE);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to save battle' });
+    expect(create).not.toHaveBeenCalled();
   });
 });

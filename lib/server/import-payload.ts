@@ -16,12 +16,18 @@ import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
 import TestCase from '@/models/TestCase';
 import Insight from '@/models/Insight';
+import { PER_USER_CEILING } from '@/lib/content-limits';
 
 /** The only file version export writes (app/api/export/route.ts). */
 export const IMPORT_FILE_VERSION = '1.0';
 
-/** Most items accepted per collection in one file. D7 replaces it with the per-user ceilings. */
-export const IMPORT_MAX_ITEMS = 1000;
+/**
+ * Most items accepted per collection in one file: the per-user ceiling (D7). A
+ * replace leaves exactly the file's rows as the caller's private rows, so this
+ * check alone keeps a replace within the ceiling; a merge also counts the rows
+ * already there (app/api/import/route.ts).
+ */
+export const IMPORT_MAX_ITEMS = PER_USER_CEILING;
 
 /** Most problems collected and reported for one file. */
 export const IMPORT_MAX_PROBLEMS = 5;
@@ -148,7 +154,7 @@ export function parseImportPayload(body: unknown, userId: string, now: Date = ne
   }
   for (const collection of IMPORT_COLLECTIONS) {
     if ((lists[collection] as unknown[]).length > IMPORT_MAX_ITEMS) {
-      return refuse(`${collection} has more than ${IMPORT_MAX_ITEMS} items.`, [
+      return refuse(`${collection} has more than ${IMPORT_MAX_ITEMS} items, the most WinQA keeps per account.`, [
         { collection, item: null, field: null },
       ]);
     }

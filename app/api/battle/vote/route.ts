@@ -6,7 +6,12 @@ import Leaderboard from '@/models/Leaderboard';
 import { validateRating, validateEnum } from '@/lib/security';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
-import { prepareBattleVote, validationErrorText } from '@/lib/server/content-input';
+import {
+  assertBelowCeiling,
+  ownedBattles,
+  prepareBattleVote,
+  validationErrorText,
+} from '@/lib/server/content-input';
 
 interface VoteRequestBody {
   challengeId: string;
@@ -72,6 +77,14 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
+
+    // The per-user ceiling (D7, decision D-6): at 500 saved battles the vote is
+    // refused with 409. Nothing is deleted to make room, and the leaderboard is
+    // not touched, so a refused vote changes nothing.
+    const room = await assertBelowCeiling(Battle, ownedBattles(userId), 'battles');
+    if (!room.ok) {
+      return NextResponse.json({ error: room.error }, { status: room.status });
+    }
 
     // Record each slot under the model that actually produced its response. The
     // respond route reports the executed id in responseX.specificModel; the picked id

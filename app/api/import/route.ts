@@ -9,7 +9,10 @@ import Insight from '@/models/Insight';
 import { isClerkUserId } from '@/lib/server/purge-user';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonBody } from '@/lib/server/read-json-body';
+import { assertBelowCeiling, ownedPrivateRows } from '@/lib/server/content-input';
+import { importCeilingText } from '@/lib/content-limits';
 import {
+  IMPORT_COLLECTIONS,
   parseImportPayload,
   type ImportCollection,
   type ImportDocs,
@@ -17,7 +20,7 @@ import {
 } from '@/lib/server/import-payload';
 import { runInTransaction, supportsTransactions } from '@/lib/server/transaction';
 
-// A replace of 4 x 1,000 rows is eight operations in one transaction. If the
+// A replace of 4 x 500 rows is eight operations in one transaction. If the
 // platform kills the function mid-transaction, the server aborts the
 // uncommitted transaction, so nothing is half-written.
 export const maxDuration = 30;
@@ -116,6 +119,38 @@ async function writeImport(
 
 const total = (c: Counts) => c.bugs + c.prompts + c.testCases + c.insights;
 
+const MODELS = { bugs: BugReport, prompts: PromptLibrary, testCases: TestCase, insights: Insight };
+
+type MergeCeiling = { ok: true } | { ok: false; status: 409; error: string; collection: ImportCollection };
+
+/**
+ * D7: a merge adds to the rows already there, so for each list the file
+ * carries, the caller's private rows plus the incoming ones must stay within
+ * the per-user ceiling. An empty list is not counted: a collection already past
+ * the ceiling does not block the others. The counts are reads outside the
+ * transaction, so a create racing the import can overshoot by up to the incoming rows of each racing request; the
+ * ceiling bounds storage, it is not a security boundary.
+ *
+ * A replace is not counted: it deletes the caller's private rows first, and
+ * parseImportPayload already refused any list longer than the ceiling.
+ */
+async function mergeCeiling(userId: string, docs: ImportDocs): Promise<MergeCeiling> {
+  const filter = ownedPrivateRows(userId);
+  const checks = await Promise.all(
+    IMPORT_COLLECTIONS.filter((name) => docs[name].length > 0).map(async (name) => ({
+      name,
+      check: await assertBelowCeiling(MODELS[name], filter, name, {
+        incoming: docs[name].length,
+        refusal: importCeilingText,
+      }),
+    }))
+  );
+  for (const { name, check } of checks) {
+    if (!check.ok) return { ...check, collection: name };
+  }
+  return { ok: true };
+}
+
 export async function POST(request: NextRequest) {
   let mode = 'unknown';
   let transactional = false;
@@ -149,6 +184,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { connection } = await dbConnect();
+
+    // The per-user ceilings (D7), before the probe and the transaction: a
+    // refused merge opens no transaction and writes nothing.
+    if (mode === 'merge') {
+      const room = await mergeCeiling(userId, docs);
+      if (!room.ok) {
+        logOutcome(mode, 'rejected', `status=409 reason=ceiling collection=${room.collection}`);
+        return NextResponse.json({ error: room.error }, { status: room.status });
+      }
+    }
+
     transactional = await supportsTransactions(connection);
 
     // A replace deletes, and there is never a delete outside a transaction.
