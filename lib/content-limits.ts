@@ -76,8 +76,15 @@ export const CHAT_HISTORY_TRIMMED_TEXT = 'Older messages are no longer sent to t
 /**
  * Fits a conversation into the chat caps by dropping its oldest turns. A turn
  * is a user message and the non-system messages after it up to the next user
- * message, so a Compare turn (one user message, one reply per model) goes as
- * a whole and the window never starts with a reply.
+ * message, so a turn goes as a whole and the window never starts with a reply.
+ *
+ * Chat Lab trims each request's own list: since D15 a Compare model is sent the
+ * user messages and only its own replies (historyForModel, lib/chat-history.ts),
+ * so a turn is 2 messages for any number of models, as in single mode. At the
+ * 100-message cap the window is the new message plus 49 earlier turns (99
+ * messages): turn 50 is sent whole and turn 51 is the first one trimmed, fewer
+ * when the 200,000-character cap binds first. (Before D15 every model got one
+ * shared list of 1 + N messages a turn: 19 earlier turns with 4 models.)
  *
  * - A conversation inside every cap comes back unchanged (as a new array).
  * - System messages are all kept, in place, wherever they stand. Only when they

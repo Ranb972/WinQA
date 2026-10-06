@@ -170,13 +170,15 @@ describe('trimChatHistory (D13): a long conversation is trimmed to the chat caps
   const sys = (content: string): Msg => ({ role: 'system', content });
   const chars = (list: readonly Msg[]) => list.reduce((n, x) => n + x.content.length, 0);
 
-  /** A Compare conversation as Chat Lab builds a send: each earlier turn is the
-   *  user message and one reply per model, then the new user message. */
-  function compareHistory(previousTurns: number, models: number): Msg[] {
+  /** A send whose earlier turns are each a user message and `replies` replies,
+   *  then the new user message. One reply a turn is what each Compare model is
+   *  sent since D15 (and single mode); several replies a turn is the shared
+   *  Compare list Chat Lab sent before D15. */
+  function turnsHistory(previousTurns: number, replies: number): Msg[] {
     const out: Msg[] = [];
     for (let t = 1; t <= previousTurns; t++) {
       out.push(user(`u${t}`));
-      for (let k = 1; k <= models; k++) out.push(bot(`r${t}.${k}`));
+      for (let k = 1; k <= replies; k++) out.push(bot(`r${t}.${k}`));
     }
     out.push(user(`u${previousTurns + 1}`));
     return out;
@@ -239,7 +241,7 @@ describe('trimChatHistory (D13): a long conversation is trimmed to the chat caps
   it('the window never starts with an assistant reply: whole Compare turns go, not single messages', () => {
     // Three turns of a user message and two replies. A cap of 7 taken message by
     // message would start on turn 1's second reply.
-    const all = compareHistory(3, 2).slice(0, -1);
+    const all = turnsHistory(3, 2).slice(0, -1);
     expect(all).toHaveLength(9);
     const out = trimChatHistory(all, { maxMessages: 7, maxMessageChars: 100, maxTotalChars: 1_000 });
     expect(out.messages[0]).toEqual(user('u2'));
@@ -254,25 +256,37 @@ describe('trimChatHistory (D13): a long conversation is trimmed to the chat caps
     expect(out.dropped).toBe(2);
   });
 
-  it('Compare with 4 models: turn 21 sends the new message and the 19 newest whole turns (96 messages)', () => {
-    const at20 = compareHistory(19, 4);
-    expect(at20).toHaveLength(96);
-    expect(trimChatHistory(at20).dropped).toBe(0);
-    const at21 = compareHistory(20, 4);
+  it('a Compare model is sent two messages a turn (D15): 40 turns never trim, turn 51 keeps the 49 newest turns', () => {
+    const at40 = turnsHistory(39, 1);
+    expect(at40).toHaveLength(79);
+    expect(trimChatHistory(at40).dropped).toBe(0);
+    const at50 = turnsHistory(49, 1);
+    expect(at50).toHaveLength(99);
+    expect(trimChatHistory(at50).dropped).toBe(0);
+    const at51 = turnsHistory(50, 1);
+    expect(at51).toHaveLength(101);
+    const out = trimChatHistory(at51);
+    expect(out.dropped).toBe(2);
+    expect(out.messages).toEqual(at51.slice(2));
+    expect(out.messages[0]).toEqual(user('u2'));
+    const at80 = trimChatHistory(turnsHistory(79, 1));
+    expect(at80.messages).toHaveLength(99);
+    expect(at80.dropped).toBe(60);
+    expect(at80.messages[0]).toEqual(user('u31'));
+    expect(at80.messages.at(-1)).toEqual(user('u80'));
+  });
+
+  it('the shared shape (one reply per model in one list, before D15) trims at turn 21 with 4 models', () => {
+    const at21 = turnsHistory(20, 4);
     expect(at21).toHaveLength(101);
     const out = trimChatHistory(at21);
     expect(out.dropped).toBe(5);
     expect(out.messages).toEqual(at21.slice(5));
     expect(out.messages[0]).toEqual(user('u2'));
-    const at40 = trimChatHistory(compareHistory(39, 4));
-    expect(at40.messages).toHaveLength(96);
-    expect(at40.dropped).toBe(100);
-    expect(at40.messages[0]).toEqual(user('u21'));
-    expect(at40.messages.at(-1)).toEqual(user('u40'));
   });
 
-  it('Compare with 2 models keeps 33 whole turns plus the new message (100 messages)', () => {
-    const all = compareHistory(60, 2);
+  it('turns of a user message and two replies keep 33 whole turns plus the new message (100 messages)', () => {
+    const all = turnsHistory(60, 2);
     expect(all).toHaveLength(181);
     const out = trimChatHistory(all);
     expect(out.messages).toHaveLength(100);
@@ -317,7 +331,7 @@ describe('trimChatHistory (D13): a long conversation is trimmed to the chat caps
   });
 
   it('does not change the list it is given', () => {
-    const all = compareHistory(20, 4);
+    const all = turnsHistory(20, 4);
     const copy = all.map((x) => ({ ...x }));
     trimChatHistory(all);
     expect(all).toEqual(copy);

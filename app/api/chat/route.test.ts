@@ -9,6 +9,7 @@ import type { ChatResponse, CustomApiKeys } from '@/lib/llm';
 import type { CustomProvider } from '@/lib/custom-providers';
 import { defaultModels } from '@/lib/llm';
 import { CHAT_MAX_MESSAGES, CHAT_MAX_TOTAL_CHARS, trimChatHistory } from '@/lib/content-limits';
+import { historyForModel } from '@/lib/chat-history';
 import { buildChatBody } from '@/lib/provider-picker';
 
 const USER = 'user_2chatALICE42';
@@ -448,113 +449,197 @@ describe('POST /api/chat: message count and length are capped before the charge 
   });
 });
 
-describe('POST /api/chat: a long Compare conversation keeps being accepted (D13)', () => {
+describe('POST /api/chat: a long Compare conversation keeps being accepted, each model sent only its own replies (D13, D15)', () => {
+  type Stored = { role: 'user' | 'assistant'; content: string; model?: string; isError?: boolean };
   type Sent = { role: string; content: string };
-  const COMPARE_MODELS = ['cohere', 'gemini', 'groq', 'mistral'] as const;
+  const BUILT_INS = ['cohere', 'gemini', 'groq', 'mistral'] as const;
+  const CUSTOM_KEY = `custom:${CUSTOM_ID}`;
   const USER_CHARS = 120;
+  const ENGINE_FAILURE = 'engine exploded on purpose';
+  /** Every reply starts with a tag naming who wrote it and on which turn. */
+  const tag = (key: string, turn: number) => `[${key} reply ${turn}]`;
+  const replyTag = (key: string) => `[${key} reply `;
+
+  type Send = {
+    turn: number;
+    key: string;
+    outgoing: Sent[];
+    dropped: number;
+    status: number;
+    bodyText: string;
+    engineGot: unknown;
+    error?: string;
+  };
 
   /**
-   * A Compare session as Chat Lab runs it (components/ChatInterface.tsx): each
-   * send maps the on-screen conversation plus the new user message to
-   * { role, content }, trims it, and posts the same list once per selected model
-   * with the Compare body; each reply (data.error || data.content) is appended as
-   * an assistant message in model order. `trim: false` sends the raw history,
-   * which is what the client did before this change.
+   * A Compare session as Chat Lab runs it (components/ChatInterface.tsx): on each
+   * send, every selected model (the built-ins, then the custom provider) gets
+   * historyForModel(conversation + new message, its key), trimmed with
+   * trimChatHistory, posted with its Compare body. Each reply is stored with the
+   * key that asked for it (`model`) and isError when data.error is set, as the
+   * component stores it. `shared: true` replays the client before D15 instead:
+   * one untrimmed list of every message on screen, sent to every model.
    */
-  async function compareSession(turns: number, replyChars: number, { trim = true } = {}) {
+  async function compareSession(
+    turns: number,
+    replyChars: number,
+    {
+      models = BUILT_INS as readonly string[],
+      custom = false,
+      shared = false,
+      failAt,
+    }: { models?: readonly string[]; custom?: boolean; shared?: boolean; failAt?: { key: string; turn: number } } = {}
+  ) {
+    let turn = 0;
+    const replyFor = (key: string) => tag(key, turn).padEnd(replyChars, 'r');
     m.chat.mockImplementation(async (_msgs: unknown, model: string) =>
-      okResponse(model, { content: 'r'.repeat(replyChars) })
+      failAt && failAt.key === model && failAt.turn === turn
+        ? okResponse(model, { content: '', error: ENGINE_FAILURE })
+        : okResponse(model, { content: replyFor(model) })
     );
-    const conversation: Sent[] = [];
-    const sends: { turn: number; outgoing: Sent[]; dropped: number; statuses: number[]; engineGot: unknown[] }[] = [];
-    for (let turn = 1; turn <= turns; turn++) {
-      const userMessage = { role: 'user', content: `turn ${turn} `.padEnd(USER_CHARS, 'q') };
-      const history = [...conversation, userMessage].map((x) => ({ role: x.role, content: x.content }));
-      const { messages: outgoing, dropped } = trim ? trimChatHistory(history) : { messages: history, dropped: 0 };
+    m.callCustomProvider.mockImplementation(async () => ({ content: replyFor(CUSTOM_KEY), model: 'custom', responseTime: 1 }));
+    m.loadCustomProvider.mockResolvedValue(storedProvider());
+
+    const keys = [...models, ...(custom ? [CUSTOM_KEY] : [])];
+    const conversation: Stored[] = [];
+    const sends: Send[] = [];
+    for (turn = 1; turn <= turns; turn++) {
+      const userMessage: Stored = { role: 'user', content: `turn ${turn} `.padEnd(USER_CHARS, 'q') };
+      const onScreen = [...conversation, userMessage];
       conversation.push(userMessage);
-      const statuses: number[] = [];
-      const engineGot: unknown[] = [];
-      for (const model of COMPARE_MODELS) {
+      // Every list is built before any reply of this turn lands, as in the component.
+      const lists = keys.map((key) =>
+        shared
+          ? { messages: onScreen.map((x) => ({ role: x.role, content: x.content })), dropped: 0 }
+          : trimChatHistory(historyForModel(onScreen, key))
+      );
+      for (const [i, key] of keys.entries()) {
+        const { messages: outgoing, dropped } = lists[i];
         m.chat.mockClear();
-        const body = buildChatBody(
-          {
-            messages: outgoing,
-            modelPreferences: defaultModels,
-            crossProviderFallback: false,
-            maxFallbackAttempts: 2,
-            fallbackDelay: 200,
-          },
-          { model, localKeys: {} }
-        );
+        m.callCustomProvider.mockClear();
+        const body =
+          key === CUSTOM_KEY
+            ? buildChatBody({ messages: outgoing }, { model: key })
+            : buildChatBody(
+                {
+                  messages: outgoing,
+                  modelPreferences: defaultModels,
+                  crossProviderFallback: false,
+                  maxFallbackAttempts: 2,
+                  fallbackDelay: 200,
+                },
+                { model: key, localKeys: {} }
+              );
         const res = await POST(req(body));
-        statuses.push(res.status);
-        engineGot.push(m.chat.mock.calls[0]?.[0]);
+        const engineGot =
+          key === CUSTOM_KEY ? m.callCustomProvider.mock.calls[0]?.[1] : m.chat.mock.calls[0]?.[0];
         const data = (await res.json()) as ChatResponse;
-        conversation.push({ role: 'assistant', content: data.error || data.content });
+        conversation.push({
+          role: 'assistant',
+          content: data.error || data.content,
+          model: key,
+          ...(data.error ? { isError: true } : {}),
+        });
+        sends.push({ turn, key, outgoing, dropped, status: res.status, bodyText: JSON.stringify(body), engineGot, error: data.error });
       }
-      sends.push({ turn, outgoing, dropped, statuses, engineGot });
     }
-    return sends;
+    return { sends, keys };
   }
 
   const total = (list: Sent[]) => list.reduce((n, x) => n + x.content.length, 0);
 
-  it('without the trim, turn 21 of a 4-model Compare chat is refused with 400 (the regression)', async () => {
-    const sends = await compareSession(21, 200, { trim: false });
-    expect(sends.slice(0, 20).every((s) => s.statuses.every((st) => st === 200))).toBe(true);
-    expect(sends[20].outgoing).toHaveLength(101);
-    expect(sends[20].statuses).toEqual([400, 400, 400, 400]);
+  it('the shared list (before D15) is refused at turn 21 with 4 models; per-model lists send 41 messages there and are accepted', async () => {
+    const before = await compareSession(21, 200, { shared: true });
+    expect(before.sends.filter((s) => s.turn <= 20).every((s) => s.status === 200)).toBe(true);
+    const turn21 = before.sends.filter((s) => s.turn === 21);
+    expect(turn21.map((s) => s.outgoing.length)).toEqual([101, 101, 101, 101]);
+    expect(turn21.map((s) => s.status)).toEqual([400, 400, 400, 400]);
+    // The shared list carried every model's replies to every model.
+    expect(turn21[0].bodyText).toContain(replyTag('gemini'));
+
+    const after = await compareSession(21, 200);
+    const now21 = after.sends.filter((s) => s.turn === 21);
+    expect(now21.map((s) => s.outgoing.length)).toEqual([41, 41, 41, 41]);
+    expect(now21.map((s) => s.dropped)).toEqual([0, 0, 0, 0]);
+    expect(now21.map((s) => s.status)).toEqual([200, 200, 200, 200]);
   }, 60_000);
 
-  it('40 turns with 4 models: every send of every turn is accepted; past turn 20 the window is 19 whole turns', async () => {
-    const sends = await compareSession(40, 200);
-    expect(sends).toHaveLength(40);
+  it("40 turns, 4 models and a custom provider: every send accepted, nothing trimmed, and no request carries another model's reply", async () => {
+    const { sends, keys } = await compareSession(40, 200, { custom: true });
+    expect(keys).toEqual([...BUILT_INS, CUSTOM_KEY]);
+    expect(sends).toHaveLength(200);
     for (const s of sends) {
-      expect(s.statuses, `turn ${s.turn}`).toEqual([200, 200, 200, 200]);
-      // The engine got exactly the trimmed window, for each model.
-      for (const got of s.engineGot) expect(got).toEqual(s.outgoing);
+      const where = `turn ${s.turn} ${s.key}`;
+      expect(s.status, where).toBe(200);
+      // The engine (or the custom provider) got exactly the list that was built.
+      expect(s.engineGot, where).toEqual(s.outgoing);
+      // User turns and own replies, alternating: two messages a turn, never trimmed.
+      expect(s.dropped, where).toBe(0);
+      expect(s.outgoing, where).toHaveLength(2 * s.turn - 1);
+      s.outgoing.forEach((x, i) => {
+        expect(x.role, where).toBe(i % 2 === 0 ? 'user' : 'assistant');
+        if (i % 2 === 0) expect(x.content.startsWith(`turn ${i / 2 + 1} `), where).toBe(true);
+        else expect(x.content.startsWith(tag(s.key, (i + 1) / 2)), where).toBe(true);
+      });
+      for (const other of keys.filter((k) => k !== s.key)) {
+        expect(s.bodyText.includes(replyTag(other)), `${where} carries ${other}`).toBe(false);
+      }
       expect(s.outgoing.length).toBeLessThanOrEqual(CHAT_MAX_MESSAGES);
       expect(total(s.outgoing)).toBeLessThanOrEqual(CHAT_MAX_TOTAL_CHARS);
-      // Whole turns only: it starts on a user message, ends on the new one, and
-      // holds the new message plus five messages per earlier turn.
-      expect(s.outgoing[0].role).toBe('user');
-      expect(s.outgoing.at(-1)?.content.startsWith(`turn ${s.turn} `)).toBe(true);
-      expect((s.outgoing.length - 1) % 5).toBe(0);
-      if (s.turn <= 20) {
-        expect(s.dropped, `turn ${s.turn}`).toBe(0);
-        expect(s.outgoing).toHaveLength(5 * (s.turn - 1) + 1);
-      } else {
-        expect(s.dropped, `turn ${s.turn}`).toBe(5 * (s.turn - 20));
-        expect(s.outgoing).toHaveLength(96);
-        expect(s.outgoing[0].content.startsWith(`turn ${s.turn - 19} `)).toBe(true);
-      }
     }
-    expect(m.consume).toHaveBeenCalledTimes(160);
+    expect(m.consume).toHaveBeenCalledTimes(200);
   }, 60_000);
 
-  it('40 turns with 4 long replies: the 200,000-character cap trims from turn 18 and every send is accepted', async () => {
-    // 120 + 4 x 3,000 = 12,120 characters a turn: 16 earlier turns fit, 17 do not.
-    const sends = await compareSession(40, 3_000);
+  it('an error bubble is never resent: gemini fails on turn 3, its later requests keep the user turn without a reply', async () => {
+    const { sends } = await compareSession(6, 200, { failAt: { key: 'gemini', turn: 3 } });
+    const failed = sends.find((s) => s.turn === 3 && s.key === 'gemini');
+    expect(failed?.error).toBeTruthy();
+    const errorText = failed?.error as string;
     for (const s of sends) {
-      expect(s.statuses, `turn ${s.turn}`).toEqual([200, 200, 200, 200]);
-      expect(s.outgoing[0].role).toBe('user');
-      expect(total(s.outgoing)).toBeLessThanOrEqual(CHAT_MAX_TOTAL_CHARS);
-      if (s.turn <= 17) {
-        expect(s.dropped, `turn ${s.turn}`).toBe(0);
+      expect(s.status).toBe(200);
+      expect(s.bodyText.includes(errorText), `turn ${s.turn} ${s.key}`).toBe(false);
+    }
+    const gemini6 = sends.find((s) => s.turn === 6 && s.key === 'gemini');
+    expect(gemini6?.outgoing).toHaveLength(10);
+    expect(gemini6?.outgoing.slice(4, 6).map((x) => x.role)).toEqual(['user', 'user']);
+    expect(gemini6?.outgoing[4].content.startsWith('turn 3 ')).toBe(true);
+    for (const key of ['cohere', 'groq', 'mistral']) {
+      expect(sends.find((s) => s.turn === 6 && s.key === key)?.outgoing).toHaveLength(11);
+    }
+  }, 60_000);
+
+  it('52 turns with 2 models: the 100-message cap first trims at turn 51 and keeps the 49 newest turns; every send accepted', async () => {
+    const { sends } = await compareSession(52, 200, { models: ['cohere', 'gemini'] });
+    for (const s of sends) {
+      const where = `turn ${s.turn} ${s.key}`;
+      expect(s.status, where).toBe(200);
+      expect(s.engineGot, where).toEqual(s.outgoing);
+      expect(s.outgoing[0].role, where).toBe('user');
+      if (s.turn <= 50) {
+        expect(s.dropped, where).toBe(0);
+        expect(s.outgoing, where).toHaveLength(2 * s.turn - 1);
       } else {
-        expect(s.dropped, `turn ${s.turn}`).toBeGreaterThan(0);
-        expect(s.outgoing).toHaveLength(1 + 5 * 16);
+        expect(s.dropped, where).toBe(2 * (s.turn - 50));
+        expect(s.outgoing, where).toHaveLength(99);
+        expect(s.outgoing[0].content.startsWith(`turn ${s.turn - 49} `), where).toBe(true);
       }
     }
   }, 60_000);
 
-  it('the trimmed turn-40 window is accepted by a custom provider too', async () => {
-    const sends = await compareSession(40, 200);
-    const last = sends[39].outgoing;
-    m.loadCustomProvider.mockResolvedValue(storedProvider());
-    const res = await POST(req(buildChatBody({ messages: last }, { model: `custom:${CUSTOM_ID}` })));
-    expect(res.status).toBe(200);
-    expect(m.callCustomProvider).toHaveBeenCalledTimes(1);
-    expect(m.callCustomProvider.mock.calls[0][1]).toEqual(last);
+  it('25 turns with 4 replies of 10,000 characters: the 200,000-character cap trims each model from turn 21 and every send is accepted', async () => {
+    // 120 + 10,000 = 10,120 characters per turn in each model's list: 19 earlier turns fit, 20 do not.
+    const { sends } = await compareSession(25, 10_000);
+    for (const s of sends) {
+      const where = `turn ${s.turn} ${s.key}`;
+      expect(s.status, where).toBe(200);
+      expect(s.outgoing[0].role, where).toBe('user');
+      expect(total(s.outgoing), where).toBeLessThanOrEqual(CHAT_MAX_TOTAL_CHARS);
+      if (s.turn <= 20) {
+        expect(s.dropped, where).toBe(0);
+      } else {
+        expect(s.dropped, where).toBe(2 * (s.turn - 20));
+        expect(s.outgoing, where).toHaveLength(1 + 2 * 19);
+      }
+    }
   }, 60_000);
 });

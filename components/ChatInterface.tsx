@@ -13,6 +13,7 @@ import BugReportModal from '@/components/BugReportModal';
 import { LLMProvider, ChatMessage as ChatMessageType, ChatResponse, FallbackInfo, SpecificModel, defaultModels, modelDisplayNames, sanitizeModelPreferences } from '@/lib/llm';
 import { cn } from '@/lib/utils';
 import { CHAT_HISTORY_TRIMMED_TEXT, trimChatHistory } from '@/lib/content-limits';
+import { COMPARE_ISOLATION_TEXT, historyForModel } from '@/lib/chat-history';
 import { getApiKeys, ApiKeys } from '@/lib/api-keys';
 import KeyMigrationBanner from '@/components/KeyMigrationBanner';
 import { subscribeKeysChanged } from '@/lib/key-migration';
@@ -36,6 +37,8 @@ interface Message extends ChatMessageType {
   fallback?: FallbackInfo;
   userKeyRejected?: boolean;
   isLoading?: boolean;
+  // The bubble shows an error text, not a reply: never sent as history (D15).
+  isError?: boolean;
 }
 
 // Timeout wrapper for fetch requests. The 45s default sits above the chat route's
@@ -202,18 +205,14 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
     setInput('');
     setIsLoading(true);
 
-    // What is sent is trimmed to the chat caps (D13); the screen keeps the whole
-    // conversation. Every request of this send (single, each Compare model, each
-    // custom provider) carries the same list, in which an earlier Compare turn is
-    // the user message plus every reply shown under it, so the trim drops whole
-    // turns, oldest first, and never starts the window on a reply.
-    const { messages: chatHistory, dropped } = trimChatHistory(
-      [...messages, userMessage].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }))
-    );
-    setHistoryTrimmed(dropped > 0);
+    // Each request gets its own history (D15): in Compare a model is sent the user
+    // messages and only the replies it produced (matched on the stored `model`:
+    // the provider key, or custom:<id>); single mode keeps every reply as before.
+    // Error bubbles are never sent. Each list is then trimmed to the chat caps
+    // (D13), whole turns oldest first; the screen keeps the whole conversation.
+    const conversation = [...messages, userMessage];
+    const historyFor = (modelKey: string | null) =>
+      trimChatHistory(historyForModel(conversation, modelKey));
 
     try {
       // Local keys (un-migrated browser blob only); buildChatBody attaches them
@@ -221,6 +220,9 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       const localKeys = cachedApiKeys;
 
       if (mode === 'single') {
+        const { messages: chatHistory, dropped } = historyFor(null);
+        setHistoryTrimmed(dropped > 0);
+
         // Single model: one request with loading indicator
         const response = await fetchWithTimeout('/api/chat', {
           method: 'POST',
@@ -240,6 +242,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
           responseTime: data.responseTime,
           fallback: data.fallback,
           userKeyRejected: data.userKeyRejected,
+          isError: Boolean(data.error),
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
@@ -248,6 +251,11 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
         const activeCustomProviders = pickerProviders.filter((p) =>
           selectedCustomProviders.includes(p.id)
         );
+
+        // One history per model, all built before any reply of this send lands.
+        const builtInHistories = selectedModels.map((model) => historyFor(model));
+        const customHistories = activeCustomProviders.map((provider) => historyFor(`custom:${provider.id}`));
+        setHistoryTrimmed([...builtInHistories, ...customHistories].some((h) => h.dropped > 0));
 
         // Create placeholder messages for each built-in model
         const builtInPlaceholders: Message[] = selectedModels.map((model) => ({
@@ -271,7 +279,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
         setMessages((prev) => [...prev, ...builtInPlaceholders, ...customPlaceholders]);
 
         // Fire off parallel requests for built-in providers
-        const builtInPromises = selectedModels.map(async (model) => {
+        const builtInPromises = selectedModels.map(async (model, i) => {
           const messageId = `${timestamp}-${model}`;
           try {
             const response = await fetchWithTimeout('/api/chat', {
@@ -280,7 +288,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
               body: JSON.stringify(
                 buildChatBody(
                   {
-                    messages: chatHistory,
+                    messages: builtInHistories[i].messages,
                     modelPreferences,
                     crossProviderFallback: false,
                     maxFallbackAttempts: 2,
@@ -304,6 +312,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                       fallback: data.fallback,
                       userKeyRejected: data.userKeyRejected,
                       isLoading: false,
+                      isError: Boolean(data.error),
                     }
                   : msg
               )
@@ -317,6 +326,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                       ...msg,
                       content: `Error: ${errorMessage}`,
                       isLoading: false,
+                      isError: true,
                     }
                   : msg
               )
@@ -325,14 +335,14 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
         });
 
         // Fire off parallel requests for custom providers
-        const customPromises = activeCustomProviders.map(async (provider) => {
+        const customPromises = activeCustomProviders.map(async (provider, i) => {
           const messageId = `${timestamp}-custom:${provider.id}`;
           try {
             const response = await fetchWithTimeout('/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(
-                buildChatBody({ messages: chatHistory }, { model: `custom:${provider.id}`, provider })
+                buildChatBody({ messages: customHistories[i].messages }, { model: `custom:${provider.id}`, provider })
               ),
             });
 
@@ -350,6 +360,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                       specificModel: data.specificModel || `${provider.name}: ${provider.modelId}`,
                       responseTime: data.responseTime,
                       isLoading: false,
+                      isError: Boolean(data.error),
                     }
                   : msg
               )
@@ -363,6 +374,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
                       ...msg,
                       content: `Error: ${errorMessage}`,
                       isLoading: false,
+                      isError: true,
                     }
                   : msg
               )
@@ -378,6 +390,7 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
         id: (timestamp + 1).toString(),
         role: 'assistant',
         content: 'An error occurred while processing your request.',
+        isError: true,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -419,20 +432,25 @@ export default function ChatInterface({ initialPrompt, initialCompareMode = fals
       <KeyMigrationBanner className="px-4 sm:px-6 pt-3 shrink-0" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-white/[0.06]">
-        <div className="overflow-x-auto">
-          <ModelSelector
-            mode={mode}
-            selectedModel={selectedModel}
-            selectedModels={selectedModels}
-            modelPreferences={modelPreferences}
-            customProviders={selectorProviders}
-            selectedCustomProviders={selectedCustomProviders}
-            onModelChange={setSelectedModel}
-            onModelsChange={setSelectedModels}
-            onModeChange={setMode}
-            onModelPreferenceChange={handleModelPreferenceChange}
-            onCustomProvidersChange={setSelectedCustomProviders}
-          />
+        <div className="min-w-0">
+          <div className="overflow-x-auto">
+            <ModelSelector
+              mode={mode}
+              selectedModel={selectedModel}
+              selectedModels={selectedModels}
+              modelPreferences={modelPreferences}
+              customProviders={selectorProviders}
+              selectedCustomProviders={selectedCustomProviders}
+              onModelChange={setSelectedModel}
+              onModelsChange={setSelectedModels}
+              onModeChange={setMode}
+              onModelPreferenceChange={handleModelPreferenceChange}
+              onCustomProvidersChange={setSelectedCustomProviders}
+            />
+          </div>
+          {mode === 'multi' && (
+            <p className="mt-2 text-xs text-white/50">{COMPARE_ISOLATION_TEXT}</p>
+          )}
         </div>
 
         <Button
