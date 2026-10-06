@@ -49,6 +49,9 @@ describe('redactSecrets', () => {
     expect(redactSecrets('Authorization: Bearer abcdefghijklmnop failed')).toBe('Authorization: Bearer <redacted> failed');
     expect(redactSecrets('GET /v1/models?key=AIzaSyExample123&x=1')).toBe('GET /v1/models?key=<redacted>&x=1');
     expect(redactSecrets('key sk-or-v1-0123456789abcdef rejected')).toBe('key <redacted> rejected');
+    // Groq keys are gsk_ (underscore), not gsk-: an echoed key must not reach a log line.
+    expect(redactSecrets('invalid key gsk_FAKEUSERKEY0123456789abcdef in body')).toBe('invalid key <redacted> in body');
+    expect(redactSecrets('sk_live_0123456789abcdefghij and co_0123456789abcdefghij')).toBe('<redacted> and <redacted>');
   });
 });
 

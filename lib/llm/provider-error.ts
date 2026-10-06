@@ -41,7 +41,7 @@ export function redactSecrets(text: string): string {
   return text
     .replace(/bearer\s+[a-z0-9_\-.]{8,}/gi, 'Bearer <redacted>')
     .replace(/([?&]key=)[^&\s]+/gi, '$1<redacted>')
-    .replace(/\b(sk|gsk|or|co)-[a-z0-9_\-]{12,}/gi, '<redacted>');
+    .replace(/\b(sk|gsk|or|co)[-_][a-z0-9_\-]{12,}/gi, '<redacted>');
 }
 
 /**
