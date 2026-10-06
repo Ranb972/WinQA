@@ -3,26 +3,19 @@ import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
 
 // eslint-config-next 16 ships native flat configs, so FlatCompat is gone (H10).
-// eslint-plugin-react-hooks 7 adds the React Compiler rules below to
-// `recommended`. They are parked at 'off' here and switched on one rule per
-// commit (H11 for the rules that already pass, H12 for the rest), so this
-// commit changes no lint result. Keep the list in sync with the plugin's
-// recommended preset when it is bumped.
+// eslint-plugin-react-hooks 7 adds the React Compiler rules to `recommended`.
+// H11 switched on the eleven that already pass on this codebase (config,
+// error-boundaries, gating, globals, immutability, incompatible-library,
+// preserve-manual-memoization, set-state-in-render, static-components,
+// unsupported-syntax, use-memo: 0 hits each on 2026-10-06). The three below
+// still fire and stay parked until H12 fixes them one rule per commit:
+//   purity               2 hits  app/(app)/battle/components/BlindfoldReveal.tsx
+//   refs                 4 hits  app/(app)/code-testing/page.tsx, components/ChatInterface.tsx
+//   set-state-in-effect 20 hits  data-fetching effects across the library and battle pages
 const PARKED_REACT_COMPILER_RULES = {
-  'react-hooks/config': 'off',
-  'react-hooks/error-boundaries': 'off',
-  'react-hooks/gating': 'off',
-  'react-hooks/globals': 'off',
-  'react-hooks/immutability': 'off',
-  'react-hooks/incompatible-library': 'off',
-  'react-hooks/preserve-manual-memoization': 'off',
   'react-hooks/purity': 'off',
   'react-hooks/refs': 'off',
   'react-hooks/set-state-in-effect': 'off',
-  'react-hooks/set-state-in-render': 'off',
-  'react-hooks/static-components': 'off',
-  'react-hooks/unsupported-syntax': 'off',
-  'react-hooks/use-memo': 'off',
 };
 
 const eslintConfig = defineConfig([

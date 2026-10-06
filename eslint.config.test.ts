@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ESLint } from 'eslint';
 
 // H10: eslint-config-next 16 flat config without FlatCompat, with the React
-// Compiler rules of eslint-plugin-react-hooks 7 parked at off until H11/H12.
+// Compiler rules of eslint-plugin-react-hooks 7: eleven on since H11, three parked until H12.
 const eslint = new ESLint({ cwd: process.cwd() });
 
 describe('eslint.config.mjs (H10)', () => {
@@ -12,6 +12,11 @@ describe('eslint.config.mjs (H10)', () => {
     expect(rules['react-hooks/set-state-in-effect']).toBeDefined();
     expect(rules['react-hooks/set-state-in-effect'][0]).toBe(0);
     expect(rules['react-hooks/purity'][0]).toBe(0);
+    expect(rules['react-hooks/refs'][0]).toBe(0);
+    // H11: the compiler rules that already pass are on at the preset severity.
+    for (const rule of ['immutability', 'globals', 'set-state-in-render', 'use-memo', 'static-components']) {
+      expect(rules[`react-hooks/${rule}`][0]).not.toBe(0);
+    }
     expect(rules['react-hooks/rules-of-hooks'][0]).toBe(2);
     expect(rules['react-hooks/exhaustive-deps'][0]).toBe(1);
     expect(rules['@typescript-eslint/no-unused-vars'][0]).toBe(2);
