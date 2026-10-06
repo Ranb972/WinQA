@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   IMPORT_COLLECTIONS,
   IMPORT_MAX_ITEMS,
@@ -41,7 +41,7 @@ function validFile() {
   };
 }
 
-function parse(file: unknown, mode: unknown = 'replace'): ParsedImport {
+async function parse(file: unknown, mode: unknown = 'replace'): Promise<ParsedImport> {
   return parseImportPayload({ data: file, mode }, USER, NOW);
 }
 
@@ -51,8 +51,8 @@ function refused(result: ParsedImport) {
 }
 
 describe('parseImportPayload: a valid file', () => {
-  it('builds every row owned by the caller, private, from allow-listed keys only', () => {
-    const result = parse(validFile());
+  it('builds every row owned by the caller, private, from allow-listed keys only', async () => {
+    const result = await parse(validFile());
     if (!result.ok) throw new Error(result.error);
     expect(result.value.mode).toBe('replace');
     const [bug] = result.value.docs.bugs;
@@ -76,24 +76,44 @@ describe('parseImportPayload: a valid file', () => {
     }
   });
 
-  it('dates rows without created_at (absent or null) at now', () => {
+  it('dates rows without created_at (absent or null) at now', async () => {
     const file = validFile();
     (file.data.prompts[0] as Record<string, unknown>).created_at = null;
-    const result = parse(file, 'merge');
+    const result = await parse(file, 'merge');
     if (!result.ok) throw new Error(result.error);
     expect(result.value.mode).toBe('merge');
     expect(result.value.docs.prompts[0].created_at).toEqual(NOW);
     expect(result.value.docs.testCases[0].created_at).toEqual(NOW);
   });
 
-  it('accepts empty lists and exactly IMPORT_MAX_ITEMS items', () => {
+  it('accepts empty lists and exactly IMPORT_MAX_ITEMS items', async () => {
     const file = validFile();
     file.data.bugs = Array.from({ length: IMPORT_MAX_ITEMS }, () => ({ ...(file.data.bugs[0] as object) }));
     file.data.insights = [];
-    const result = parse(file);
+    const result = await parse(file);
     if (!result.ok) throw new Error(result.error);
     expect(result.value.docs.bugs).toHaveLength(IMPORT_MAX_ITEMS);
     expect(result.value.docs.insights).toEqual([]);
+  });
+
+  it('emits no MONGOOSE deprecation warning (validateSync warns once per row in mongoose 9.7)', async () => {
+    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => {});
+    try {
+      const file = validFile();
+      file.data.bugs = [0, 1, 2].map(() => ({ ...(file.data.bugs[0] as object) }));
+      file.data.prompts = [];
+      file.data.testCases = [];
+      file.data.insights = [];
+      const result = await parse(file);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.value.docs.bugs).toHaveLength(3);
+      const mongooseWarnings = emitWarning.mock.calls.filter(
+        ([, options]) => (options as { code?: unknown } | undefined)?.code === 'MONGOOSE'
+      );
+      expect(mongooseWarnings).toHaveLength(0);
+    } finally {
+      emitWarning.mockRestore();
+    }
   });
 });
 
@@ -102,21 +122,21 @@ describe('parseImportPayload: the file as a whole', () => {
     ['a body that is not an object', null],
     ['data that is not an object', 'text'],
     ['data that is a list', []],
-  ])('refuses %s', (_label, data) => {
-    const result = refused(parseImportPayload(data === null ? null : { data, mode: 'replace' }, USER, NOW));
+  ])('refuses %s', async (_label, data) => {
+    const result = refused(await parseImportPayload(data === null ? null : { data, mode: 'replace' }, USER, NOW));
     expect(result.error).toBe('Nothing was imported. The file is not a WinQA export.');
   });
 
-  it('refuses any version other than 1.0', () => {
+  it('refuses any version other than 1.0', async () => {
     const file = { ...validFile(), version: '2.0' };
-    expect(refused(parse(file)).error).toBe('Nothing was imported. The file is not a WinQA export of version 1.0.');
-    expect(refused(parse({ ...validFile(), version: undefined })).error).toMatch(/version 1\.0/);
+    expect(refused(await parse(file)).error).toBe('Nothing was imported. The file is not a WinQA export of version 1.0.');
+    expect(refused(await parse({ ...validFile(), version: undefined })).error).toMatch(/version 1\.0/);
   });
 
-  it('refuses a missing list instead of reading it as empty (D-3)', () => {
+  it('refuses a missing list instead of reading it as empty (D-3)', async () => {
     const file = validFile();
     delete file.data.testCases;
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. The file has no testCases list.');
     expect(result.problems).toEqual([{ collection: 'testCases', item: null, field: null }]);
   });
@@ -126,70 +146,70 @@ describe('parseImportPayload: the file as a whole', () => {
     expect(IMPORT_MAX_ITEMS).toBe(PER_USER_CEILING);
   });
 
-  it.each(IMPORT_COLLECTIONS)('D7: refuses %s with 501 items, naming the list and the limit', (collection) => {
+  it.each(IMPORT_COLLECTIONS)('D7: refuses %s with 501 items, naming the list and the limit', async (collection) => {
     const file = validFile();
     file.data[collection] = Array.from({ length: IMPORT_MAX_ITEMS + 1 }, () => ({}));
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe(
       `Nothing was imported. ${collection} has more than 500 items, the most WinQA keeps per account.`
     );
     expect(result.problems).toEqual([{ collection, item: null, field: null }]);
   });
 
-  it('refuses a mode other than merge or replace', () => {
-    expect(refused(parse(validFile(), 'append')).error).toBe(
+  it('refuses a mode other than merge or replace', async () => {
+    expect(refused(await parse(validFile(), 'append')).error).toBe(
       'Nothing was imported. The mode must be "merge" or "replace".'
     );
   });
 });
 
 describe('parseImportPayload: each item', () => {
-  it.each([[42], [null], [['a']], ['text']])('refuses a non-object item (%j) and names its position', (bad) => {
+  it.each([[42], [null], [['a']], ['text']])('refuses a non-object item (%j) and names its position', async (bad) => {
     const file = validFile();
     file.data.bugs = [file.data.bugs[0], bad];
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. bugs item 2: the item is not an object.');
     expect(result.problems).toEqual([{ collection: 'bugs', item: 2, field: null }]);
   });
 
-  it('refuses a value outside an enum and names the field', () => {
+  it('refuses a value outside an enum and names the field', async () => {
     const file = validFile();
     (file.data.bugs[0] as Record<string, unknown>).severity = 'Critical';
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. bugs item 1: severity is not an allowed value.');
     expect(result.problems).toEqual([{ collection: 'bugs', item: 1, field: 'severity' }]);
   });
 
-  it('refuses a field over its D6 cap and names the field (maxlength reaches import)', () => {
+  it('refuses a field over its D6 cap and names the field (maxlength reaches import)', async () => {
     const file = validFile();
     (file.data.bugs[0] as Record<string, unknown>).model_response = 'x'.repeat(BUG_REPORT_CAPS.model_response + 1);
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. bugs item 1: model_response is too long.');
     expect(result.problems).toEqual([{ collection: 'bugs', item: 1, field: 'model_response' }]);
   });
 
-  it('accepts a field exactly at its cap and refuses 21 tags', () => {
+  it('accepts a field exactly at its cap and refuses 21 tags', async () => {
     const atCap = validFile();
     (atCap.data.bugs[0] as Record<string, unknown>).model_response = 'x'.repeat(BUG_REPORT_CAPS.model_response);
-    expect(parse(atCap).ok).toBe(true);
+    expect((await parse(atCap)).ok).toBe(true);
     const tags = validFile();
     (tags.data.prompts[0] as Record<string, unknown>).tags = Array.from({ length: TAGS_MAX_COUNT + 1 }, (_, i) => `t${i}`);
-    const result = refused(parse(tags));
+    const result = refused(await parse(tags));
     expect(result.problems).toEqual([{ collection: 'prompts', item: 1, field: 'tags' }]);
     expect(result.error).not.toContain('t0');
   });
 
-  it('refuses a missing required field', () => {
+  it('refuses a missing required field', async () => {
     const file = validFile();
     delete (file.data.bugs[0] as Record<string, unknown>).model_response;
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. bugs item 1: model_response is required.');
   });
 
-  it('refuses a value of the wrong type and reports tags.1 as tags', () => {
+  it('refuses a value of the wrong type and reports tags.1 as tags', async () => {
     const file = validFile();
     (file.data.prompts[0] as Record<string, unknown>).tags = ['ok', { nested: true }, { again: true }];
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. prompts item 1: tags has the wrong type.');
     expect(result.problems).toEqual([{ collection: 'prompts', item: 1, field: 'tags' }]);
   });
@@ -201,28 +221,28 @@ describe('parseImportPayload: each item', () => {
     ['a date in 1960 (no 13-digit cursor)', '1960-01-01T00:00:00.000Z'],
     ['a date before 2001-09-09', '2001-09-08T00:00:00.000Z'],
     ['a date after the year 2286', '2300-01-01T00:00:00.000Z'],
-  ])('refuses created_at that is %s', (_label, value) => {
+  ])('refuses created_at that is %s', async (_label, value) => {
     const file = validFile();
     (file.data.insights[0] as Record<string, unknown>).created_at = value;
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.error).toBe('Nothing was imported. insights item 1: created_at is not a valid date.');
     expect(result.problems).toEqual([{ collection: 'insights', item: 1, field: 'created_at' }]);
   });
 
-  it('accepts created_at at both ends of the cursor range', () => {
+  it('accepts created_at at both ends of the cursor range', async () => {
     const file = validFile();
     (file.data.bugs[0] as Record<string, unknown>).created_at = new Date(1_000_000_000_000).toISOString();
     (file.data.insights[0] as Record<string, unknown>).created_at = new Date(9_999_999_999_999).toISOString();
-    const result = parse(file);
+    const result = await parse(file);
     if (!result.ok) throw new Error(result.error);
     expect((result.value.docs.bugs[0].created_at as Date).getTime()).toBe(1_000_000_000_000);
     expect((result.value.docs.insights[0].created_at as Date).getTime()).toBe(9_999_999_999_999);
   });
 
-  it(`collects at most ${IMPORT_MAX_PROBLEMS} problems, in file order`, () => {
+  it(`collects at most ${IMPORT_MAX_PROBLEMS} problems, in file order`, async () => {
     const file = validFile();
     file.data.bugs = Array.from({ length: 10 }, () => 7);
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.problems).toHaveLength(IMPORT_MAX_PROBLEMS);
     expect(result.problems.map((p) => p.item)).toEqual([1, 2, 3, 4, 5]);
     expect(result.error).toBe(
@@ -232,18 +252,18 @@ describe('parseImportPayload: each item', () => {
     );
   });
 
-  it('reports problems across collections', () => {
+  it('reports problems across collections', async () => {
     const file = validFile();
     (file.data.bugs[0] as Record<string, unknown>).issue_type = 'Other';
     file.data.insights = [{ title: 'only a title' }];
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.problems).toEqual([
       { collection: 'bugs', item: 1, field: 'issue_type' },
       { collection: 'insights', item: 1, field: 'content' },
     ]);
   });
 
-  it('never echoes a submitted value: a sentinel in every field stays out of the error and problems', () => {
+  it('never echoes a submitted value: a sentinel in every field stays out of the error and problems', async () => {
     const SENTINEL = 'SENTINEL_9f3c1e';
     const file = validFile();
     for (const collection of IMPORT_COLLECTIONS) {
@@ -261,7 +281,7 @@ describe('parseImportPayload: each item', () => {
         return item;
       });
     }
-    const result = refused(parse(file));
+    const result = refused(await parse(file));
     expect(result.problems.length).toBeGreaterThan(0);
     expect(JSON.stringify(result)).not.toContain(SENTINEL);
   });

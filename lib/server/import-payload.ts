@@ -1,17 +1,19 @@
 /**
  * Validate a whole import file before anything is written (Batch D, D3).
  *
- * parseImportPayload is pure: it builds every row the import would insert and
- * checks each one against its Mongoose schema with validateSync (required
- * fields, enums, casts, and any length cap the schema declares), with no
- * database access. The import route deletes or inserts nothing unless this
- * returns ok, so a bad file can never empty a library.
+ * parseImportPayload builds every row the import would insert and checks each
+ * one against its Mongoose schema with Document.validate() (required fields,
+ * enums, casts, and any length cap the schema declares), with no database
+ * access: on an unsaved document validate() runs the schema's validators only,
+ * and none in models/ reads the database. Rows are validated one at a time, in
+ * file order. The import route deletes or inserts nothing unless this returns
+ * ok, so a bad file can never empty a library.
  *
  * Error texts name the collection, the 1-based item number and the field only.
  * They never contain a submitted value, and neither does `problems`.
  */
 
-import type mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
 import TestCase from '@/models/TestCase';
@@ -51,7 +53,7 @@ export const IMPORT_ALLOWED_FIELDS: Record<ImportCollection, readonly string[]> 
 };
 
 interface ValidatingModel {
-  new (doc: Record<string, unknown>): { validateSync(): mongoose.Error.ValidationError | null };
+  new (doc: Record<string, unknown>): { validate(): Promise<void> };
 }
 
 const SCHEMA_MODELS: Record<ImportCollection, ValidatingModel> = {
@@ -132,7 +134,11 @@ function readCreatedAt(item: Record<string, unknown>): Date | null | 'invalid' {
  * Checks the request body `{ data: <export file>, mode }` and builds every row
  * to insert, owned by `userId`, private, dated from the file or `now`.
  */
-export function parseImportPayload(body: unknown, userId: string, now: Date = new Date()): ParsedImport {
+export async function parseImportPayload(
+  body: unknown,
+  userId: string,
+  now: Date = new Date()
+): Promise<ParsedImport> {
   if (!isPlainObject(body) || !isPlainObject(body.data)) {
     return refuse('The file is not a WinQA export.');
   }
@@ -198,7 +204,15 @@ export function parseImportPayload(body: unknown, userId: string, now: Date = ne
       doc.created_at = createdAt instanceof Date ? createdAt : now;
       doc.updated_at = now;
 
-      const error = new SCHEMA_MODELS[collection](doc).validateSync();
+      // One row at a time (never Promise.all): file order and the problem cap
+      // stay deterministic. Anything but a ValidationError is a bug and throws.
+      let error: mongoose.Error.ValidationError | null = null;
+      try {
+        await new SCHEMA_MODELS[collection](doc).validate();
+      } catch (thrown) {
+        if (!(thrown instanceof mongoose.Error.ValidationError)) throw thrown;
+        error = thrown;
+      }
       if (error) {
         const seen = new Set<string>();
         for (const [path, detail] of Object.entries(error.errors)) {

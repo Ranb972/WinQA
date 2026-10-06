@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     // The whole file is checked before anything touches the database.
-    const parsed = parseImportPayload(read.value, userId);
+    const parsed = await parseImportPayload(read.value, userId);
     if (!parsed.ok) {
       logOutcome(modeLabel(read.value), 'rejected', `status=400 problems=${parsed.problems.length}`);
       return NextResponse.json({ error: parsed.error, problems: parsed.problems }, { status: 400 });
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logOutcome(mode, 'aborted', `txn=${transactional ? 'yes' : 'no'} ${errorClass(error)}`);
-    // validateSync ran on every row first, so a ValidationError here is a bug;
+    // validate() ran on every row first, so a ValidationError here is a bug;
     // it is still the file's fault, not the server's.
     const status = isValidationError(error) ? 400 : 500;
     // Without a transaction only a merge writes, and its earlier inserts stay.
