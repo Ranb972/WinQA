@@ -11,6 +11,7 @@ import ProviderCredential from '@/models/ProviderCredential';
 import { loadUserKeys } from '@/lib/server/user-keys';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
+import { groqFetchForTests } from '@/lib/llm/groq-fetch';
 
 // Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
 // leaving ~5s headroom under maxDuration = 15.
@@ -131,7 +132,10 @@ async function testGroqKey(apiKey: string): Promise<TestKeyResponse> {
 
   try {
     const Groq = (await import('groq-sdk')).default;
-    const client = new Groq({ apiKey });
+    // The fetch hook is set only by the wire contract test (lib/llm/groq.contract.test.ts);
+    // unset, the options are exactly { apiKey } as before.
+    const fetchImpl = groqFetchForTests();
+    const client = new Groq({ apiKey, ...(fetchImpl && { fetch: fetchImpl }) });
 
     await client.chat.completions.create(
       {
