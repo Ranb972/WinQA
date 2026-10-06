@@ -320,13 +320,16 @@ export const IMPORT_TOO_LARGE_TEXT = 'This file is larger than 4 MB. Nothing was
 /*
  * Per-user ceilings (D7, owner decision D-6): the most rows one account keeps in
  * each collection. The library collections count the owner's private rows
- * (public example rows never count); battles count every battle the user saved.
- * A create at the ceiling, or an import merge that would pass it, answers 409.
- * Battles refuse at the ceiling like the rest: nothing is deleted to make room.
+ * (public example rows never count); a create at the ceiling, or an import merge
+ * that would pass it, answers 409.
+ *
+ * Battles (D14) count every battle the user saved and are never refused: at the
+ * ceiling the vote route deletes the oldest battles so the newest 500 are kept,
+ * and the page shows rolledOffText once.
  */
 export const PER_USER_CEILING = 500;
 
-export type CeilingCollection = 'bugs' | 'prompts' | 'testCases' | 'insights' | 'battles';
+export type CeilingCollection = 'bugs' | 'prompts' | 'testCases' | 'insights';
 
 /** How each refusal names its collection. */
 export const CEILING_NOUNS: Readonly<Record<CeilingCollection, string>> = {
@@ -334,8 +337,16 @@ export const CEILING_NOUNS: Readonly<Record<CeilingCollection, string>> = {
   prompts: 'prompts',
   testCases: 'test cases',
   insights: 'insights',
-  battles: 'battles',
 };
+
+/**
+ * The note Battle Arena shows the first time a vote rolled battles off: it
+ * states the fixed ceiling and how many went, never the user's battle count.
+ */
+export function rolledOffText(removed: number): string {
+  const what = removed === 1 ? 'the oldest one was' : `the oldest ${withThousands(removed)} were`;
+  return `You reached ${withThousands(PER_USER_CEILING)} saved battles, so ${what} removed to make room.`;
+}
 
 const KEPT_PER_ACCOUNT = 'the most WinQA keeps per account. Delete some to add more.';
 
@@ -345,11 +356,6 @@ const KEPT_PER_ACCOUNT = 'the most WinQA keeps per account. Delete some to add m
  * ceiling, never the row count or anything submitted.
  */
 export function ceilingText(collection: CeilingCollection): string {
-  // Battles cannot be deleted one by one (no route, no UI), so their sentence
-  // does not ask for it; it says what happened to the vote instead.
-  if (collection === 'battles') {
-    return `You have ${withThousands(PER_USER_CEILING)} saved battles, the most WinQA keeps per account. This vote was not saved.`;
-  }
   return `You have ${withThousands(PER_USER_CEILING)} ${CEILING_NOUNS[collection]}, ${KEPT_PER_ACCOUNT}`;
 }
 

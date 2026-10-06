@@ -9,6 +9,7 @@ import {
   CODE_TESTING_RESULT_MAX_CHARS,
   IMPORT_MAX_BYTES,
   IMPORT_TOO_LARGE_TEXT,
+  CEILING_NOUNS,
   PER_USER_CEILING,
   TAGS_MAX_COUNT,
   TAG_MAX_CHARS,
@@ -16,6 +17,7 @@ import {
   charCountText,
   clipForPrompt,
   importCeilingText,
+  rolledOffText,
   tagLimitText,
   trimChatHistory,
   truncateForField,
@@ -148,10 +150,13 @@ describe('D7: the per-user ceiling sentences', () => {
     );
   });
 
-  it('battles: the refusal does not ask for a delete that does not exist', () => {
-    expect(ceilingText('battles')).toBe(
-      'You have 500 saved battles, the most WinQA keeps per account. This vote was not saved.'
-    );
+  it('D14: only the four library collections refuse at the ceiling; battles roll off instead', () => {
+    expect(Object.keys(CEILING_NOUNS).sort()).toEqual(['bugs', 'insights', 'prompts', 'testCases']);
+  });
+
+  it('D14: the roll-off note names the fixed ceiling and what was removed, never a count of saved battles', () => {
+    expect(rolledOffText(1)).toBe('You reached 500 saved battles, so the oldest one was removed to make room.');
+    expect(rolledOffText(3)).toBe('You reached 500 saved battles, so the oldest 3 were removed to make room.');
   });
 
   it('the import refusal says nothing was imported and names the same ceiling', () => {

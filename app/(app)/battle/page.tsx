@@ -18,8 +18,20 @@ import {
   RotateCcw,
   ScrollText,
   User,
+  Trash2,
 } from 'lucide-react';
 import SafeMarkdown from '@/components/SafeMarkdown';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { rolledOffText } from '@/lib/content-limits';
 import { BATTLE_CHALLENGES, BattleChallenge } from '@/lib/battle-challenges';
 import { PROVIDER_MODELS, getDefaultModel } from '@/lib/llm/models';
 import { LLMProvider } from '@/lib/llm/types';
@@ -133,6 +145,42 @@ const emptyRatings = (): Ratings => ({ accuracy: 0, creativity: 0, clarity: 0, t
 
 /** Shown when a vote does not save and the route gave no sentence of its own. */
 const SAVE_FAILED_TEXT = 'Failed to save. Try again.';
+
+/** Shown when a History delete fails and the route gave no sentence of its own. */
+const DELETE_FAILED_TEXT = 'Failed to delete the battle. Try again.';
+
+/** The History delete confirm: what goes, and that the leaderboard does not change. */
+const DELETE_CONFIRM_TEXT = 'This removes the battle from your history. Leaderboard totals are not changed.';
+
+// D14: the roll-off note is shown once per browser. The flag lives in
+// localStorage; when storage is blocked, once per page load instead.
+const ROLLOFF_NOTED_KEY = 'winqa:battle-rolloff-noted';
+let rollOffNotedThisLoad = false;
+
+/**
+ * The note for a saved vote, or null. Reads the vote route's 201 body: when it
+ * says older battles rolled off and this browser has not shown the note yet,
+ * marks it shown and returns the sentence. Never throws.
+ */
+async function rollOffNoteFrom(res: Response): Promise<string | null> {
+  let rolledOff = 0;
+  try {
+    const data: unknown = await res.json();
+    const value = (data as { rolledOff?: unknown } | null)?.rolledOff;
+    if (typeof value === 'number' && Number.isInteger(value)) rolledOff = value;
+  } catch {
+    return null;
+  }
+  if (rolledOff <= 0 || rollOffNotedThisLoad) return null;
+  rollOffNotedThisLoad = true;
+  try {
+    if (window.localStorage.getItem(ROLLOFF_NOTED_KEY)) return null;
+    window.localStorage.setItem(ROLLOFF_NOTED_KEY, '1');
+  } catch {
+    // Storage blocked: the in-memory flag above keeps it to once per page load.
+  }
+  return rolledOffText(rolledOff);
+}
 
 // --- Markdown renderer for battle responses ---
 
@@ -292,14 +340,20 @@ export default function BattlePage() {
 
   // Results
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  // The vote route's own sentence (400 field, 409 ceiling, 413 size; D9), shown with 'error'.
+  // The vote route's own sentence (400 field, 413 size; D9), shown with 'error'. The
+  // per-user ceiling no longer refuses a vote (D14: the oldest battle rolls off).
   const [saveError, setSaveError] = useState(SAVE_FAILED_TEXT);
+  // D14: the one-time note after a vote that rolled the oldest battles off.
+  const [rollOffNote, setRollOffNote] = useState<string | null>(null);
 
   // Leaderboard & History
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  // D14: the battle whose delete is being confirmed, and the one being deleted.
+  const [confirmDeleteBattle, setConfirmDeleteBattle] = useState<HistoryEntry | null>(null);
+  const [deletingBattleId, setDeletingBattleId] = useState<string | null>(null);
   const [leaderboardSort, setLeaderboardSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
     key: 'winRate',
     dir: 'desc',
@@ -553,6 +607,7 @@ export default function BattlePage() {
         setSaveStatus('error');
         return;
       }
+      setRollOffNote(await rollOffNoteFrom(res));
       setSaveStatus('saved');
       setBattleState('results');
     } catch {
@@ -644,6 +699,7 @@ export default function BattlePage() {
         setSaveStatus('error');
         return;
       }
+      setRollOffNote(await rollOffNoteFrom(res));
       setSaveStatus('saved');
       setBattleState('results');
     } catch {
@@ -676,11 +732,33 @@ export default function BattlePage() {
     isLoading: historyLoading,
     isLoadingMore: historyLoadingMore,
     loadMore: loadMoreHistory,
+    updateRows: updateHistory,
   } = usePagedList<HistoryEntry>('/api/battle/history', {
     enabled: activeTab === 'history',
     errorText: 'Failed to fetch battle history',
     onError: setHistoryError,
   });
+
+  // D14: delete one battle from History after the confirm. The row leaves the
+  // loaded list on success; a failure shows the route's own sentence. The
+  // leaderboard is not refetched: the route does not change it.
+  const deleteBattle = async (id: string) => {
+    setHistoryError(null);
+    setDeletingBattleId(id);
+    try {
+      const res = await fetch(`/api/battle/history?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setHistoryError(await errorTextFrom(res, DELETE_FAILED_TEXT));
+        return;
+      }
+      updateHistory((rows) => rows.filter((row) => row._id !== id));
+      setExpandedHistoryId((open) => (open === id ? null : open));
+    } catch (error) {
+      setHistoryError(await errorTextFrom(error, DELETE_FAILED_TEXT));
+    } finally {
+      setDeletingBattleId(null);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'leaderboard') fetchLeaderboard();
@@ -710,6 +788,7 @@ export default function BattlePage() {
     setRoyaleRankings(null);
     setRoyalePrompts([]);
     setSaveStatus('idle');
+    setRollOffNote(null);
     setBattlePrompt('');
     setBattleExplanation('');
   };
@@ -1417,6 +1496,16 @@ export default function BattlePage() {
                     </motion.div>
                   </motion.div>
 
+                  {/* D14: shown once per browser, after the first vote that rolled battles off */}
+                  {rollOffNote && (
+                    <p
+                      role="status"
+                      className="max-w-xl mx-auto -mt-4 mb-8 px-4 py-3 rounded-md border border-white/[0.08] bg-white/[0.02] text-sm text-white/60"
+                    >
+                      {rollOffNote}
+                    </p>
+                  )}
+
                   {/* Score Breakdown */}
                   {royaleRankings ? (
                     /* Battle Royale Rankings */
@@ -1753,6 +1842,19 @@ export default function BattlePage() {
                           </div>
                         </button>
 
+                        {/* D14: delete this battle (after a confirm) */}
+                        <div className="flex justify-end mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteBattle(entry)}
+                            disabled={deletingBattleId === entry._id}
+                            className="inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 rounded-md text-[10px] font-mono uppercase tracking-[0.12em] text-white/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {deletingBattleId === entry._id ? 'Deleting...' : 'Delete battle'}
+                          </button>
+                        </div>
+
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
@@ -1821,6 +1923,38 @@ export default function BattlePage() {
                   </button>
                 </div>
               )}
+
+              {/* D14: the Delete battle confirm */}
+              <AlertDialog
+                open={confirmDeleteBattle !== null}
+                onOpenChange={(open) => {
+                  if (!open) setConfirmDeleteBattle(null);
+                }}
+              >
+                <AlertDialogContent className="bg-black border border-white/[0.08]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-red-400 font-mono text-xs uppercase tracking-[0.16em]">
+                      Delete this battle?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm text-zinc-400">
+                      {DELETE_CONFIRM_TEXT}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-white/[0.06] text-zinc-400 hover:bg-white/[0.02] font-mono text-xs uppercase tracking-[0.12em] min-h-11">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (confirmDeleteBattle) void deleteBattle(confirmDeleteBattle._id);
+                      }}
+                      className="bg-red-600 hover:bg-red-500 text-white font-mono text-xs uppercase tracking-[0.12em] min-h-11"
+                    >
+                      Delete battle
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </motion.div>
           )}
         </AnimatePresence>

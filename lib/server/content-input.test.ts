@@ -359,10 +359,10 @@ describe("D7: assertBelowCeiling counts the owner's rows before a create", () =>
 
   it.each([500, 650])("%i rows: refused with 409 and the collection's sentence", async (count) => {
     const { model } = countingModel(count);
-    expect(await assertBelowCeiling(model, ownedBattles('user_a'), 'battles')).toEqual({
+    expect(await assertBelowCeiling(model, ownedPrivateRows('user_a'), 'prompts')).toEqual({
       ok: false,
       status: 409,
-      error: ceilingText('battles'),
+      error: ceilingText('prompts'),
     });
   });
 

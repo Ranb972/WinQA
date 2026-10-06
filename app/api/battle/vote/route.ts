@@ -6,8 +6,9 @@ import Leaderboard from '@/models/Leaderboard';
 import { validateRating, validateEnum } from '@/lib/security';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
+import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
+import { PER_USER_CEILING } from '@/lib/content-limits';
 import {
-  assertBelowCeiling,
   ownedBattles,
   prepareBattleVote,
   validationErrorText,
@@ -78,12 +79,32 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    // The per-user ceiling (D7, decision D-6): at 500 saved battles the vote is
-    // refused with 409. Nothing is deleted to make room, and the leaderboard is
-    // not touched, so a refused vote changes nothing.
-    const room = await assertBelowCeiling(Battle, ownedBattles(userId), 'battles');
-    if (!room.ok) {
-      return NextResponse.json({ error: room.error }, { status: room.status });
+    // The per-user ceiling (D14): a vote is never refused for it. At 500 saved
+    // battles the oldest are deleted so that, with this one, the newest 500 are
+    // kept (an account saved past 500 before D7 drops to 500 in one vote). Only
+    // the caller's own battles are counted, looked up and deleted. The leaderboard
+    // rows are running aggregates and are not touched: a battle that rolls off
+    // stays counted in them. A failed count, lookup or delete rejects into the
+    // catch below (500) before the battle is created and before any leaderboard
+    // write. If the create itself fails after a delete, the battle that rolled
+    // off is gone and the retry finds 499, so nothing more is removed. Two votes
+    // racing at 500 can both pick the same oldest battle and leave 501; the next
+    // vote rolls back to 500 (the ceiling bounds storage, it is not a security
+    // boundary, as in D7).
+    const owned = ownedBattles(userId);
+    const saved = await Battle.countDocuments(owned).maxTimeMS(DB_QUERY_MAX_TIME_MS);
+    let rolledOff = 0;
+    if (saved >= PER_USER_CEILING) {
+      const oldest = await Battle.find(owned)
+        .sort({ created_at: 1, _id: 1 })
+        .limit(saved - PER_USER_CEILING + 1)
+        .select('_id')
+        .lean()
+        .maxTimeMS(DB_QUERY_MAX_TIME_MS);
+      if (oldest.length > 0) {
+        const removed = await Battle.deleteMany({ _id: { $in: oldest.map((row) => row._id) }, ...owned });
+        rolledOff = removed.deletedCount ?? 0;
+      }
     }
 
     // Record each slot under the model that actually produced its response. The
@@ -177,7 +198,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(battle, { status: 201 });
+    // The saved battle as before, plus how many old battles this vote removed
+    // (0 below the ceiling); the page shows a one-time note when it is above 0.
+    return NextResponse.json({ ...battle.toJSON(), rolledOff }, { status: 201 });
   } catch (error) {
     const invalid = validationErrorText(error);
     if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
