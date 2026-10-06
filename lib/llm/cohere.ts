@@ -2,13 +2,16 @@ import { CohereClient } from 'cohere-ai';
 import { ChatMessage, ChatResponse, CohereModel, KeySource } from './types';
 import { defaultModels } from './registry';
 import { reportProviderError } from './provider-error';
+import { CohereFetch, cohereFetchForTests } from './cohere-fetch';
 
-function getCohereClient(customApiKey?: string): CohereClient {
+function getCohereClient(customApiKey?: string, fetchImpl: CohereFetch | undefined = cohereFetchForTests()): CohereClient {
   const apiKey = customApiKey || process.env.COHERE_API_KEY || '';
   // Construct fresh per call. CohereClient's constructor is cheap (just stores
   // the token); the real cost is the network round-trip in chat() below.
   // Avoids unbounded module-level cache growth on long-lived serverless instances.
-  return new CohereClient({ token: apiKey });
+  // `fetchImpl` is set only by the wire contract test (lib/llm/cohere-fetch.ts);
+  // unset, the options are exactly { token } as before.
+  return new CohereClient({ token: apiKey, ...(fetchImpl && { fetch: fetchImpl }) });
 }
 
 export async function cohereChat(

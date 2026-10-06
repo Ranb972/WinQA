@@ -12,6 +12,7 @@ import { loadUserKeys } from '@/lib/server/user-keys';
 import { BODY_LIMITS } from '@/lib/server/body-limits';
 import { readJsonObject } from '@/lib/server/read-json-body';
 import { groqFetchForTests } from '@/lib/llm/groq-fetch';
+import { cohereFetchForTests } from '@/lib/llm/cohere-fetch';
 
 // Each provider check is bounded at 10s (abort + SDK timeout, no SDK retries),
 // leaving ~5s headroom under maxDuration = 15.
@@ -56,7 +57,10 @@ async function testCohereKey(apiKey: string): Promise<TestKeyResponse> {
 
   try {
     const { CohereClient } = await import('cohere-ai');
-    const client = new CohereClient({ token: apiKey });
+    // The fetch hook is set only by the wire contract test (lib/llm/cohere.contract.test.ts);
+    // unset, the options are exactly { token } as before.
+    const fetchImpl = cohereFetchForTests();
+    const client = new CohereClient({ token: apiKey, ...(fetchImpl && { fetch: fetchImpl }) });
 
     await client.chat(
       {
