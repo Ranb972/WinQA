@@ -15,12 +15,15 @@ export async function GET() {
 
     await dbConnect();
 
-    // Fetch all collections for this user
+    // Fetch this user's private rows: exactly the rows a replace import deletes,
+    // so export and replace are symmetric. Public library rows are never
+    // exported, even for their owner.
+    const privateRows = { user_id: userId, is_public: { $ne: true } };
     const [bugs, prompts, testCases, insights] = await Promise.all([
-      BugReport.find({ user_id: userId }).lean(),
-      PromptLibrary.find({ user_id: userId }).lean(),
-      TestCase.find({ user_id: userId }).lean(),
-      Insight.find({ user_id: userId }).lean(),
+      BugReport.find(privateRows).lean(),
+      PromptLibrary.find(privateRows).lean(),
+      TestCase.find(privateRows).lean(),
+      Insight.find(privateRows).lean(),
     ]);
 
     // Remove MongoDB _id and user_id from exported data for cleaner output

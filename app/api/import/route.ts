@@ -5,6 +5,7 @@ import BugReport from '@/models/BugReport';
 import PromptLibrary from '@/models/PromptLibrary';
 import TestCase from '@/models/TestCase';
 import Insight from '@/models/Insight';
+import { isClerkUserId } from '@/lib/server/purge-user';
 
 interface ExportData {
   exportDate: string;
@@ -57,15 +58,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 'system' owns the public library, and a malformed id must never become a
+    // filter value: refuse both before any database call.
+    if (!isClerkUserId(userId)) {
+      return NextResponse.json(
+        { error: 'This account cannot import data.' },
+        { status: 400 }
+      );
+    }
+
     await dbConnect();
 
-    // If replace mode, delete all existing data for this user
+    // If replace mode, delete this user's private data. Public rows are never
+    // deleted here: `$ne: true` matches false, null and a missing field, which
+    // the app treats as private (the same filter as the account purge).
     if (mode === 'replace') {
+      const privateRows = { user_id: userId, is_public: { $ne: true } };
       await Promise.all([
-        BugReport.deleteMany({ user_id: userId }),
-        PromptLibrary.deleteMany({ user_id: userId }),
-        TestCase.deleteMany({ user_id: userId }),
-        Insight.deleteMany({ user_id: userId }),
+        BugReport.deleteMany(privateRows),
+        PromptLibrary.deleteMany(privateRows),
+        TestCase.deleteMany(privateRows),
+        Insight.deleteMany(privateRows),
       ]);
     }
 
@@ -89,6 +102,8 @@ export async function POST(request: NextRequest) {
       return {
         ...sanitized,
         user_id: userId,
+        // Imported rows are always private, whatever the file says.
+        is_public: false,
         created_at: (typeof doc.created_at === 'string' && doc.created_at) || now,
         updated_at: now,
       };
