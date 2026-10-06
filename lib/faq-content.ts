@@ -1,5 +1,6 @@
 import { registryEntries } from '@/lib/llm/registry';
 import type { LLMProvider } from '@/lib/llm/types';
+import { PER_USER_CEILING } from '@/lib/content-limits';
 
 // Model names come from the registry so this answer (also emitted as FAQPage
 // JSON-LD) cannot drift from the lineup.
@@ -53,6 +54,11 @@ export const faqs = [
     question: 'Is my data private and secure?',
     answer:
       'Your data is yours. Keys you save are stored in our database encrypted with AES-256-GCM under a key held only in our server environment. They are decrypted only on our servers, when a request goes to that provider, and never sent back to your browser. Keys saved in this browser before October 2026 stay there until you move them from Settings. Authentication goes through Clerk. Everything you create — prompts, bugs, test cases, insights — is tied to your account and only visible to you. WinQA does not sell data. The full details are in the privacy policy.',
+  },
+  {
+    question: 'Is there a limit on how much I can save?',
+    answer:
+      `Your account holds up to ${PER_USER_CEILING} each of bug reports, prompts, test cases, insights, and battles. At ${PER_USER_CEILING}, a new battle replaces your oldest one. Text fields and chat messages also have size limits, and the forms show a counter under the long fields.`,
   },
   {
     question: 'Is WinQA open source?',

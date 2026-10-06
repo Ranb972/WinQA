@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { faqs, buildFaqJsonLd } from '@/lib/faq-content';
+import { PER_USER_CEILING } from '@/lib/content-limits';
 
 const answerTo = (question: string) => {
   const entry = faqs.find((f) => f.question === question);
@@ -57,6 +58,30 @@ describe('faq content', () => {
         }
       }
     }
+  });
+
+  it('a limits entry follows the privacy entry and names the 500 ceiling, the battle roll-off and the size caps', () => {
+    const at = faqs.findIndex((f) => f.question === 'Is there a limit on how much I can save?');
+    expect(at, 'limits entry missing').toBeGreaterThan(-1);
+    expect(faqs[at - 1].question).toBe('Is my data private and secure?');
+    const answer = faqs[at].answer;
+    expect(answer).toMatch(/\b500\b/);
+    for (const kind of ['bug reports', 'prompts', 'test cases', 'insights', 'battles']) {
+      expect(answer).toContain(kind);
+    }
+    const rollOff = sentences(answer).find((s) => /oldest/.test(s));
+    expect(rollOff, 'no sentence says the oldest battle goes').toMatch(/battle/);
+    expect(answer).toMatch(/size limits/);
+    expect(answer).toMatch(/chat messages/);
+    expect(answer).toMatch(/counter/);
+  });
+
+  it('every number in the limits entry matches lib/content-limits.ts', () => {
+    expect(PER_USER_CEILING).toBe(500);
+    const answer = answerTo('Is there a limit on how much I can save?');
+    const numbers = (answer.match(/\d[\d,]*/g) ?? []).map((n) => Number(n.replace(/,/g, '')));
+    expect(numbers.length).toBeGreaterThan(0);
+    for (const n of numbers) expect(n).toBe(PER_USER_CEILING);
   });
 
   it('the FAQPage JSON-LD has the same count and order as the array', () => {
