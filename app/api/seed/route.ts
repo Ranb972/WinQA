@@ -11,6 +11,8 @@ import {
   seedInsights,
   seedBugReports,
 } from '@/lib/seedData';
+import { SYSTEM_USER_ID } from '@/lib/systemUser';
+import { runInTransaction, supportsTransactions } from '@/lib/server/transaction';
 
 // Admin allowlist for destructive reseed operations.
 // Parsed once at module load; empty list means no one can call PUT (fail-closed).
@@ -74,39 +76,48 @@ export async function PUT() {
       );
     }
 
-    await dbConnect();
+    const { connection } = await dbConnect();
 
-    // Delete all existing public seed data across all collections
-    const deleted = await Promise.all([
-      BugReport.deleteMany({ is_public: true }),
-      PromptLibrary.deleteMany({ is_public: true }),
-      TestCase.deleteMany({ is_public: true }),
-      Insight.deleteMany({ is_public: true }),
-    ]);
+    // The delete and the inserts must land together: a library left empty or
+    // partial is never repaired, because autoSeed skips when any public row
+    // exists (lib/autoSeed.ts). Without transactions, refuse rather than risk it.
+    if (!(await supportsTransactions(connection))) {
+      return NextResponse.json(
+        {
+          error:
+            'Reseed is unavailable right now: the database does not support transactions. Nothing was changed.',
+        },
+        { status: 503 }
+      );
+    }
 
-    // Insert new seed data with is_public: true
-    const [bugs, prompts, testCases, insights] = await Promise.all([
-      BugReport.insertMany(seedBugReports.map(d => ({ ...d, user_id: userId, is_public: true }))),
-      PromptLibrary.insertMany(seedPrompts.map(d => ({ ...d, user_id: userId, is_public: true }))),
-      TestCase.insertMany(seedTestCases.map(d => ({ ...d, user_id: userId, is_public: true }))),
-      Insight.insertMany(seedInsights.map(d => ({ ...d, user_id: userId, is_public: true }))),
-    ]);
+    // Delete all existing public seed data, then insert fresh seed data owned by
+    // the system user, one operation at a time inside one transaction (never
+    // Promise.all on a session). The runner may retry, so each run starts over.
+    const { deleted, inserted } = await runInTransaction(connection, async (session) => {
+      const publicRows = { is_public: true };
+      const owned = <T extends object>(docs: T[]) =>
+        docs.map(d => ({ ...d, user_id: SYSTEM_USER_ID, is_public: true }));
+      const deleted = {
+        bugs: (await BugReport.deleteMany(publicRows, { session })).deletedCount,
+        prompts: (await PromptLibrary.deleteMany(publicRows, { session })).deletedCount,
+        testCases: (await TestCase.deleteMany(publicRows, { session })).deletedCount,
+        insights: (await Insight.deleteMany(publicRows, { session })).deletedCount,
+      };
+      const inserted = {
+        bugs: (await BugReport.insertMany(owned(seedBugReports), { session })).length,
+        prompts: (await PromptLibrary.insertMany(owned(seedPrompts), { session })).length,
+        testCases: (await TestCase.insertMany(owned(seedTestCases), { session })).length,
+        insights: (await Insight.insertMany(owned(seedInsights), { session })).length,
+      };
+      return { deleted, inserted };
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Reseeded all collections',
-      deleted: {
-        bugs: deleted[0].deletedCount,
-        prompts: deleted[1].deletedCount,
-        testCases: deleted[2].deletedCount,
-        insights: deleted[3].deletedCount,
-      },
-      inserted: {
-        bugs: bugs.length,
-        prompts: prompts.length,
-        testCases: testCases.length,
-        insights: insights.length,
-      },
+      deleted,
+      inserted,
     });
   } catch (error) {
     console.error('Error reseeding data:', error);
