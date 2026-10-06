@@ -26,8 +26,8 @@ beforeEach(() => {
 });
 
 describe('GET /api/battle/history pages the list', () => {
-  it('defaults to 50: asks for 51 rows and answers 50 plus X-Next-Cursor built from the 50th', async () => {
-    const rows = makeRows(51);
+  it('defaults to 20: asks for 21 rows and answers 20 plus X-Next-Cursor built from the 20th', async () => {
+    const rows = makeRows(21);
     const q = fakeQuery(rows);
     h.find.mockReturnValue(q);
 
@@ -35,19 +35,19 @@ describe('GET /api/battle/history pages the list', () => {
 
     expect(h.find).toHaveBeenCalledWith({ odlUserId: 'user_a' });
     expect(q.sort).toHaveBeenCalledWith({ created_at: -1, _id: -1 });
-    expect(q.limit).toHaveBeenCalledWith(51);
+    expect(q.limit).toHaveBeenCalledWith(21);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
-    expect(body).toHaveLength(50);
-    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[49].created_at, rows[49]._id));
+    expect(body).toHaveLength(20);
+    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[19].created_at, rows[19]._id));
   });
 
-  it('sends no X-Next-Cursor when the 51-row query finds only 50', async () => {
-    const q = fakeQuery(makeRows(50));
+  it('sends no X-Next-Cursor when the 21-row query finds only 20', async () => {
+    const q = fakeQuery(makeRows(20));
     h.find.mockReturnValue(q);
     const res = await get();
-    expect(q.limit).toHaveBeenCalledWith(51);
-    expect(await res.json()).toHaveLength(50);
+    expect(q.limit).toHaveBeenCalledWith(21);
+    expect(await res.json()).toHaveLength(20);
     expect(res.headers.get('X-Next-Cursor')).toBeNull();
   });
 

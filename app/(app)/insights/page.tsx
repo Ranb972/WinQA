@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Lightbulb, Search, ChevronDown } from 'lucide-react';
@@ -15,6 +15,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
+import { usePagedList } from '@/hooks/use-paged-list';
+import { asRow, loadedLabel, prependRow, removeRow, searchScopeLabel } from '@/lib/list-paging';
 
 interface Insight {
   _id: string;
@@ -30,8 +32,6 @@ const suggestedTags = ['Cohere', 'Gemini', 'Groq', 'Hebrew', 'Code', 'Formatting
 
 function InsightsPageContent() {
   const searchParams = useSearchParams();
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,32 +61,26 @@ function InsightsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchInsights = useCallback(async () => {
-    try {
-      const response = await fetch('/api/insights');
-      const data = await response.json();
-      if (response.ok && Array.isArray(data)) {
-        setInsights(data);
-      } else {
-        setInsights([]);
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch insights');
-        }
-      }
-    } catch (error) {
+  // The tag filters on the server (a change reloads from the first page); the
+  // search box filters the loaded rows below.
+  const {
+    rows: insights,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    loadMore,
+    refresh,
+    updateRows,
+  } = usePagedList<Insight>('/api/insights', {
+    filters: { tag: selectedTag },
+    errorText: 'Failed to fetch insights',
+    onError: (message) =>
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch insights',
+        description: message,
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchInsights();
-  }, [fetchInsights]);
+      }),
+  });
 
   const toggleCard = (id: string) => {
     setExpandedCards((prev) => {
@@ -123,15 +117,20 @@ function InsightsPageContent() {
       });
 
       if (!response.ok) throw new Error('Failed to save insight');
+      const saved = asRow<Insight>(await response.json().catch(() => null));
 
       toast({
         title: editingInsight ? 'Insight updated' : 'Insight created',
         description: 'Your insight has been saved successfully.',
       });
 
+      const edited = editingInsight;
       setDialogOpen(false);
       resetForm();
-      fetchInsights();
+      // The list is most recently updated first and a save sets updated_at, so a
+      // created or edited insight goes on top of the loaded pages.
+      if (saved) updateRows((rows) => prependRow(rows, edited ? { ...edited, ...saved } : saved));
+      else refresh();
     } catch {
       toast({
         title: 'Error',
@@ -158,7 +157,7 @@ function InsightsPageContent() {
         description: 'The insight has been removed.',
       });
 
-      fetchInsights();
+      updateRows((rows) => removeRow(rows, id));
     } catch {
       toast({
         title: 'Error',
@@ -216,8 +215,11 @@ function InsightsPageContent() {
     });
   };
 
-  // Get all unique tags from insights
-  const allTags = Array.from(new Set(insights.flatMap((insight) => insight.tags))).sort();
+  // Get all unique tags from the loaded insights. The selected tag stays a chip
+  // even when no loaded row carries it any more, so it can always be cleared.
+  const allTags = Array.from(
+    new Set([...insights.flatMap((insight) => insight.tags), ...(selectedTag ? [selectedTag] : [])])
+  ).sort();
 
   // Filter insights by search and tag
   const filteredInsights = insights.filter((insight) => {
@@ -276,6 +278,11 @@ function InsightsPageContent() {
               className="w-full bg-white/[0.02] border border-white/[0.06] rounded px-4 py-3 pl-10 font-sans text-sm text-white placeholder:text-white/30 outline-none focus:border-orange-500/30 transition-colors"
             />
           </div>
+          {hasMore && searchQuery && (
+            <p className="-mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
+              {searchScopeLabel(insights.length)}
+            </p>
+          )}
 
           {/* Tag Filter */}
           {allTags.length > 0 && (
@@ -316,6 +323,11 @@ function InsightsPageContent() {
         <span className="font-mono text-xs text-white/30 tracking-wider uppercase hidden sm:inline">
           Documented discoveries
         </span>
+        {hasMore && (
+          <span className="ml-auto font-mono text-xs text-white/40 whitespace-nowrap">
+            {loadedLabel(filteredInsights.length, insights.length)}
+          </span>
+        )}
       </div>
 
       {/* Content */}
@@ -466,6 +478,19 @@ function InsightsPageContent() {
             );
           })}
         </StaggerContainer>
+      )}
+
+      {/* Load more: shown while the server has more insights than are loaded */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="flex items-center justify-center w-full sm:w-auto min-h-[44px] sm:min-h-0 border border-white/[0.06] bg-white/[0.02] text-white/50 hover:border-orange-500/30 hover:text-orange-400 font-mono text-xs font-medium uppercase tracking-wider px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {/* Dialog */}

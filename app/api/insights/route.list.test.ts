@@ -23,9 +23,9 @@ beforeEach(() => {
 });
 
 describe('GET /api/insights pages the list on updated_at', () => {
-  it('asks for 201 rows and answers 200 plus X-Next-Cursor built from the 200th', async () => {
+  it('defaults to 50: asks for 51 rows and answers 50 plus X-Next-Cursor built from the 50th', async () => {
     // Distinct created_at so a cursor built from the wrong field would differ.
-    const rows = makeRows(201).map((r, i) => ({ ...r, created_at: new Date(1_000_000_000_000 + i) }));
+    const rows = makeRows(51).map((r, i) => ({ ...r, created_at: new Date(1_000_000_000_000 + i) }));
     const q = fakeQuery(rows);
     h.find.mockReturnValue(q);
 
@@ -33,19 +33,19 @@ describe('GET /api/insights pages the list on updated_at', () => {
 
     expect(h.find).toHaveBeenCalledWith(VISIBILITY);
     expect(q.sort).toHaveBeenCalledWith({ updated_at: -1, _id: -1 });
-    expect(q.limit).toHaveBeenCalledWith(201);
+    expect(q.limit).toHaveBeenCalledWith(51);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
-    expect(body).toHaveLength(200);
-    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[199].updated_at, rows[199]._id));
+    expect(body).toHaveLength(50);
+    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[49].updated_at, rows[49]._id));
   });
 
-  it('sends no X-Next-Cursor when the 201-row query finds only 200', async () => {
-    const q = fakeQuery(makeRows(200));
+  it('sends no X-Next-Cursor when the 51-row query finds only 50', async () => {
+    const q = fakeQuery(makeRows(50));
     h.find.mockReturnValue(q);
     const res = await get();
-    expect(q.limit).toHaveBeenCalledWith(201);
-    expect(await res.json()).toHaveLength(200);
+    expect(q.limit).toHaveBeenCalledWith(51);
+    expect(await res.json()).toHaveLength(50);
     expect(res.headers.get('X-Next-Cursor')).toBeNull();
   });
 

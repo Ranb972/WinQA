@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Heart, Library, Copy, Check, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
+import { usePagedList } from '@/hooks/use-paged-list';
+import { asRow, loadedLabel, prependRow, removeRow, replaceRow, searchScopeLabel } from '@/lib/list-paging';
 
 interface Prompt {
   _id: string;
@@ -33,10 +35,11 @@ const suggestedTags = ['Formatting', 'Reasoning', 'Security', 'Code', 'Creative'
 
 function PromptsPageContent() {
   const searchParams = useSearchParams();
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  // Read from the URL up front so the first page is already filtered.
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(
+    () => searchParams.get('filter') === 'favorites'
+  );
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
@@ -75,32 +78,26 @@ function PromptsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchPrompts = useCallback(async () => {
-    try {
-      const response = await fetch('/api/prompts');
-      const data = await response.json();
-      if (response.ok && Array.isArray(data)) {
-        setPrompts(data);
-      } else {
-        setPrompts([]);
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch prompts');
-        }
-      }
-    } catch (error) {
+  // Tag and favorites filter on the server (a change reloads from the first
+  // page); the search box filters the loaded rows below.
+  const {
+    rows: prompts,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    loadMore,
+    refresh,
+    updateRows,
+  } = usePagedList<Prompt>('/api/prompts', {
+    filters: { tag: selectedTag, favorite: showFavoritesOnly },
+    errorText: 'Failed to fetch prompts',
+    onError: (message) =>
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch prompts',
+        description: message,
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchPrompts();
-  }, [fetchPrompts]);
+      }),
+  });
 
   const handleSubmit = async () => {
     if (
@@ -129,15 +126,26 @@ function PromptsPageContent() {
       });
 
       if (!response.ok) throw new Error('Failed to save prompt');
+      const saved = asRow<Prompt>(await response.json().catch(() => null));
 
       toast({
         title: editingPrompt ? 'Prompt updated' : 'Prompt created',
         description: 'Your prompt has been saved successfully.',
       });
 
+      const wasEdit = !!editingPrompt;
       setDialogOpen(false);
       resetForm();
-      fetchPrompts();
+      // The favorite flag is per user (UserFavorite); a saved document can still
+      // carry a stale stored is_favorite from before DB-005, so it is never taken
+      // from the save. An edit keeps the loaded flag; a new prompt starts
+      // unfavorited and goes on top.
+      if (!saved) refresh();
+      else {
+        const { is_favorite: _stored, ...fields } = saved;
+        if (wasEdit) updateRows((rows) => replaceRow(rows, fields));
+        else updateRows((rows) => prependRow(rows, { ...fields, is_favorite: false }));
+      }
     } catch {
       toast({
         title: 'Error',
@@ -164,7 +172,7 @@ function PromptsPageContent() {
         description: 'The prompt has been removed.',
       });
 
-      fetchPrompts();
+      updateRows((rows) => removeRow(rows, id));
     } catch {
       toast({
         title: 'Error',
@@ -175,7 +183,7 @@ function PromptsPageContent() {
   };
 
   const handleToggleFavorite = async (id: string) => {
-    setPrompts(prev =>
+    updateRows(prev =>
       prev.map(p => p._id === id ? { ...p, is_favorite: !p.is_favorite } : p)
     );
 
@@ -188,7 +196,7 @@ function PromptsPageContent() {
 
       if (!response.ok) throw new Error('Failed to toggle favorite');
     } catch {
-      setPrompts(prev =>
+      updateRows(prev =>
         prev.map(p => p._id === id ? { ...p, is_favorite: !p.is_favorite } : p)
       );
       toast({
@@ -265,7 +273,11 @@ function PromptsPageContent() {
     });
   };
 
-  const allTags = Array.from(new Set(prompts.flatMap((p) => p.tags)));
+  // Chips come from the loaded rows. The selected tag stays a chip even when no
+  // loaded row carries it any more, so it can always be cleared.
+  const allTags = Array.from(
+    new Set([...prompts.flatMap((p) => p.tags), ...(selectedTag ? [selectedTag] : [])])
+  );
 
   const filteredPrompts = prompts.filter((p) => {
     const matchesSearch =
@@ -352,6 +364,11 @@ function PromptsPageContent() {
             </div>
           )}
         </div>
+        {hasMore && searchQuery && (
+          <p className="-mt-3 mb-6 text-[10px] font-mono tracking-wider uppercase text-white/40">
+            {searchScopeLabel(prompts.length)}
+          </p>
+        )}
       </MotionWrapper>
 
       {/* Section Header */}
@@ -360,7 +377,7 @@ function PromptsPageContent() {
         <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-orange-400">Prompt Archive</span>
         <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-white/30">Documented Techniques</span>
         <span className="bg-white/[0.05] text-white/50 text-xs font-mono px-2 py-0.5 rounded-full">
-          {filteredPrompts.length}
+          {hasMore ? loadedLabel(filteredPrompts.length, prompts.length) : filteredPrompts.length}
         </span>
       </div>
 
@@ -531,6 +548,19 @@ function PromptsPageContent() {
             );
           })}
         </StaggerContainer>
+      )}
+
+      {/* Load more: shown while the server has more prompts than are loaded */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto rounded-lg font-mono text-xs uppercase tracking-[0.12em] transition-colors bg-white/[0.02] border border-white/[0.06] text-white/50 hover:border-orange-500/30 hover:text-orange-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {/* Create/Edit Dialog */}

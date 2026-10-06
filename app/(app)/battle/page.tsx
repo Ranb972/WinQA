@@ -33,6 +33,7 @@ import {
 import CodeDuelJudging from './components/CodeDuelJudging';
 import BlindfoldReveal from './components/BlindfoldReveal';
 import BattleRoyaleArena, { type RoyaleRanking } from './components/BattleRoyaleArena';
+import { usePagedList } from '@/hooks/use-paged-list';
 
 // --- Types ---
 
@@ -290,9 +291,8 @@ export default function BattlePage() {
 
   // Leaderboard & History
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [leaderboardSort, setLeaderboardSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
     key: 'winRate',
@@ -652,24 +652,24 @@ export default function BattlePage() {
     setLeaderboardLoading(false);
   }, []);
 
-  const fetchHistory = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const res = await fetch('/api/battle/history');
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data);
-      }
-    } catch {
-      // ignore
-    }
-    setHistoryLoading(false);
-  }, []);
+  // History loads its first page (20 battles) each time the tab opens, and
+  // "Load more" appends the next page while the server sends a cursor.
+  const {
+    rows: history,
+    hasMore: historyHasMore,
+    isLoading: historyLoading,
+    isLoadingMore: historyLoadingMore,
+    loadMore: loadMoreHistory,
+  } = usePagedList<HistoryEntry>('/api/battle/history', {
+    enabled: activeTab === 'history',
+    errorText: 'Failed to fetch battle history',
+    onError: setHistoryError,
+  });
 
   useEffect(() => {
     if (activeTab === 'leaderboard') fetchLeaderboard();
-    if (activeTab === 'history') fetchHistory();
-  }, [activeTab, fetchLeaderboard, fetchHistory]);
+    if (activeTab === 'history') setHistoryError(null);
+  }, [activeTab, fetchLeaderboard]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1619,7 +1619,16 @@ export default function BattlePage() {
                 <div className="w-1 h-5 bg-orange-500 rounded-full" />
                 <h2 className="text-white text-sm font-semibold uppercase tracking-wide font-heading">Case Files · Closed Investigations</h2>
                 <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/30">Past battles</span>
+                {historyHasMore && (
+                  <span className="ml-auto text-[10px] font-mono uppercase tracking-[0.15em] text-white/40">
+                    {history.length} loaded
+                  </span>
+                )}
               </div>
+
+              {historyError && (
+                <p className="text-sm text-red-400 mb-4">{historyError}</p>
+              )}
 
               {historyLoading ? (
                 <div className="text-center text-white/50 py-12">
@@ -1772,6 +1781,22 @@ export default function BattlePage() {
                       </motion.div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Load more: shown while the server has more battles than are loaded */}
+              {!historyLoading && historyHasMore && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={() => {
+                      setHistoryError(null);
+                      void loadMoreHistory();
+                    }}
+                    disabled={historyLoadingMore}
+                    className="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/60 hover:border-orange-500/30 hover:text-orange-400 font-mono text-xs uppercase tracking-[0.12em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {historyLoadingMore ? 'Loading...' : 'Load more'}
+                  </button>
                 </div>
               )}
             </motion.div>

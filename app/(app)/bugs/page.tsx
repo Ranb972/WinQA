@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trash2, ChevronDown, Filter, Bug, Search, Plus, AlertTriangle, FileText } from 'lucide-react';
@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { modelDisplayNames, LLMProvider } from '@/lib/llm';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
+import { usePagedList } from '@/hooks/use-paged-list';
+import { asRow, loadedLabel, prependRow, removeRow, replaceRow, searchScopeLabel } from '@/lib/list-paging';
 
 interface BugReport {
   _id: string;
@@ -58,13 +60,19 @@ const issueTypeColors = {
   Logic: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
 };
 
+// The ?status= the dashboard links with, when it names a real status.
+function statusFromUrl(status: string | null): BugReport['status'] | null {
+  return status === 'Open' || status === 'Investigating' || status === 'Resolved' ? status : null;
+}
+
 function BugsPageContent() {
   const searchParams = useSearchParams();
-  const [bugs, setBugs] = useState<BugReport[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Read from the URL up front so the first page is already filtered.
+  const [statusFilter, setStatusFilter] = useState<string>(
+    () => statusFromUrl(searchParams.get('status')) ?? 'all'
+  );
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
   const [editingBug, setEditingBug] = useState<BugReport | null>(null);
@@ -91,10 +99,10 @@ function BugsPageContent() {
   useEffect(() => {
     if (paramsProcessed) return;
 
-    const status = searchParams.get('status');
+    const status = statusFromUrl(searchParams.get('status'));
     const action = searchParams.get('action');
 
-    if (status === 'Open' || status === 'Investigating' || status === 'Resolved') {
+    if (status) {
       setStatusFilter(status);
     }
 
@@ -105,32 +113,29 @@ function BugsPageContent() {
     setParamsProcessed(true);
   }, [searchParams, paramsProcessed]);
 
-  const fetchBugs = useCallback(async () => {
-    try {
-      const response = await fetch('/api/bugs');
-      const data = await response.json();
-      if (response.ok && Array.isArray(data)) {
-        setBugs(data);
-      } else {
-        setBugs([]);
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch bug reports');
-        }
-      }
-    } catch (error) {
+  // Status and issue type filter on the server (a change reloads from the first
+  // page); severity and the search box filter the loaded rows below.
+  const {
+    rows: bugs,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    loadMore,
+    refresh,
+    updateRows,
+  } = usePagedList<BugReport>('/api/bugs', {
+    filters: {
+      status: statusFilter === 'all' ? null : statusFilter,
+      issue_type: issueTypeFilter === 'all' ? null : issueTypeFilter,
+    },
+    errorText: 'Failed to fetch bug reports',
+    onError: (message) =>
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch bug reports',
+        description: message,
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchBugs();
-  }, [fetchBugs]);
+      }),
+  });
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this bug report?')) return;
@@ -147,7 +152,7 @@ function BugsPageContent() {
         description: 'The bug report has been removed.',
       });
 
-      fetchBugs();
+      updateRows((rows) => removeRow(rows, id));
     } catch {
       toast({
         title: 'Error',
@@ -168,14 +173,17 @@ function BugsPageContent() {
       });
 
       if (!response.ok) throw new Error('Failed to update bug report');
+      const saved = asRow<BugReport>(await response.json().catch(() => null));
 
       toast({
         title: 'Status updated',
         description: `Bug status changed to ${newStatus}.`,
       });
 
+      const id = editingBug._id;
+      const status = newStatus as BugReport['status'];
       setEditingBug(null);
-      fetchBugs();
+      updateRows((rows) => replaceRow(rows, saved ?? { _id: id, status }));
     } catch {
       toast({
         title: 'Error',
@@ -225,6 +233,7 @@ function BugsPageContent() {
       });
 
       if (!response.ok) throw new Error('Failed to create bug report');
+      const created = asRow<BugReport>(await response.json().catch(() => null));
 
       toast({
         title: 'Bug report created',
@@ -233,7 +242,9 @@ function BugsPageContent() {
 
       setDialogOpen(false);
       resetForm();
-      fetchBugs();
+      // Newest first, so a new report goes on top of the loaded pages.
+      if (created) updateRows((rows) => prependRow(rows, created));
+      else refresh();
     } catch {
       toast({
         title: 'Error',
@@ -315,6 +326,9 @@ function BugsPageContent() {
               className="bg-transparent border-0 text-sm text-white placeholder:text-white/30 font-mono py-3 px-3 flex-1 focus:outline-none"
             />
           </div>
+          {hasMore && searchQuery && (
+            <p className="font-mono text-xs text-white/40 -mt-2">{searchScopeLabel(bugs.length)}</p>
+          )}
 
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-3">
@@ -369,7 +383,9 @@ function BugsPageContent() {
         <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/60">Incident Reports</span>
         <span className="hidden sm:inline font-mono text-xs uppercase tracking-[0.15em] text-white/30">Active Investigations</span>
         <div className="flex-1 h-px bg-white/[0.06]" />
-        <span className="font-mono text-xs text-white/40 whitespace-nowrap">{filteredBugs.length} cases</span>
+        <span className="font-mono text-xs text-white/40 whitespace-nowrap">
+          {hasMore ? loadedLabel(filteredBugs.length, bugs.length) : `${filteredBugs.length} cases`}
+        </span>
       </div>
 
       {/* Content */}
@@ -524,6 +540,19 @@ function BugsPageContent() {
             </StaggerItem>
           ))}
         </StaggerContainer>
+      )}
+
+      {/* Load more: shown while the server has more reports than are loaded */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="border border-white/[0.1] bg-white/[0.02] hover:border-orange-500/30 text-white font-mono text-xs uppercase tracking-[0.1em] px-4 py-3.5 sm:py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+          >
+            {isLoadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {/* Status Update Dialog */}

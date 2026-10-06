@@ -5,8 +5,8 @@ import Battle from '@/models/Battle';
 import { pageQuery, pageResponse, parsePage } from '@/lib/server/list-page';
 
 // Battles are full documents (the UI expands every response body), so the page
-// is smaller than the library pages.
-const LIST_PAGE = { def: 50, max: 50 };
+// is smaller than the library pages: 20 by default, up to 50 with ?limit=.
+const LIST_PAGE = { def: 20, max: 50 };
 
 export async function GET(request: NextRequest) {
   try {

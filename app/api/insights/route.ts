@@ -12,9 +12,9 @@ import {
   validationErrorText,
 } from '@/lib/server/content-input';
 
-// Page size for the list. The default equals the cap so no existing library is cut
-// short before the UI learns to load more (D11).
-const LIST_PAGE = { def: 200, max: 200 };
+// Page size for the list: 50 by default, up to 200 with ?limit=. The page shows
+// "Load more" while X-Next-Cursor comes back.
+const LIST_PAGE = { def: 50, max: 200 };
 
 // GET - One page of the user's insights plus all public ones, most recently updated first.
 // PUT sets updated_at, so an edit moves a row to the top: a row edited while a

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, TestTube2, Play, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -15,6 +15,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { MotionWrapper, StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper';
+import { usePagedList } from '@/hooks/use-paged-list';
+import { asRow, loadedLabel, prependRow, removeRow, replaceRow, searchScopeLabel } from '@/lib/list-paging';
 
 interface TestCase {
   _id: string;
@@ -27,8 +29,6 @@ interface TestCase {
 }
 
 export default function TestCasesPage() {
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<TestCase | null>(null);
@@ -46,32 +46,24 @@ export default function TestCasesPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const fetchTestCases = useCallback(async () => {
-    try {
-      const response = await fetch('/api/test-cases');
-      const data = await response.json();
-      if (response.ok && Array.isArray(data)) {
-        setTestCases(data);
-      } else {
-        setTestCases([]);
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch test cases');
-        }
-      }
-    } catch (error) {
+  // The route has no filters; the search box filters the loaded rows below.
+  const {
+    rows: testCases,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    loadMore,
+    refresh,
+    updateRows,
+  } = usePagedList<TestCase>('/api/test-cases', {
+    errorText: 'Failed to fetch test cases',
+    onError: (message) =>
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch test cases',
+        description: message,
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchTestCases();
-  }, [fetchTestCases]);
+      }),
+  });
 
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.initial_prompt.trim()) {
@@ -98,15 +90,20 @@ export default function TestCasesPage() {
       });
 
       if (!response.ok) throw new Error('Failed to save test case');
+      const saved = asRow<TestCase>(await response.json().catch(() => null));
 
       toast({
         title: editingCase ? 'Test case updated' : 'Test case created',
         description: 'Your test case has been saved successfully.',
       });
 
+      const wasEdit = !!editingCase;
       setDialogOpen(false);
       resetForm();
-      fetchTestCases();
+      // Newest first by creation: an edit stays in place, a new case goes on top.
+      if (!saved) refresh();
+      else if (wasEdit) updateRows((rows) => replaceRow(rows, saved));
+      else updateRows((rows) => prependRow(rows, saved));
     } catch {
       toast({
         title: 'Error',
@@ -133,7 +130,7 @@ export default function TestCasesPage() {
         description: 'The test case has been removed.',
       });
 
-      fetchTestCases();
+      updateRows((rows) => removeRow(rows, id));
     } catch {
       toast({
         title: 'Error',
@@ -230,6 +227,11 @@ export default function TestCasesPage() {
             className="w-full pl-12 pr-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-lg text-white text-sm font-mono outline-none focus:border-orange-500/30 transition-colors placeholder:text-white/30"
           />
         </div>
+        {hasMore && searchQuery && (
+          <p className="-mt-4 mb-6 text-[10px] font-mono tracking-wider uppercase text-white/40">
+            {searchScopeLabel(testCases.length)}
+          </p>
+        )}
       </MotionWrapper>
 
       {/* Section Header */}
@@ -237,7 +239,7 @@ export default function TestCasesPage() {
         <div className="w-1 h-6 bg-orange-500" />
         <h2 className="text-white text-sm font-medium uppercase tracking-wider">Case Library</h2>
         <span className="bg-white/[0.05] text-white/50 text-xs font-mono px-2 py-0.5 rounded-full">
-          {filteredCases.length}
+          {hasMore ? loadedLabel(filteredCases.length, testCases.length) : filteredCases.length}
         </span>
       </div>
 
@@ -385,6 +387,19 @@ export default function TestCasesPage() {
             );
           })}
         </StaggerContainer>
+      )}
+
+      {/* Load more: shown while the server has more test cases than are loaded */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="flex items-center justify-center px-4 py-3 sm:py-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto bg-white/[0.02] border border-white/[0.06] text-white/50 hover:border-orange-500/30 hover:text-orange-400 font-mono text-xs uppercase tracking-wider font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {/* Create/Edit Dialog */}

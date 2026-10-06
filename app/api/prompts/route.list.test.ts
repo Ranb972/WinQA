@@ -29,8 +29,8 @@ beforeEach(() => {
 });
 
 describe('GET /api/prompts pages the list', () => {
-  it('asks for 201 rows and answers 200 plus X-Next-Cursor built from the 200th', async () => {
-    const rows = makeRows(201);
+  it('defaults to 50: asks for 51 rows and answers 50 plus X-Next-Cursor built from the 50th', async () => {
+    const rows = makeRows(51);
     const q = fakeQuery(rows);
     h.find.mockReturnValue(q);
     favorites([rows[0]._id]);
@@ -39,21 +39,21 @@ describe('GET /api/prompts pages the list', () => {
 
     expect(h.find).toHaveBeenCalledWith(VISIBILITY);
     expect(q.sort).toHaveBeenCalledWith({ created_at: -1, _id: -1 });
-    expect(q.limit).toHaveBeenCalledWith(201);
+    expect(q.limit).toHaveBeenCalledWith(51);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
-    expect(body).toHaveLength(200);
+    expect(body).toHaveLength(50);
     expect(body[0].is_favorite).toBe(true);
     expect(body[1].is_favorite).toBe(false);
-    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[199].created_at, rows[199]._id));
+    expect(res.headers.get('X-Next-Cursor')).toBe(cursorOf(rows[49].created_at, rows[49]._id));
   });
 
-  it('sends no X-Next-Cursor when the 201-row query finds only 200', async () => {
-    const q = fakeQuery(makeRows(200));
+  it('sends no X-Next-Cursor when the 51-row query finds only 50', async () => {
+    const q = fakeQuery(makeRows(50));
     h.find.mockReturnValue(q);
     const res = await get();
-    expect(q.limit).toHaveBeenCalledWith(201);
-    expect(await res.json()).toHaveLength(200);
+    expect(q.limit).toHaveBeenCalledWith(51);
+    expect(await res.json()).toHaveLength(50);
     expect(res.headers.get('X-Next-Cursor')).toBeNull();
   });
 
