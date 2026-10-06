@@ -62,3 +62,54 @@ export function makeRows(n: number, startMs = Date.UTC(2026, 9, 1)): FakeRow[] {
 export function cursorOf(at: Date, id: Types.ObjectId): string {
   return `${String(at.getTime()).padStart(13, '0')}_${id.toHexString()}`;
 }
+
+// A tiny evaluator for the filter shapes pageQuery produces, so a paging walk
+// (helper spec and route specs) runs the real clause logic over rows that share
+// milliseconds. memoryModel is a stand-in for a seeded collection.
+export type Doc = Record<string, unknown>;
+export const cmp = (a: unknown, b: unknown): number => {
+  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+  if (a instanceof Types.ObjectId && b instanceof Types.ObjectId) {
+    return a.toHexString() < b.toHexString() ? -1 : a.toHexString() > b.toHexString() ? 1 : 0;
+  }
+  return a === b ? 0 : NaN;
+};
+export function matches(doc: Doc, filter: Doc): boolean {
+  return Object.entries(filter).every(([key, cond]) => {
+    if (key === '$and') return (cond as Doc[]).every(f => matches(doc, f));
+    if (key === '$or') return (cond as Doc[]).some(f => matches(doc, f));
+    const v = doc[key];
+    if (cond && typeof cond === 'object' && !(cond instanceof Date) && !(cond instanceof Types.ObjectId)) {
+      return Object.entries(cond as Doc).every(([op, arg]) => {
+        if (v === undefined || v === null) return false;
+        if (op === '$lt') return cmp(v, arg) < 0;
+        if (op === '$lte') return cmp(v, arg) <= 0;
+        throw new Error(`unsupported operator ${op}`);
+      });
+    }
+    return cmp(v, cond) === 0;
+  });
+}
+export function memoryModel(all: FakeRow[], sortField: 'created_at' | 'updated_at') {
+  return {
+    find(filter: Doc) {
+      let limit = Infinity;
+      const run = () =>
+        all
+          .filter(d => matches(d, filter))
+          .sort((a, b) => cmp(b[sortField], a[sortField]) || cmp(b._id, a._id))
+          .slice(0, limit);
+      const q = {
+        sort: () => q,
+        limit: (n: number) => ((limit = n), q),
+        lean: () => q,
+        maxTimeMS: () => q,
+        then: <A = FakeRow[], B = never>(
+          ok?: ((rows: FakeRow[]) => A | PromiseLike<A>) | null,
+          fail?: ((reason: unknown) => B | PromiseLike<B>) | null,
+        ) => Promise.resolve(run()).then(ok, fail),
+      };
+      return q;
+    },
+  };
+}

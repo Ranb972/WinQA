@@ -9,8 +9,8 @@ import {
   NEXT_CURSOR_HEADER,
 } from '@/lib/server/list-page';
 import { DB_QUERY_MAX_TIME_MS } from '@/lib/server/db-limits';
-import { cursorOf, fakeQuery, makeRows } from '@/lib/server/list-page.test-utils';
-import type { FakeRow } from '@/lib/server/list-page.test-utils';
+import { cursorOf, fakeQuery, makeRows, memoryModel } from '@/lib/server/list-page.test-utils';
+import type { Doc, FakeRow } from '@/lib/server/list-page.test-utils';
 import Battle from '@/models/Battle';
 import BugReport from '@/models/BugReport';
 import Insight from '@/models/Insight';
@@ -149,56 +149,6 @@ describe('pageQuery against a fake query', () => {
     });
   });
 });
-
-// A tiny evaluator for the filter shapes pageQuery produces, so the paging walk
-// below runs the real clause logic over rows that share milliseconds.
-type Doc = Record<string, unknown>;
-const cmp = (a: unknown, b: unknown): number => {
-  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
-  if (a instanceof Types.ObjectId && b instanceof Types.ObjectId) {
-    return a.toHexString() < b.toHexString() ? -1 : a.toHexString() > b.toHexString() ? 1 : 0;
-  }
-  return a === b ? 0 : NaN;
-};
-function matches(doc: Doc, filter: Doc): boolean {
-  return Object.entries(filter).every(([key, cond]) => {
-    if (key === '$and') return (cond as Doc[]).every(f => matches(doc, f));
-    if (key === '$or') return (cond as Doc[]).some(f => matches(doc, f));
-    const v = doc[key];
-    if (cond && typeof cond === 'object' && !(cond instanceof Date) && !(cond instanceof Types.ObjectId)) {
-      return Object.entries(cond as Doc).every(([op, arg]) => {
-        if (v === undefined || v === null) return false;
-        if (op === '$lt') return cmp(v, arg) < 0;
-        if (op === '$lte') return cmp(v, arg) <= 0;
-        throw new Error(`unsupported operator ${op}`);
-      });
-    }
-    return cmp(v, cond) === 0;
-  });
-}
-function memoryModel(all: FakeRow[], sortField: 'created_at' | 'updated_at') {
-  return {
-    find(filter: Doc) {
-      let limit = Infinity;
-      const run = () =>
-        all
-          .filter(d => matches(d, filter))
-          .sort((a, b) => cmp(b[sortField], a[sortField]) || cmp(b._id, a._id))
-          .slice(0, limit);
-      const q = {
-        sort: () => q,
-        limit: (n: number) => ((limit = n), q),
-        lean: () => q,
-        maxTimeMS: () => q,
-        then: <A = FakeRow[], B = never>(
-          ok?: ((rows: FakeRow[]) => A | PromiseLike<A>) | null,
-          fail?: ((reason: unknown) => B | PromiseLike<B>) | null,
-        ) => Promise.resolve(run()).then(ok, fail),
-      };
-      return q;
-    },
-  };
-}
 
 describe('paging walk over rows that share milliseconds', () => {
   // 30 rows, pairs share a millisecond; every third row belongs to another user
