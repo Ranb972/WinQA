@@ -1,6 +1,10 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
 
-export default clerkMiddleware()
+// Next 16 names this file proxy.ts and runs it on the Node.js runtime; the
+// docs recommend the proxy name for the function as well.
+const proxy = clerkMiddleware();
+
+export default proxy;
 
 export const config = {
   matcher: [
