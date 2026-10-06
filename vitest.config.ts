@@ -1,8 +1,11 @@
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
+// The @/ alias comes from tsconfig.json paths; Vite 8 resolves it natively
+// (resolve.tsconfigPaths, marked experimental), so vite-tsconfig-paths is gone.
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     environment: 'node',
     globals: true,
